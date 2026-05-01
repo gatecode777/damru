@@ -194,7 +194,7 @@
 }
 
 /* Single Card Logic */
-.menu-parent .menu-card {
+.menu-parent .menu-card-m {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -202,7 +202,7 @@
 }
 
 /* Image Left-Right Reverse Logic */
-.menu-parent .menu-card.reverse {
+.menu-parent .menu-card-m.reverse {
     flex-direction: row-reverse;
 }
 
@@ -212,7 +212,6 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    margin-bottom: 10px;
 }
 
 .menu-parent .menu-price {
@@ -223,7 +222,7 @@
     font-family: 'Serif', Georgia, serif;
 }
 
-.menu-parent .menu-title {
+.menu-parent .menu-title-m {
     font-size: 2.8rem;
     font-family: 'Serif', Georgia, serif;
     color: #000;
@@ -316,7 +315,7 @@
     transition: transform 0.4s ease;
 }
 
-.menu-parent .menu-card:hover .menu-img-box img {
+.menu-parent .menu-card-m:hover .menu-img-box img {
     transform: scale(1.03);
 }
 
@@ -339,7 +338,7 @@
 }
 
 /* Card Structure */
-.menu-parent .menu-card {
+.menu-parent .menu-card-m {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -347,7 +346,7 @@
 }
 
 /* Reverse class: Image Left, Text Right */
-.menu-parent .menu-card.reverse {
+.menu-parent .menu-card-m.reverse {
     flex-direction: row-reverse;
 }
 
@@ -381,7 +380,7 @@
 }
 
 /* Typography */
-.menu-parent .menu-title {
+.menu-parent .menu-title-m {
     font-size: 3.5rem;
     font-family: 'Serif', Georgia, serif;
     color: #000;
@@ -482,11 +481,11 @@
         padding: 60px 5%;
     }
 
-    .menu-parent .menu-title {
+    .menu-parent .menu-title-m {
         font-size: 2.5rem;
     }
 
-    .menu-parent .menu-card {
+    .menu-parent .menu-card-m {
         gap: 40px;
     }
 }
@@ -501,8 +500,8 @@
         gap: 60px;
     }
 
-    .menu-parent .menu-card,
-    .menu-parent .menu-card.reverse {
+    .menu-parent .menu-card-m,
+    .menu-parent .menu-card-m.reverse {
         flex-direction: column;
         text-align: center;
         gap: 30px;
@@ -516,7 +515,7 @@
         align-items: center;
     }
 
-    .menu-parent .menu-title {
+    .menu-parent .menu-title-m {
         font-size: 2rem;
     }
 
@@ -543,7 +542,6 @@
         justify-content: center;
     }
 }
-
 
 
 /* Make a Reservation section  */
