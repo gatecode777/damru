@@ -1,7 +1,7 @@
 /* --- 1. Variables & Root --- */
 :root {
   --primary-orange: #e67e22;
-  --text-brown: #c1611c;
+  --text-brown: #764208;
   --dark-text: #111;
 }
 
@@ -11,7 +11,7 @@
   padding: 0;
   box-sizing: border-box;
 }
- 
+
 .damru-theme-wrapper {
   font-family: "Poppins", sans-serif;
   overflow-x: hidden;
@@ -19,515 +19,400 @@
   color: var(--dark-text);
   width: 100%;
   display: block;
+  position: relative;
 }
- 
+
 /* ============================================================
-   HERO
+   HERO BASE — sab screens ke liye common
    ============================================================ */
 .hero {
   width: 100%;
-  min-height: auto;
   display: flex;
   align-items: center;
   position: relative;
-  overflow: hidden;
-  /* Navbar ke neeche se content start */
-  padding-top: clamp(50px, 5vw, 60px);
-  padding-bottom: clamp(0px, 0vw, 0px);
-  padding-left: clamp(24px, 0vw, 90px);
-  padding-right: 0;
-  /* background-color: green;  */
 }
- 
+
 /* ============================================================
-   HERO CONTAINER
+   HERO CONTAINER BASE
    ============================================================ */
 .hero-container {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   position: relative;
   z-index: 2;
-  /* background-color: red; */
 }
- 
-/* ============================================================
-   HERO LEFT
 
+/* ============================================================
+   SHARED ELEMENTS
    ============================================================ */
-.hero-left {
-  flex: 0 0 auto;
-  width: clamp(280px, 55%, 750px);
-  position: relative;
-  z-index: 3;
-  /* background-color: red; */
-}
- 
 .sub-heading {
   color: #764208;
-  font-size: clamp(13px, 1vw, 17px);
   font-weight: 600;
-  margin-bottom: clamp(6px, 0.5vw, 10px);
   display: block;
+  letter-spacing: 1px;
 }
- 
+
 .main-heading {
   font-family: "Playfair Display", serif;
-  font-size: clamp(38px, 4.5vw, 74px);
-  line-height: 1.18;
+  line-height: 1.2;
   color: var(--dark-text);
   font-weight: 800;
-  margin-bottom: clamp(22px, 2.5vw, 38px);
 }
- 
-/* ============================================================
-   THUMBNAILS
-   ============================================================ */
-.thumbnails {
-  display: flex;
-  gap: clamp(10px, 1vw, 20px);
-  margin-bottom: clamp(20px, 2.5vw, 40px);
-}
- 
+
 .thumb {
-  width: clamp(42px, 3.5vw, 58px);
-  height: clamp(42px, 3.5vw, 58px);
   border-radius: 50%;
   cursor: pointer;
   transition: transform 0.3s ease, border-color 0.3s ease;
   overflow: hidden;
-  border: 2px solid #eee;
+  border: 2px solid #e0e0e0;
   flex-shrink: 0;
 }
- 
+
 .thumb.active {
   border-color: var(--primary-orange);
-  transform: scale(1.15);
+  transform: scale(1.1);
 }
- 
+
 .thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
- 
-/* ============================================================
-   HERO BUTTONS
-   ============================================================ */
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: clamp(18px, 2vw, 36px);
-  flex-wrap: wrap;
-}
- 
+
 .btn-book {
   background-color: var(--primary-orange);
   color: #fff;
-  padding: clamp(12px, 1vw, 17px) clamp(24px, 2.2vw, 40px);
-  border-radius: 10px;
-  font-size: clamp(13px, 1vw, 16px);
+  border-radius: 12px;
   font-weight: 600;
   text-decoration: none;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s ease;
   display: inline-block;
   white-space: nowrap;
+  border: none;
+  cursor: pointer;
 }
- 
+
 .btn-book:hover {
   transform: translateY(-3px);
-  box-shadow: 0 15px 30px rgba(230, 126, 34, 0.45);
+  box-shadow: 0 12px 28px rgba(193, 97, 28, 0.35);
+  background-color: #a85218;
 }
- 
+
 .btn-menu {
   text-decoration: none;
   color: var(--dark-text);
   font-weight: 700;
-  font-size: clamp(13px, 1vw, 17px);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
+  transition: gap 0.3s ease;
 }
- 
-/* ============================================================
-   HERO RIGHT
 
-   ============================================================ */
-.hero-right {
-  flex: 1;
-  position: relative;
-  align-self: stretch;
-  /* Hero ki height ke barabar */
-  min-height: clamp(300px, 45vw, 620px);
-  /* background-color: #3b82f6; */
+.btn-menu:hover {
+  gap: 12px;
+  color: var(--primary-orange);
 }
- 
-/* ============================================================
-   WHEEL CONTAINER — THE ORANGE CIRCLE
 
-   ============================================================ */
-.wheel-container {
-  position: absolute;
-  width: clamp(420px, 65vw, 900px);
-  height: clamp(420px, 65vw, 900px);
-  background-color: var(--primary-orange);
-  border-radius: 50%;
-  
-  /* MIN sabse kam negative, MAX sabse zyada negative */
-  top: clamp(-160px, -32vw, -260px);
-  right: clamp(-200px, -42vw, -340px);
-  
-  transform: none;
-  overflow: visible;
-}
- 
-/* ============================================================
-   ORANGE CIRCLE INNER — JS se rotate hota hai
-   ============================================================ */
 .orange-circle {
   width: 100%;
   height: 100%;
   background-color: var(--primary-orange);
   border-radius: 50%;
   position: relative;
-  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-  /* background-color: brown; */
-  /* right: clamp(-340px, -42vw, -200px); */
-  /* top: clamp(-260px, -32vw, -160px); */
+  transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
- 
-/* ============================================================
-   PLATE ITEMS
-   ============================================================ */
+
 .plate-item {
   position: absolute;
-  width: clamp(200px, 35vw, 500px);
-  height: clamp(200px, 35vw, 500px);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.4s ease;
-  /* background-color: black; */
 }
- 
+
 .plate-item.active {
   opacity: 1;
   visibility: visible;
 }
- 
-/* Positions — same as original HTML */
-.p1 {
-  left: 0%;
-  top: 70%;
-  transform: translate(-50%, -50%);
-}
-.p2 {
-  left: 30%;
-  top: 0%;
-  transform: translate(-50%, -50%);
-}
-.p3 {
-  left: 100%;
-  top: 30%;
-  transform: translate(-50%, -50%);
-}
-.p4 {
-  left: 70%;
-  top: 100%;
-  transform: translate(-50%, -50%);
-}
- 
+
 .plate-item img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 30px 50px rgba(0, 0, 0, 0.22));
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
   animation: counterRotate 20s linear infinite;
-  transition: transform 0.6s ease;
 }
- 
+
 .plate-item.active img {
-  transform: scale(1.12) rotate(0deg);
+  transform: scale(1.08);
 }
- 
-/* ============================================================
-   KEYFRAMES
-   ============================================================ */
-@keyframes rotateWheel {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
- 
+
 @keyframes counterRotate {
   from { transform: rotate(0deg); }
   to   { transform: rotate(-360deg); }
 }
- 
+
 @keyframes fadeIn {
   from { opacity: 0.4; transform: scale(0.9); }
   to   { opacity: 1;   transform: scale(1); }
 }
- 
-.fade-in {
-  animation: fadeIn 0.8s forwards;
-}
- 
+
+.fade-in { animation: fadeIn 0.6s forwards; }
+.orange-bg-shape { display: none; }
+
+
 /* ============================================================
-   RESPONSIVE BREAKPOINTS
+   DESKTOP & TABLET — 769px aur upar
+   Aapka original design bilkul waisa hi
    ============================================================ */
- 
-/* --- 4K / Ultra-wide (1920px+) --- */
-@media (min-width: 1920px) {
+@media (min-width: 769px) {
   .hero {
-    padding-right: 800px;
-    padding-top: 150px;
-    padding-bottom: 50px;
-    /* background-color: #3b82f6; */
-  }
-  .hero-container {
-    max-width: 2000px;
-    /* background-color: burlywood; */
-  }
-  .main-heading { font-size: 90px;}
-  .wheel-container {
-    width: 960px;
-    height: 960px;
-    top: -400px;
-    right: -900px;
-  }
-  .plate-item {
-    width: 500px;
-    height: 500px;
-  }
-}
- 
-/* --- Large Desktop (1440px – 1919px) --- */
-@media (max-width: 1919px) and (min-width: 1440px) {
-  .wheel-container {
-    width: 650px;
-    height: 650px;
-    top: -190px;
-    right: -210px;
-  }
-  .plate-item {
-    width: 400px;
-    height: 400px;
-  }
-}
- 
-/* --- Medium Desktop (1200px – 1439px) --- */
-@media (max-width: 1439px) and (min-width: 1200px) {
-  .wheel-container {
-    width: 640px;
-    height: 640px;
-    top: -200px;
-    right: -275px;
-  }
-  .plate-item {
-    width: 340px;
-    height: 340px;
-  }
-}
- 
-/* --- Standard Laptop / 1366px (aapki actual problem screen) --- */
-@media (max-width: 1399px) and (min-width: 1300px) {
-  .hero { padding-left: 60px; }
-  .hero-left { width: clamp(280px, 44%, 560px); }
-  .main-heading { font-size: 52px; }
-  .wheel-container {
-    width: 680px;
-    height: 680px;
-    top: -170px;
-    right: -175px;
-  }
-  .plate-item {
-    width: 360px;
-    height: 360px;
-  }
-  
-}
- 
-@media (max-width: 1199px) and (min-width: 1024px) {
-  .hero {
-    padding-left: 50px;
-    /* padding-top: 90px; */
-    padding-bottom: 40px;
-    padding-top: 100px
-  }
-  .hero-left { width: clamp(280px, 52%, 500px); }
-  .main-heading { font-size: 46px; }
-  .sub-heading { font-size: 13px; }
-  .thumb { width: 46px; height: 46px; }
-  .thumbnails { gap: 12px; margin-bottom: 28px; }
-  .btn-book { padding: 11px 24px; font-size: 13px; }
-  .btn-menu { font-size: 13px; }
-  .wheel-container {
-    width: 500px;
-    height: 500px;
-    top: -160px;       /* aur upar */
-    right: -160px;     /* aur peeche */
-  }
-  .plate-item {
-    width: 265px;
-    height: 265px;
-  }
-  .hero-right { min-height: 400px; }
-}
- 
-/* --- Tablet Landscape (768px – 1023px) --- */
-@media (max-width: 1023px) and (min-width: 768px) {
-  .hero {
-    padding-left: 58px;
-    padding-top: 80px;
-    padding-bottom: 0px;
-  }
-  .hero-left { width: clamp(270px, 60%, 480px); }
-  .main-heading { font-size: 44px; margin-bottom: 20px; }
-  .sub-heading { font-size: 14px; }
-  .thumb { width: 44px; height: 44px; }
-  .thumbnails { gap: 10px; margin-bottom: 24px; }
-  .btn-book { padding: 10px 22px; font-size: 13px; }
-  .btn-menu { font-size: 13px; }
-  .wheel-container {
-    width: 450px;
-    height: 450px;
-    top: -170px;
-    right: -155px;
-  }
-  .plate-item {
-    width: 230px;
-    height: 230px;
-  }
-  .hero-right { min-height: 350px; }
-}
- 
-/* --- Tablet Portrait + Mobile Landscape (576px – 767px) --- */
-@media (max-width: 767px) {
-  .hero {
-    padding: 70px 24px 50px 24px;
-    text-align: center;
     min-height: auto;
     overflow: hidden;
+    padding-top: clamp(30px, 3vw, 80px);
+    padding-bottom: clamp(40px, 8vw, 80px);
+    padding-left: clamp(20px, 5vw, 90px);
+    padding-right: clamp(20px, 5vw, 40px);
   }
+
+  .hero-container {
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .hero-left {
+    flex: 0 0 auto;
+    width: clamp(300px, 55%, 850px);
+    position: relative;
+    z-index: 10;
+    max-width: 100%;
+  }
+
+  .sub-heading {
+    font-size: clamp(14px, 1.2vw, 18px);
+    margin-bottom: clamp(8px, 1vw, 15px);
+  }
+
+  .main-heading {
+    font-size: clamp(28px, 4.5vw, 74px);
+    margin-bottom: clamp(20px, 3vw, 45px);
+  }
+
+  .thumbnails {
+    display: flex;
+    gap: clamp(12px, 2vw, 25px);
+    margin-bottom: clamp(20px, 2vw, 40px);
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .thumb {
+    width: clamp(45px, 5vw, 65px);
+    height: clamp(45px, 5vw, 65px);
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: clamp(20px, 3vw, 45px);
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .btn-book {
+    font-size: clamp(13px, 1.1vw, 17px);
+    padding: clamp(10px, 1.2vw, 18px) clamp(22px, 2.5vw, 45px);
+  }
+
+  .btn-menu {
+    font-size: clamp(13px, 1.1vw, 18px);
+  }
+
+  .hero-right {
+    flex: 1;
+    position: relative;
+    min-height: clamp(300px, 50vw, 600px);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .wheel-container {
+    position: absolute !important;
+    width: clamp(400px, 55vw, 700px) !important;
+    height: clamp(400px, 55vw, 700px) !important;
+    background-color: var(--primary-orange) !important;
+    border-radius: 50% !important;
+    top: -32% !important;
+    right: -69% !important;
+    overflow: visible !important;
+    z-index: 1 !important;
+  }
+
+  .plate-item {
+    width: clamp(130px, 28vw, 380px);
+    height: clamp(130px, 28vw, 380px);
+  }
+
+  .p1 { left: 1%;   top: 65%; transform: translate(-50%, -50%); }
+  .p2 { left: 35%;  top: 3%;  transform: translate(-50%, -50%); }
+  .p3 { left: 100%; top: 35%; transform: translate(-50%, -50%); }
+  .p4 { left: 65%;  top: 95%; transform: translate(-50%, -50%); }
+}
+
+
+/* ============================================================
+   MOBILE — 768px aur niche
+   Aapka adjusted code — vw units se 320px to 768px sab cover
+   ============================================================ */
+@media (max-width: 768px) {
+
+  .hero {
+    padding-top: clamp(70px, 14vw, 110px);
+    padding-bottom: 0;
+    padding-left: 20px;
+    padding-right: 20px;
+    min-height: auto;
+    overflow: visible;
+    align-items: flex-start;
+  }
+
   .hero-container {
     flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
     gap: 0;
+    flex-wrap: nowrap;
   }
+
   .hero-left {
     width: 100%;
-    max-width: 100%;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
     position: relative;
-    z-index: 3;
+    padding-bottom: clamp(28px, 7vw, 50px);
+    flex: none;
   }
-  .thumbnails { justify-content: center; }
-  .hero-actions { justify-content: center; }
-  .main-heading { font-size: 32px; margin-bottom: 18px; }
- 
-  /* Mobile me circle: hero ke top-right pe rakhte hain
-     background decoration ki tarah, text ke peeche */
+
+  .sub-heading {
+    font-size: clamp(12px, 3.5vw, 16px);
+    margin-bottom: clamp(6px, 2vw, 12px);
+  }
+
+  .main-heading {
+    font-size: clamp(24px, 7.5vw, 42px);
+    margin-bottom: clamp(16px, 5vw, 32px);
+  }
+
+  .thumbnails {
+    display: flex;
+    gap: clamp(10px, 3vw, 20px);
+    margin-bottom: clamp(16px, 5vw, 30px);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .thumb {
+    width: clamp(38px, 11vw, 58px);
+    height: clamp(38px, 11vw, 58px);
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: clamp(16px, 5vw, 30px);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn-book {
+    font-size: clamp(12px, 3.5vw, 15px);
+    padding: clamp(9px, 2.5vw, 14px) clamp(18px, 5vw, 30px);
+  }
+
+  .btn-menu {
+    font-size: clamp(12px, 3.5vw, 15px);
+  }
+
+  /* 
+    hero-right height = circle ka sirf upar ka aadha hissa dikhega
+    Circle = 90vw, half = 45vw, plus top gap 20px
+  */
   .hero-right {
-    /* Hero ke background me rakhenge circle ko */
-    position: static;
     width: 100%;
-    height: 0; /* No space consume kare */
-    pointer-events: none;
-  }
- 
-  .wheel-container {
-    position: fixed; /* absolute from hero */
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    top: -60px;
-    right: -80px;
-    z-index: 1;
-  }
- 
-  /* Mobile pe hero ko position:relative chahiye */
-  .hero {
+    flex: 0 0 auto;
     position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: visible;
+    height: calc(90vw + 60px);
+    padding-top: 20px;
+    padding-bottom: 0;
+    /* flex: none; */
   }
- 
+
+  /* 
+    Wheel:
+    - 90vw size (aapka adjusted value)
+    - left: 70%, transform: translateX(-15%) = right side mein shift, right half off-screen
+    - top: 20px gap from hero-right top
+    - Bottom half automatically bahar jaata hai hero-right ke niche
+  */
+  .wheel-container {
+    position: absolute !important;
+    width: 90vw !important;
+    height: 90vw !important;
+    top: 20px !important;
+    right: auto !important;
+    left: 70% !important;
+    bottom: auto !important;
+    transform: translateX(-15%) !important;
+    overflow: visible !important;
+    z-index: 1 !important;
+    background-color: var(--primary-orange) !important;
+    border-radius: 50% !important;
+  }
+
+  /* 
+    Plates: 70vw size (aapka adjusted value)
+    Positions: circle ki exact rim par — 9, 12, 3, 6 o'clock
+  */
   .plate-item {
-    width: 160px;
-    height: 160px;
+    width: 70vw !important;
+    height: 70vw !important;
+    opacity: 0;
+    visibility: hidden;
   }
- 
-  /* Text z-index upar */
-  .hero-left { z-index: 3; }
-}
- 
-/* Mobile pe hero-container ko thoda adjust karo */
-@media (max-width: 767px) {
-  .hero-container {
-    position: relative;
-  }
-}
- 
-/* --- Mobile Large (425px – 575px) --- */
-@media (max-width: 575px) and (min-width: 425px) {
-  .hero { padding: 55px 18px 40px 18px; }
-  .main-heading { font-size: 28px; margin-bottom: 16px; }
-  .sub-heading { font-size: 11px; }
-  .thumb { width: 40px; height: 40px; }
-  .thumbnails { gap: 10px; margin-bottom: 20px; }
-  .btn-book { padding: 9px 18px; font-size: 12px; }
-  .btn-menu { font-size: 12px; }
-  .wheel-container {
-    width: 250px;
-    height: 250px;
-    top: -50px;
-    right: -65px;
-  }
-  .plate-item { width: 130px; height: 130px; }
-}
- 
-/* --- Mobile Standard (375px – 424px) --- */
-@media (max-width: 424px) and (min-width: 375px) {
-  .hero { padding: 50px 16px 36px 16px; }
-  .main-heading { font-size: 25px; margin-bottom: 14px; }
-  .sub-heading { font-size: 11px; }
-  .thumb { width: 38px; height: 38px; }
-  .thumbnails { gap: 8px; margin-bottom: 18px; }
-  .hero-actions { gap: 16px; }
-  .btn-book { padding: 8px 16px; font-size: 11px; }
-  .btn-menu { font-size: 11px; }
-  .wheel-container {
-    width: 220px;
-    height: 220px;
-    top: -45px;
-    right: -55px;
-  }
-  .plate-item { width: 115px; height: 115px; }
-}
- 
-/* --- Mobile Small (320px – 374px) --- */
-@media (max-width: 374px) {
-  .hero { padding: 44px 14px 30px 14px; }
-  .main-heading { font-size: 22px; margin-bottom: 12px; }
-  .sub-heading { font-size: 11px; }
-  .thumb { width: 36px; height: 36px; }
-  .thumbnails { gap: 8px; margin-bottom: 16px; }
-  .hero-actions { gap: 14px; flex-wrap: wrap; }
-  .btn-book { padding: 7px 14px; font-size: 11px; }
-  .btn-menu { font-size: 11px; }
-  .wheel-container {
-    width: 190px;
-    height: 190px;
-    top: -40px;
-    right: -50px;
-  }
-  .plate-item { width: 100px; height: 100px; }
-}
 
+  .plate-item.active {
+    opacity: 1;
+    visibility: visible;
+  }
 
+  /* 9 o'clock — left rim */
+  .p1 { left: 3%   !important; top: 50%  !important; transform: translate(-50%, -50%) !important; }
+  /* 12 o'clock — top rim */
+  .p2 { left: 50%  !important; top: 0%   !important; transform: translate(-50%, -50%) !important; }
+  /* 3 o'clock — right rim */
+  .p3 { left: 100% !important; top: 50%  !important; transform: translate(-50%, -50%) !important; }
+  /* 6 o'clock — bottom rim */
+  .p4 { left: 50%  !important; top: 100% !important; transform: translate(-50%, -50%) !important; }
+
+  /* Next section ke saath gap */
+  .hero + * {
+    margin-top: clamp(30px, 8vw, 60px);
+  }
+}
 
 
 /* DIET plan section  */

@@ -1,26 +1,55 @@
-/* Parent Scoped Class */
+/* ============================================================
+   REFUND POLICY PAGE - ULTIMATE WHITE SPACE FIX
+   ============================================================ */
+
+/* Parent Scoped Class - Main Fix */
 .refund {
   margin: 0;
   padding: 0;
   width: 100%;
+  max-width: 100%;
   background-color: #ffffff;
   overflow-x: hidden;
-}
-
-/* Image 1: Hero Section */
-.refund .refund-hero {
-  width: 100%;
-  height: 700px;
-  background: url("/assets/images/refundpolicy.png") no-repeat center
-    center/cover;
   position: relative;
 }
 
-/* Main Content Container */
+/* Force all elements inside refund to not overflow */
+.refund,
+.refund * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Extra fix for any element that might cause overflow */
+.refund div,
+.refund section,
+.refund header,
+.refund ul,
+.refund li,
+.refund p,
+.refund h1,
+.refund h2 {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Hero Section */
+.refund .refund-hero {
+  width: 100%;
+  max-width: 100%;
+  height: 700px;
+  background: url("/assets/images/refundpolicy.png") no-repeat center center/cover;
+  position: relative;
+}
+
+/* Main Content Container - CRITICAL FIX */
 .refund .refund-container {
-  max-width: 1400px;
-  margin: 60px auto;
-  padding: 0 40px;
+  width: 100%;
+  max-width: 100%;
+  margin: 60px 0;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 
 /* Header Styling */
@@ -29,6 +58,10 @@
   font-size: 48px;
   color: #e37a24;
   margin-bottom: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .refund .effective-date {
@@ -37,6 +70,7 @@
   font-size: 16px;
   color: #000;
   margin-bottom: 30px;
+  word-break: break-word;
 }
 
 .refund .intro-text {
@@ -45,11 +79,15 @@
   line-height: 1.8;
   color: #444;
   margin-bottom: 50px;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 /* Policy Sections */
 .refund .policy-section {
   margin-bottom: 45px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .refund .policy-section h2 {
@@ -58,6 +96,7 @@
   color: #000;
   margin-bottom: 20px;
   font-weight: 600;
+  word-break: break-word;
 }
 
 .refund .policy-section p {
@@ -66,13 +105,15 @@
   line-height: 1.8;
   color: #555;
   margin-bottom: 15px;
+  word-break: break-word;
 }
 
-/* List Styling (Bullets) */
+/* List Styling */
 .refund .policy-section ul {
   list-style: none;
-  padding-left: 10px;
+  padding-left: 20px;
   margin-bottom: 20px;
+  width: 100%;
 }
 
 .refund .policy-section ul li {
@@ -83,6 +124,7 @@
   margin-bottom: 10px;
   position: relative;
   padding-left: 20px;
+  word-break: break-word;
 }
 
 .refund .policy-section ul li::before {
@@ -93,53 +135,226 @@
   font-weight: bold;
 }
 
-/* Specific Sub-Policies and Notes */
+/* Sub Policy */
 .refund .sub-policy {
   margin-bottom: 25px;
 }
 
 .refund .note {
   background-color: #f9f9f9;
-  padding: 10px;
+  padding: 10px 15px;
   border-left: 4px solid #e37a24;
+  margin-top: 10px;
 }
 
 /* Contact Details */
+.refund .contact-details {
+  margin-top: 20px;
+}
+
 .refund .contact-details p {
   margin-bottom: 8px;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  color: #555;
+  word-break: break-word;
 }
 
-@media (max-width: 1024px) {
-  .refund .refund-container {
-    max-width: 90%;
-  }
-}
-
-@media (max-width: 768px) {
+/* ============================================================
+   RESPONSIVE: TABLET (768px - 1024px)
+   ============================================================ */
+@media (max-width: 1024px) and (min-width: 768px) {
   .refund .refund-hero {
-    height: 250px;
+    height: 450px;
   }
-
+  
   .refund .refund-container {
-    margin: 40px auto;
+    margin: 50px 0;
     padding: 0 20px;
   }
-
+  
   .refund .policy-title {
-    font-size: 36px;
+    font-size: 40px;
   }
+  
+  .refund .policy-section h2 {
+    font-size: 26px;
+  }
+}
 
+/* ============================================================
+   RESPONSIVE: MOBILE LARGE (426px - 767px)
+   ============================================================ */
+@media (max-width: 767px) and (min-width: 426px) {
+  .refund .refund-hero {
+    height: 300px;
+  }
+  
+  .refund .refund-container {
+    margin: 40px 0;
+    padding: 0 16px;
+  }
+  
+  .refund .policy-title {
+    font-size: 34px;
+  }
+  
   .refund .policy-section h2 {
     font-size: 24px;
   }
-
-  .refund .intro-text {
-    font-size: 15px;
+  
+  .refund .intro-text,
+  .refund .policy-section p,
+  .refund .policy-section ul li {
+    font-size: 14px;
+  }
+  
+  .refund .policy-section ul {
+    padding-left: 16px;
   }
 }
 
-@media (max-width: 480px) {
+/* ============================================================
+   RESPONSIVE: MOBILE MEDIUM (376px - 425px)
+   ============================================================ */
+@media (max-width: 425px) and (min-width: 376px) {
+  .refund .refund-hero {
+    height: 250px;
+  }
+  
+  .refund .refund-container {
+    margin: 35px 0;
+    padding: 0 14px;
+  }
+  
   .refund .policy-title {
     font-size: 30px;
   }
+  
+  .refund .policy-section h2 {
+    font-size: 22px;
+  }
+  
+  .refund .intro-text,
+  .refund .policy-section p,
+  .refund .policy-section ul li {
+    font-size: 13px;
+  }
+  
+  .refund .policy-section ul {
+    padding-left: 14px;
+  }
+  
+  .refund .policy-section ul li {
+    padding-left: 18px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE: MOBILE SMALL (320px - 375px)
+   ============================================================ */
+@media (max-width: 375px) and (min-width: 320px) {
+  .refund .refund-hero {
+    height: 200px;
+  }
+  
+  .refund .refund-container {
+    margin: 30px 0;
+    padding: 0 12px;
+  }
+  
+  .refund .policy-title {
+    font-size: 26px;
+  }
+  
+  .refund .policy-section h2 {
+    font-size: 20px;
+  }
+  
+  .refund .intro-text,
+  .refund .policy-section p,
+  .refund .policy-section ul li {
+    font-size: 12px;
+  }
+  
+  .refund .policy-section ul {
+    padding-left: 12px;
+  }
+  
+  .refund .policy-section ul li {
+    padding-left: 16px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE: MOBILE EXTRA SMALL (below 320px)
+   ============================================================ */
+@media (max-width: 319px) {
+  .refund .refund-hero {
+    height: 160px;
+  }
+  
+  .refund .refund-container {
+    margin: 25px 0;
+    padding: 0 10px;
+  }
+  
+  .refund .policy-title {
+    font-size: 24px;
+  }
+  
+  .refund .policy-section h2 {
+    font-size: 18px;
+  }
+  
+  .refund .intro-text,
+  .refund .policy-section p,
+  .refund .policy-section ul li {
+    font-size: 11px;
+  }
+  
+  .refund .policy-section ul {
+    padding-left: 10px;
+  }
+  
+  .refund .policy-section ul li {
+    padding-left: 14px;
+  }
+}
+
+/* ============================================================
+   DESKTOP LARGE
+   ============================================================ */
+@media (min-width: 1200px) and (max-width: 1600px) {
+  .refund .refund-container {
+    max-width: 1200px;
+    margin: 60px auto;
+    padding: 0 20px;
+  }
+  
+  .refund .refund-hero {
+    height: 600px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .refund .refund-container {
+    max-width: 1400px;
+    margin: 80px auto;
+    padding: 0 20px;
+  }
+  
+  .refund .refund-hero {
+    height: 750px;
+  }
+}
+
+/* ============================================================
+   EXTRA SAFE - REMOVE ANY HIDDEN WHITE SPACE
+   ============================================================ */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }

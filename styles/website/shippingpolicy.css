@@ -1,35 +1,56 @@
-/* Parent Scoped Class */
+/* ============================================================
+   SHIPPING POLICY PAGE - WHITE SPACE FIX
+   ============================================================ */
+
+/* Parent Scoped Class - Main Fix */
 .shipping {
   margin: 0;
   padding: 0;
   width: 100%;
+  max-width: 100%;
   background-color: #ffffff;
-  overflow-x: hidden;
-}
-
-/* Image 1: Hero Section (Logistics/Shipping Context) */
-.shipping .shipping-hero {
-  width: 100%;
-  height: 700px;
-  background: url("/assets/images/shippingpolicy.png") no-repeat center
-    center/cover;
+  overflow-x: hidden !important;
   position: relative;
 }
 
-/* Main Content Container */
-.shipping .shipping-container {
-  max-width: 1400px;
-  margin: 60px auto;
-  padding: 0 40px;
+/* Force all children to not overflow */
+.shipping,
+.shipping * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
-/* Header Styling (Image 2) */
+/* Hero Section */
+.shipping .shipping-hero {
+  width: 100%;
+  max-width: 100%;
+  height: 700px;
+  background: url("/assets/images/shippingpolicy.png") no-repeat center center/cover;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Main Content Container - CRITICAL FIX */
+.shipping .shipping-container {
+  max-width: 1400px;
+  width: 100%;
+  margin: 60px auto;
+  padding: 0 20px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* Header Styling */
 .shipping .policy-title {
   font-family: "Playfair Display", serif;
   font-size: 48px;
   color: #e37a24;
   margin-bottom: 20px;
   font-weight: 600;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 .shipping .effective-date {
@@ -46,11 +67,14 @@
   line-height: 1.8;
   color: #444;
   margin-bottom: 50px;
+  word-break: break-word;
 }
 
 /* Policy Sections Styling */
 .shipping .policy-section {
   margin-bottom: 45px;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .shipping .policy-section h2 {
@@ -59,6 +83,7 @@
   color: #000;
   margin-bottom: 20px;
   font-weight: 600;
+  word-break: break-word;
 }
 
 .shipping .policy-section p {
@@ -67,13 +92,15 @@
   line-height: 1.8;
   color: #555;
   margin-bottom: 15px;
+  word-break: break-word;
 }
 
-/* List Styling (Bullet points matching image) */
+/* List Styling */
 .shipping .policy-section ul {
   list-style: none;
-  padding-left: 10px;
+  padding-left: 20px;
   margin-bottom: 20px;
+  width: 100%;
 }
 
 .shipping .policy-section ul li {
@@ -84,6 +111,7 @@
   margin-bottom: 10px;
   position: relative;
   padding-left: 20px;
+  word-break: break-word;
 }
 
 .shipping .policy-section ul li::before {
@@ -94,7 +122,7 @@
   font-weight: bold;
 }
 
-/* Contact Details Block (Image 3) */
+/* Contact Details Block */
 .shipping .contact-details {
   margin-top: 20px;
 }
@@ -104,43 +132,202 @@
   font-family: "Poppins", sans-serif;
   font-size: 15px;
   color: #555;
+  word-break: break-word;
 }
 
-@media (max-width: 1024px) {
-  .shipping .shipping-container {
-    max-width: 90%;
-  }
-}
-
-@media (max-width: 768px) {
+/* ============================================================
+   RESPONSIVE: TABLET (768px - 1024px)
+   ============================================================ */
+@media (max-width: 1024px) and (min-width: 768px) {
   .shipping .shipping-hero {
-    height: 250px;
+    height: 450px;
   }
-
+  
   .shipping .shipping-container {
-    margin: 40px auto;
+    margin: 50px auto;
     padding: 0 20px;
   }
-
+  
   .shipping .policy-title {
-    font-size: 36px;
+    font-size: 40px;
   }
+  
+  .shipping .policy-section h2 {
+    font-size: 26px;
+  }
+}
 
+/* ============================================================
+   RESPONSIVE: MOBILE LARGE (426px - 767px)
+   ============================================================ */
+@media (max-width: 767px) and (min-width: 426px) {
+  .shipping .shipping-hero {
+    height: 300px;
+  }
+  
+  .shipping .shipping-container {
+    margin: 40px auto;
+    padding: 0 16px;
+  }
+  
+  .shipping .policy-title {
+    font-size: 34px;
+  }
+  
   .shipping .policy-section h2 {
     font-size: 24px;
   }
-
-  .shipping .intro-text {
-    font-size: 15px;
+  
+  .shipping .intro-text,
+  .shipping .policy-section p,
+  .shipping .policy-section ul li {
+    font-size: 14px;
+  }
+  
+  .shipping .policy-section ul {
+    padding-left: 16px;
   }
 }
 
-@media (max-width: 480px) {
+/* ============================================================
+   RESPONSIVE: MOBILE MEDIUM (376px - 425px)
+   ============================================================ */
+@media (max-width: 425px) and (min-width: 376px) {
+  .shipping .shipping-hero {
+    height: 250px;
+  }
+  
+  .shipping .shipping-container {
+    margin: 35px auto;
+    padding: 0 14px;
+  }
+  
   .shipping .policy-title {
     font-size: 30px;
   }
-
+  
   .shipping .policy-section h2 {
     font-size: 22px;
   }
+  
+  .shipping .intro-text,
+  .shipping .policy-section p,
+  .shipping .policy-section ul li {
+    font-size: 13px;
+  }
+  
+  .shipping .policy-section ul {
+    padding-left: 14px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE: MOBILE SMALL (320px - 375px)
+   ============================================================ */
+@media (max-width: 375px) and (min-width: 320px) {
+  .shipping .shipping-hero {
+    height: 200px;
+  }
+  
+  .shipping .shipping-container {
+    margin: 30px auto;
+    padding: 0 12px;
+  }
+  
+  .shipping .policy-title {
+    font-size: 26px;
+  }
+  
+  .shipping .policy-section h2 {
+    font-size: 20px;
+  }
+  
+  .shipping .intro-text,
+  .shipping .policy-section p,
+  .shipping .policy-section ul li {
+    font-size: 12px;
+  }
+  
+  .shipping .policy-section ul {
+    padding-left: 12px;
+  }
+  
+  .shipping .policy-section ul li {
+    padding-left: 16px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE: MOBILE EXTRA SMALL (below 320px)
+   ============================================================ */
+@media (max-width: 319px) {
+  .shipping .shipping-hero {
+    height: 160px;
+  }
+  
+  .shipping .shipping-container {
+    margin: 25px auto;
+    padding: 0 10px;
+  }
+  
+  .shipping .policy-title {
+    font-size: 24px;
+  }
+  
+  .shipping .policy-section h2 {
+    font-size: 18px;
+  }
+  
+  .shipping .intro-text,
+  .shipping .policy-section p,
+  .shipping .policy-section ul li {
+    font-size: 11px;
+  }
+  
+  .shipping .policy-section ul {
+    padding-left: 10px;
+  }
+  
+  .shipping .policy-section ul li {
+    padding-left: 14px;
+  }
+}
+
+/* ============================================================
+   DESKTOP LARGE
+   ============================================================ */
+@media (min-width: 1200px) and (max-width: 1600px) {
+  .shipping .shipping-container {
+    max-width: 1200px;
+    padding: 0 20px;
+  }
+  
+  .shipping .shipping-hero {
+    height: 600px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .shipping .shipping-container {
+    max-width: 1400px;
+    margin: 80px auto;
+    padding: 0 20px;
+  }
+  
+  .shipping .shipping-hero {
+    height: 750px;
+  }
+}
+
+/* ============================================================
+   ULTIMATE WHITE SPACE FIX
+   ============================================================ */
+body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  width: 100%;
 }

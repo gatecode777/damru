@@ -3,8 +3,15 @@
   margin: 0;
   padding: 0;
   width: 100%;
+   max-width: 100%;
   overflow-x: hidden;
   background-color: #ffffff;
+}
+.contact,
+.contact * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 /* --- IMAGE 1: HERO SECTION --- */
@@ -13,7 +20,7 @@
   width: 100%;
   height: 100vh;
   min-height: 700px;
-  background: url("/assets/images/Contact_us.png") no-repeat center center/cover;
+  background: url("/assets/images/contactus.png") no-repeat center center/cover;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -64,7 +71,7 @@
 }
 
 /* RIGHT CONTENT: Open Time Section */
-.contact .hero-right-c {
+.contact .hero-right {
   flex: 1;
   display: flex;
   justify-content: flex-end;
@@ -132,6 +139,27 @@
     max-width: 500px;
   }
 }
+@media (max-width: 480px) {
+  .contact .hero-left h1 {
+    font-size: 40px;
+  }
+  .contact .open-time-section {
+    max-width: 250px;
+  }
+  .contact .open-header h2 {
+    font-size: 28px;
+  }
+  .contact .time-item label {
+    font-size: 18px;
+  }
+  .contact .time-item .time-val {
+    font-size: 20px;
+  }
+  .contact .info-container .info-text-col p, 
+  .contact .info-container .info-text-col h3{
+    font-size: 18px;
+  }
+}
 
 @media (max-width: 850px) {
   .contact .hero-container {
@@ -141,7 +169,7 @@
     padding-bottom: 40px;
   }
 
-  .contact .hero-right-c {
+  .contact .hero-right {
     justify-content: center;
     margin-top: 50px;
     width: 100%;
@@ -338,38 +366,147 @@
   background-color: #c9661a;
 }
 
-/* --- RESPONSIVE --- */
-@media (max-width: 1024px) {
+/* Mobile Medium (376px - 425px) */
+@media (max-width: 425px) and (min-width: 376px) {
+  .contact .contact-hero {
+    min-height: 450px;
+  }
+  
   .contact .hero-container {
     flex-direction: column;
+    padding: 0 14px 30px 14px;
+  }
+  
+  .contact .hero-left {
+    margin-bottom: 25px;
+  }
+  
+  .contact .hero-right {
+    width: 100%;
+  }
+  
+  .contact .open-header {
+    flex-direction: column;
     align-items: center;
+  }
+  
+  .contact .time-grid {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .contact .time-item {
     text-align: center;
   }
-  .contact .hero-left {
-    margin-bottom: 40px;
+  
+  .contact .info-section {
+    padding: 40px 0;
   }
-  .contact .info-row {
-    gap: 40px;
-  }
-  .contact .form-header h2 {
-    font-size: 40px;
-  }
-}
-
-@media (max-width: 768px) {
+  
   .contact .info-row,
   .contact .info-row.reverse {
     flex-direction: column !important;
-    text-align: center;
+    gap: 15px;
   }
-  .contact .time-grid {
-    flex-direction: column;
-    gap: 10px;
-  }
-  .contact .reservation-form .form-row {
-    flex-direction: column;
-  }
+  
   .contact .orange-art-deco {
     display: none;
   }
+  
+  .contact .reservation-form input,
+  .contact .reservation-form select {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+  
+  .contact .book-now-btn {
+    padding: 10px 35px;
+    font-size: 15px;
+  }
+  
+  .contact .form-header h2 {
+    font-size: 28px;
+  }
+}
+
+/* Mobile Small (320px - 375px) */
+@media (max-width: 375px) and (min-width: 320px) {
+  .contact .contact-hero {
+    min-height: 400px;
+  }
+  
+  .contact .hero-container {
+    flex-direction: column;
+    padding: 0 12px 25px 12px;
+  }
+  
+  .contact .hero-left {
+    margin-bottom: 20px;
+  }
+  
+  .contact .hero-left p {
+    font-size: 12px;
+  }
+  
+  .contact .hero-right {
+    width: 100%;
+  }
+  
+  .contact .open-header {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .contact .time-grid {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .contact .time-item {
+    text-align: center;
+  }
+  
+  .contact .info-section {
+    padding: 30px 0;
+  }
+  
+  .contact .info-row,
+  .contact .info-row.reverse {
+    flex-direction: column !important;
+    gap: 12px;
+  }
+  
+  .contact .orange-art-deco {
+    display: none;
+  }
+  
+  .contact .reservation-form input,
+  .contact .reservation-form select {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .contact .book-now-btn {
+    padding: 8px 30px;
+    font-size: 14px;
+  }
+  
+  .contact .form-header h2 {
+    font-size: 24px;
+  }
+  
+  .contact .map-btn {
+    padding: 8px 20px;
+    font-size: 12px;
+  }
+}
+
+/* ============================================================
+   ULTIMATE WHITE SPACE FIX
+   ============================================================ */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
 }

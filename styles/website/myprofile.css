@@ -2285,629 +2285,181 @@ body {
     background: #c96b2d;
 }
 
-/* ================================================
-    RESPONSIVE — TABLET (600px–900px) + MOBILE (≤599px)
-    ================================================ */
 
-/* -- TABLET: sidebar side pe, content adjust -- */
-@media (max-width: 900px) and (min-width: 600px) {
+/* ============================================================
+ONLY RESPONSIVE FIXES - ORIGINAL DESIGN SAME ON DESKTOP
+============================================================ */
 
-    html,
-    body {
-        overflow-x: hidden;
-        width: 100%;
-    }
+/* White space removal for all screens */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+}
 
+/* ============================================================
+DESKTOP/LAPTOP (1025px and above) - ORIGINAL DESIGN
+============================================================ */
+@media (min-width: 1025px) {
+
+    /* Everything stays as is - no changes to original design */
     .profile {
-        max-width: 100%;
-        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
     }
 
     .profile__sidebar {
-        width: 170px;
-        min-width: 170px;
+        width: 210px;
+        min-width: 210px;
+        position: sticky;
         top: 28vh;
         height: 72vh;
-    }
-
-    .profile__nav-item {
-        font-size: 12px;
-        padding: 11px 14px;
-        gap: 8px;
+        flex-direction: column;
     }
 
     .profile__main {
-        padding: 24px 16px 30px 16px;
+        padding: 130px 10px 10px 40px;
+        overflow-x: auto;
+    }
+
+    .profile__overview-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ============================================================
+TABLET (768px to 1024px) - ONLY LAYOUT ADJUSTMENT
+============================================================ */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .profile {
+        flex-direction: column;
+    }
+
+    .profile__sidebar {
+        width: 100%;
+        min-width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        position: relative;
+        top: 0;
+        height: auto;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+    }
+
+    .profile__nav-item {
+        flex-direction: column;
+        white-space: nowrap;
+        flex-shrink: 0;
+        text-align: center;
+        padding: 10px 16px;
+    }
+
+    .profile__nav-item i {
+        margin-bottom: 5px;
+    }
+
+    .profile__nav-logout {
+        flex-shrink: 0;
+        margin: 5px 10px;
+    }
+
+    .profile__main {
+        padding: 20px 20px;
     }
 
     .profile__overview-grid {
         grid-template-columns: 1fr;
-        gap: 14px;
+        gap: 15px;
     }
 
     .profile__help-cards {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .profile__payment-layout {
         grid-template-columns: 1fr;
-    }
-
-    .profile__user-row {
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
-    .profile__edit-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .profile__order-btns {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .profile__btn-view,
-    .profile__btn-reorder {
-        width: 100%;
-        text-align: center;
-    }
-
-    .profile__delete-row {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-    }
-
-    .profile__delete-btn {
-        width: 100%;
-    }
-
-    .profile__pay-card-visual {
-        width: 100%;
-    }
-
-    .profile__big-card-visual {
-        max-width: 100%;
-    }
-
-    .profile__pay-input-row {
-        flex-direction: column;
+        gap: 25px;
     }
 }
 
-/* -- MOBILE: ≤599px — sidebar horizontal top bar -- */
-@media (max-width: 599px) {
-
-    html,
-    body {
-        overflow-x: hidden;
-        width: 100%;
-        max-width: 100vw;
-    }
-
-    /* Layout: column — sidebar upar, content neeche */
+/* ============================================================
+MOBILE (up to 767px) - RESPONSIVE ADJUSTMENTS
+============================================================ */
+@media (max-width: 767px) {
     .profile {
-        flex-direction: column !important;
-        max-width: 100% !important;
-        width: 100% !important;
-        min-height: unset;
+        flex-direction: column;
     }
 
-    /* SIDEBAR — horizontal scrollable bar */
     .profile__sidebar {
-        width: 100% !important;
-        max-width: 100vw !important;
-        min-width: 0 !important;
-        height: auto !important;
-        position: sticky !important;
-        top: 0 !important;
-        flex-direction: row !important;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        padding: 4px 0 !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-        z-index: 200;
+        width: 100%;
+        min-width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        position: sticky;
+        top: 0;
+        height: auto;
+        padding: 8px 12px;
+        background: #FFFAF7;
+        z-index: 100;
         scrollbar-width: none;
-        -ms-overflow-style: none;
-        align-items: center;
-        background-color: #FFFAF7;
     }
 
     .profile__sidebar::-webkit-scrollbar {
         display: none;
     }
 
-    /* Nav items — icon upar, text neeche, horizontal */
     .profile__nav-item {
-        flex-direction: column !important;
-        gap: 3px !important;
-        font-size: 10px !important;
-        padding: 8px 10px !important;
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-        min-width: fit-content;
-        border-radius: 0;
-        color: #555;
-        align-items: center;
+        flex-direction: column;
+        white-space: nowrap;
+        flex-shrink: 0;
+        text-align: center;
+        padding: 8px 14px;
+        font-size: 12px;
     }
 
     .profile__nav-item i {
-        font-size: 15px !important;
-        width: auto !important;
+        font-size: 16px;
+        margin-bottom: 4px;
     }
 
-    .profile__nav-item.active {
-        background: #fff4ec;
-        color: #e07b39;
-    }
-
-    /* Logout in horizontal bar */
     .profile__nav-logout {
-        flex-direction: column !important;
-        gap: 3px !important;
-        font-size: 10px !important;
-        padding: 8px 10px !important;
-        margin: 3px 6px !important;
-        border-radius: 6px !important;
-        flex-shrink: 0 !important;
-        white-space: nowrap !important;
-        align-items: center;
+        flex-direction: column;
+        flex-shrink: 0;
+        margin: 5px 10px;
+        padding: 8px 14px;
+        font-size: 12px;
     }
 
-    /* MAIN CONTENT */
+    .profile__nav-logout i {
+        margin-bottom: 4px;
+    }
+
     .profile__main {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 14px 12px 24px 12px !important;
-        overflow-x: hidden !important;
+        padding: 15px 12px;
     }
 
-    /* Page headings */
     .profile__page-title {
         font-size: 18px;
     }
 
     .profile__page-subtitle {
         font-size: 12px;
-        margin-bottom: 12px;
+        margin-bottom: 15px;
     }
 
-    /* Profile info card */
+    /* Card adjustments */
     .profile__card {
-        padding: 14px 12px;
+        padding: 15px;
     }
 
     .profile__user-row {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
-    }
-
-    .profile__user-avatar {
-        width: 56px;
-        height: 56px;
-        font-size: 20px;
-    }
-
-    .profile__user-name {
-        font-size: 16px;
-    }
-
-    .profile__user-email,
-    .profile__user-phone {
-        font-size: 11px;
-        word-break: break-all;
-    }
-
-    .profile__edit-btn {
-        width: 100%;
-        justify-content: center;
-        padding: 10px 14px;
-    }
-
-    /* Overview 2x2 grid → 1 col */
-    .profile__overview-grid {
-        grid-template-columns: 1fr !important;
-        gap: 10px;
-    }
-
-    .profile__overview-card {
-        padding: 12px 12px;
-    }
-
-    .profile__overview-card-title {
-        font-size: 14px;
-    }
-
-    /* Address book */
-    .profile__addr-card {
-        padding: 12px 12px;
-    }
-
-    .profile__addr-full {
-        font-size: 12px;
-    }
-
-    .profile__add-addr-btn {
-        width: 100%;
-    }
-
-    /* Orders */
-    .profile__order-card {
-        padding: 12px 12px;
-    }
-
-    .profile__order-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-    }
-
-    .profile__order-card-footer {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .profile__order-btns {
-        flex-direction: column;
-        width: 100%;
-        gap: 6px;
-    }
-
-    .profile__btn-view,
-    .profile__btn-reorder {
-        width: 100%;
-        text-align: center;
-        padding: 9px;
-    }
-
-    /* Payment methods page */
-    .profile__pay-row {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .profile__pay-card-visual {
-        width: 100%;
-        height: 90px;
-    }
-
-    .profile__pay-add-btn {
-        width: 100%;
-    }
-
-    /* Help cards */
-    .profile__help-cards {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Reorder payment flow */
-    .profile__payment-layout {
-        grid-template-columns: 1fr !important;
-    }
-
-    .profile__big-card-visual {
-        max-width: 100%;
-        height: 140px;
-    }
-
-    .profile__pay-input-row {
-        flex-direction: column;
-        gap: 0;
-    }
-
-    .profile__pay-action-row {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .profile__pay-back-btn,
-    .profile__pay-now-btn {
-        width: 100%;
-    }
-
-    .profile__reorder-inner {
-        padding: 14px 12px;
-    }
-
-    .profile__step-line {
-        width: 16px;
-    }
-
-    .profile__step-label {
-        display: none;
-    }
-
-    .profile__stepper {
-        margin-bottom: 16px;
-    }
-
-    /* Account settings */
-    .profile__delete-row {
-        flex-direction: column;
-        gap: 8px;
-        align-items: flex-start;
-    }
-
-    .profile__delete-btn,
-    .profile__update-btn {
-        width: 100%;
-        float: none;
-    }
-
-    /* Modals */
-    .profile__modal {
-        width: 96vw;
-        padding: 18px 12px;
-    }
-
-    .profile__pay-delete-box {
-        width: 96vw;
-        padding: 18px 12px;
-    }
-
-    .profile__pay-delete-btns {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .profile__pay-delete-confirm,
-    .profile__pay-delete-cancel {
-        width: 100%;
-    }
-
-    /* Coupons */
-    .profile__applied-coupon-tag {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    /* Cart / order detail */
-    .profile__cart-item {
-        gap: 8px;
-    }
-
-    .profile__cart-item-img {
-        width: 44px;
-        height: 44px;
-        font-size: 15px;
-    }
-
-    .profile__cart-reorder-btn {
-        width: 100%;
-        padding: 11px;
-    }
-
-    /* Tracker */
-    .profile__order-tracker {
-        padding: 14px 8px 8px 8px;
-    }
-
-    .profile__tracker-line {
-        left: 20px;
-        right: 20px;
-        top: 29px;
-    }
-
-    .profile__tracker-label {
-        font-size: 9px;
-    }
-
-    .profile__tracker-dot {
-        width: 22px;
-        height: 22px;
-    }
-
-    .profile__tracker-dot i {
-        font-size: 10px;
-    }
-
-    /* Summary */
-    .profile__summary-card {
-        padding: 14px 12px;
-    }
-
-    /* FAQ */
-    .profile__faq-tab {
-        padding: 5px 10px;
-        font-size: 11px;
-    }
-}
-
-/* ================================================
-    RESPONSIVE CSS — COMPLETE
-    Breakpoints: 900px | 680px | 425px | 375px | 320px
-    ================================================ */
-
-/* ---------- TABLET: 681px – 900px ---------- */
-@media (max-width: 900px) and (min-width: 681px) {
-
-    html,
-    body {
-        overflow-x: hidden;
-        width: 100%;
-    }
-
-    .profile {
-        max-width: 100%;
-        width: 100%;
-    }
-
-    .profile__sidebar {
-        width: 170px;
-        min-width: 170px;
-        top: 28vh;
-        height: 72vh;
-    }
-
-    .profile__nav-item {
-        font-size: 12px;
-        padding: 11px 14px;
-        gap: 8px;
-    }
-
-    .profile__main {
-        padding: 24px 16px 30px 16px;
-    }
-
-    .profile__overview-grid {
-        grid-template-columns: 1fr;
-        gap: 14px;
-    }
-
-    .profile__help-cards {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .profile__payment-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .profile__user-row {
-        flex-wrap: wrap;
         gap: 12px;
-    }
-
-    .profile__edit-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .profile__order-btns {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .profile__btn-view,
-    .profile__btn-reorder {
-        width: 100%;
-        text-align: center;
-    }
-
-    .profile__delete-row {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-    }
-
-    .profile__delete-btn {
-        width: 100%;
-    }
-
-    .profile__pay-card-visual {
-        width: 100%;
-    }
-
-    .profile__big-card-visual {
-        max-width: 100%;
-    }
-
-    .profile__pay-input-row {
-        flex-direction: column;
-    }
-}
-
-/* ---------- MOBILE LARGE: 426px – 680px ---------- */
-@media (max-width: 680px) and (min-width: 426px) {
-
-    html,
-    body {
-        overflow-x: hidden;
-        width: 100%;
-        max-width: 100vw;
-    }
-
-    .profile {
-        flex-direction: column !important;
-        max-width: 100% !important;
-        width: 100% !important;
-        min-height: unset;
-    }
-
-    /* Sidebar → horizontal top bar */
-    .profile__sidebar {
-        width: 100% !important;
-        max-width: 100vw !important;
-        min-width: 0 !important;
-        height: auto !important;
-        position: sticky !important;
-        top: 0 !important;
-        flex-direction: row !important;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        padding: 4px 0 !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-        z-index: 200;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        align-items: center;
-    }
-
-    .profile__sidebar::-webkit-scrollbar {
-        display: none;
-    }
-
-    .profile__nav-item {
-        flex-direction: column !important;
-        gap: 3px !important;
-        font-size: 11px !important;
-        padding: 8px 12px !important;
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-        align-items: center;
-        color: #555;
-        border-radius: 0;
-        min-width: fit-content;
-    }
-
-    .profile__nav-item i {
-        font-size: 16px !important;
-        width: auto !important;
-    }
-
-    .profile__nav-item.active {
-        background: #fff4ec;
-        color: #e07b39;
-    }
-
-    .profile__nav-logout {
-        flex-direction: column !important;
-        gap: 3px !important;
-        font-size: 11px !important;
-        padding: 8px 12px !important;
-        margin: 3px 8px !important;
-        border-radius: 6px !important;
-        flex-shrink: 0 !important;
-        white-space: nowrap !important;
-        align-items: center;
-    }
-
-    .profile__main {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 14px 14px 24px 14px !important;
-        overflow-x: hidden !important;
-    }
-
-    .profile__page-title {
-        font-size: 19px;
-    }
-
-    .profile__page-subtitle {
-        font-size: 12px;
-    }
-
-    .profile__card {
-        padding: 16px 14px;
-    }
-
-    .profile__user-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
     }
 
     .profile__user-avatar {
@@ -2917,7 +2469,7 @@ body {
     }
 
     .profile__user-name {
-        font-size: 17px;
+        font-size: 18px;
     }
 
     .profile__edit-btn {
@@ -2925,52 +2477,73 @@ body {
         justify-content: center;
     }
 
+    /* Grid to single column */
     .profile__overview-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: 1fr;
         gap: 12px;
     }
 
     .profile__overview-card {
-        padding: 14px 12px;
+        padding: 15px;
     }
 
+    .profile__help-cards {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .profile__payment-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    /* Address card */
     .profile__addr-card {
-        padding: 14px 12px;
+        padding: 15px;
+    }
+
+    .profile__addr-header {
+        flex-wrap: wrap;
+        gap: 10px;
     }
 
     .profile__add-addr-btn {
         width: 100%;
+        text-align: center;
     }
 
+    /* Order card */
     .profile__order-card {
-        padding: 14px 12px;
+        padding: 12px;
     }
 
     .profile__order-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 6px;
+        gap: 5px;
     }
 
     .profile__order-card-footer {
         flex-direction: column;
         align-items: flex-start;
-        gap: 8px;
+        gap: 10px;
     }
 
     .profile__order-btns {
-        flex-direction: column;
         width: 100%;
+        flex-direction: row;
         gap: 8px;
     }
 
     .profile__btn-view,
     .profile__btn-reorder {
-        width: 100%;
+        flex: 1;
         text-align: center;
-        padding: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
     }
 
+    /* Payment methods */
     .profile__pay-row {
         flex-direction: column;
         gap: 10px;
@@ -2984,294 +2557,77 @@ body {
         width: 100%;
     }
 
-    .profile__help-cards {
-        grid-template-columns: 1fr !important;
+    /* Tracker */
+    .profile__order-tracker {
+        flex-wrap: wrap;
+        justify-content: space-around;
+        padding: 12px 10px;
     }
 
-    .profile__payment-layout {
-        grid-template-columns: 1fr !important;
+    .profile__tracker-line {
+        display: none;
     }
 
-    .profile__big-card-visual {
-        max-width: 100%;
-        height: 150px;
+    .profile__tracker-step {
+        min-width: 60px;
     }
 
-    .profile__pay-input-row {
-        flex-direction: column;
-        gap: 0;
+    .profile__tracker-label {
+        font-size: 9px;
+        white-space: nowrap;
     }
 
-    .profile__pay-action-row {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .profile__pay-back-btn,
-    .profile__pay-now-btn {
-        width: 100%;
-    }
-
+    /* Delete row */
     .profile__delete-row {
         flex-direction: column;
-        gap: 10px;
         align-items: flex-start;
+        gap: 10px;
     }
 
-    .profile__delete-btn,
+    .profile__delete-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Buttons */
     .profile__update-btn {
-        width: 100%;
         float: none;
-    }
-
-    .profile__modal {
-        width: 96vw;
-        padding: 20px 14px;
-    }
-
-    .profile__pay-delete-box {
-        width: 96vw;
-        padding: 20px 14px;
-    }
-
-    .profile__pay-delete-btns {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .profile__pay-delete-confirm,
-    .profile__pay-delete-cancel {
         width: 100%;
+        text-align: center;
+    }
+
+    /* Cart items */
+    .profile__cart-item {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .profile__cart-item-img {
+        width: 50px;
+        height: 50px;
     }
 
     .profile__cart-reorder-btn {
         width: 100%;
     }
 
+    /* Stepper */
     .profile__step-line {
         width: 20px;
     }
 
     .profile__step-label {
-        display: none;
-    }
-}
-
-/* ---------- MOBILE 425px ---------- */
-@media (max-width: 425px) {
-
-    html,
-    body {
-        overflow-x: hidden;
-        width: 100%;
-        max-width: 100vw;
+        font-size: 10px;
     }
 
-    .profile {
-        flex-direction: column !important;
-        max-width: 100% !important;
-        width: 100% !important;
-        min-height: unset;
-    }
-
-    /* Sidebar → horizontal top bar */
-    .profile__sidebar {
-        width: 100% !important;
-        max-width: 100vw !important;
-        min-width: 0 !important;
-        height: auto !important;
-        position: sticky !important;
-        top: 0 !important;
-        flex-direction: row !important;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        padding: 4px 0 !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09) !important;
-        z-index: 200;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        align-items: center;
-    }
-
-    .profile__sidebar::-webkit-scrollbar {
-        display: none;
-    }
-
-    .profile__nav-item {
-        flex-direction: column !important;
-        gap: 3px !important;
-        font-size: 10px !important;
-        padding: 7px 11px !important;
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-        align-items: center;
-        color: #555;
-        border-radius: 0;
-        min-width: fit-content;
-    }
-
-    .profile__nav-item i {
-        font-size: 15px !important;
-        width: auto !important;
-    }
-
-    .profile__nav-item.active {
-        background: #fff4ec;
-        color: #e07b39;
-    }
-
-    .profile__nav-logout {
-        flex-direction: column !important;
-        gap: 3px !important;
-        font-size: 10px !important;
-        padding: 7px 10px !important;
-        margin: 3px 6px !important;
-        border-radius: 6px !important;
-        flex-shrink: 0 !important;
-        white-space: nowrap !important;
-        align-items: center;
-    }
-
-    .profile__main {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 14px 12px 22px 12px !important;
-        overflow-x: hidden !important;
-    }
-
-    /* Typography */
-    .profile__page-title {
-        font-size: 18px;
-    }
-
-    .profile__page-subtitle {
-        font-size: 12px;
-        margin-bottom: 12px;
-    }
-
-    /* Profile card */
-    .profile__card {
-        padding: 14px 12px;
-    }
-
-    .profile__user-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .profile__user-avatar {
-        width: 56px;
-        height: 56px;
-        font-size: 20px;
-    }
-
-    .profile__user-name {
-        font-size: 16px;
-    }
-
-    .profile__user-email,
-    .profile__user-phone {
-        font-size: 11px;
-        word-break: break-all;
-    }
-
-    .profile__edit-btn {
-        width: 100%;
-        justify-content: center;
-        font-size: 13px;
-    }
-
-    /* Overview grid */
-    .profile__overview-grid {
-        grid-template-columns: 1fr !important;
-        gap: 10px;
-    }
-
-    .profile__overview-card {
-        padding: 12px 12px;
-    }
-
-    .profile__overview-card-title {
-        font-size: 14px;
-    }
-
-    /* Address */
-    .profile__addr-card {
-        padding: 12px 12px;
-    }
-
-    .profile__addr-full {
-        font-size: 12px;
-    }
-
-    .profile__add-addr-btn {
-        width: 100%;
-        font-size: 13px;
-    }
-
-    /* Orders */
-    .profile__order-card {
-        padding: 12px 12px;
-    }
-
-    .profile__order-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-    }
-
-    .profile__order-card-footer {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .profile__order-btns {
-        flex-direction: column;
-        width: 100%;
-        gap: 6px;
-    }
-
-    .profile__btn-view,
-    .profile__btn-reorder {
-        width: 100%;
-        text-align: center;
-        padding: 9px;
-        font-size: 12px;
-    }
-
-    /* Payment */
-    .profile__pay-row {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .profile__pay-card-visual {
-        width: 100%;
-        height: 90px;
-    }
-
-    .profile__pay-add-btn {
-        width: 100%;
-        font-size: 13px;
-    }
-
-    /* Help */
-    .profile__help-cards {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Reorder flow */
-    .profile__payment-layout {
-        grid-template-columns: 1fr !important;
-    }
-
+    /* Big card visual */
     .profile__big-card-visual {
         max-width: 100%;
-        height: 140px;
+        height: auto;
+        min-height: 150px;
     }
 
+    /* Payment input row */
     .profile__pay-input-row {
         flex-direction: column;
         gap: 0;
@@ -3279,7 +2635,7 @@ body {
 
     .profile__pay-action-row {
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
     }
 
     .profile__pay-back-btn,
@@ -3287,53 +2643,20 @@ body {
         width: 100%;
     }
 
-    .profile__reorder-inner {
-        padding: 14px 12px;
-    }
-
-    .profile__step-line {
-        width: 16px;
-    }
-
-    .profile__step-label {
-        display: none;
-    }
-
-    .profile__stepper {
-        margin-bottom: 16px;
-    }
-
-    /* Settings */
-    .profile__delete-row {
-        flex-direction: column;
-        gap: 8px;
-        align-items: flex-start;
-    }
-
-    .profile__delete-btn,
-    .profile__update-btn {
-        width: 100%;
-        float: none;
-    }
-
-    .profile__settings-group-title {
-        font-size: 13px;
-    }
-
     /* Modals */
     .profile__modal {
-        width: 96vw;
-        padding: 18px 12px;
+        width: 95%;
+        padding: 20px;
     }
 
     .profile__pay-delete-box {
-        width: 96vw;
-        padding: 18px 12px;
+        width: 95%;
+        padding: 20px;
     }
 
     .profile__pay-delete-btns {
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
     }
 
     .profile__pay-delete-confirm,
@@ -3341,335 +2664,511 @@ body {
         width: 100%;
     }
 
-    /* Cart */
-    .profile__cart-item {
-        gap: 8px;
-    }
-
-    .profile__cart-item-img {
-        width: 44px;
-        height: 44px;
-        font-size: 15px;
-    }
-
-    .profile__cart-reorder-btn {
-        width: 100%;
-        padding: 11px;
-        font-size: 13px;
-    }
-
-    .profile__summary-card {
-        padding: 12px 12px;
-    }
-
-    /* FAQ */
-    .profile__faq-tab {
-        padding: 5px 10px;
-        font-size: 11px;
+    /* Toast */
+    .profile__toast {
+        bottom: 15px;
+        right: 15px;
+        left: 15px;
+        text-align: center;
     }
 }
 
-/* ---------- MOBILE 375px ---------- */
-@media (max-width: 375px) {
-    .profile__nav-item {
-        font-size: 9px !important;
-        padding: 7px 9px !important;
-    }
-
-    .profile__nav-item i {
-        font-size: 14px !important;
-    }
-
-    .profile__nav-logout {
-        font-size: 9px !important;
-        padding: 7px 9px !important;
-        margin: 3px 5px !important;
-    }
-
+/* ============================================================
+SMALL MOBILE (up to 480px) - TIGHTER SPACING
+============================================================ */
+@media (max-width: 480px) {
     .profile__main {
-        padding: 12px 10px 20px 10px !important;
-    }
-
-    .profile__page-title {
-        font-size: 17px;
-    }
-
-    .profile__card {
         padding: 12px 10px;
     }
 
-    .profile__user-avatar {
-        width: 52px;
-        height: 52px;
-        font-size: 18px;
-    }
-
-    .profile__user-name {
-        font-size: 15px;
-    }
-
-    .profile__user-email,
-    .profile__user-phone {
-        font-size: 10px;
-    }
-
-    .profile__edit-btn {
-        font-size: 12px;
-        padding: 9px 12px;
-    }
-
-    .profile__overview-card {
-        padding: 10px 10px;
-    }
-
-    .profile__overview-card-title {
-        font-size: 13px;
-    }
-
-    .profile__addr-card {
-        padding: 10px 10px;
-    }
-
-    .profile__order-card {
-        padding: 10px 10px;
-    }
-
-    .profile__order-card-id {
-        font-size: 12px;
-    }
-
-    .profile__order-card-date {
-        font-size: 11px;
-    }
-
-    .profile__order-card-total {
-        font-size: 13px;
-    }
-
-    .profile__btn-view,
-    .profile__btn-reorder {
-        font-size: 11px;
-        padding: 8px;
-    }
-
-    .profile__modal {
-        width: 98vw;
-        padding: 16px 10px;
-    }
-
-    .profile__pay-delete-box {
-        width: 98vw;
-        padding: 16px 10px;
-    }
-
-    .profile__summary-card {
-        padding: 10px 10px;
-    }
-
-    .profile__faq-tab {
-        padding: 4px 8px;
-        font-size: 10px;
-    }
-}
-
-/* ---------- MOBILE 320px ---------- */
-@media (max-width: 320px) {
-    .profile__nav-item {
-        font-size: 8px !important;
-        padding: 6px 7px !important;
-        gap: 2px !important;
-    }
-
-    .profile__nav-item i {
-        font-size: 13px !important;
-    }
-
-    .profile__nav-logout {
-        font-size: 8px !important;
-        padding: 6px 7px !important;
-        margin: 2px 4px !important;
-    }
-
-    .profile__main {
-        padding: 10px 8px 18px 8px !important;
-    }
-
     .profile__page-title {
         font-size: 16px;
     }
 
-    .profile__page-subtitle {
-        font-size: 11px;
-        margin-bottom: 10px;
-    }
-
-    .profile__card {
-        padding: 10px 8px;
-    }
-
-    .profile__user-avatar {
-        width: 48px;
-        height: 48px;
-        font-size: 16px;
-    }
-
     .profile__user-name {
-        font-size: 14px;
+        font-size: 16px;
     }
 
     .profile__user-email,
     .profile__user-phone {
-        font-size: 10px;
-    }
-
-    .profile__edit-btn {
         font-size: 11px;
-        padding: 8px 10px;
-    }
-
-    .profile__overview-card {
-        padding: 10px 8px;
     }
 
     .profile__overview-card-title {
-        font-size: 13px;
+        font-size: 14px;
     }
 
-    .profile__addr-text {
-        font-size: 11px;
-    }
-
-    .profile__addr-card {
-        padding: 10px 8px;
-    }
-
-    .profile__addr-full {
-        font-size: 11px;
-    }
-
-    .profile__add-addr-btn {
-        font-size: 12px;
-        padding: 10px 16px;
-    }
-
-    .profile__order-card {
-        padding: 10px 8px;
-    }
-
-    .profile__order-card-id {
-        font-size: 11px;
-    }
-
-    .profile__order-card-date {
-        font-size: 10px;
-    }
-
-    .profile__order-card-items {
-        font-size: 11px;
-    }
-
-    .profile__order-card-total {
-        font-size: 12px;
+    .profile__order-btns {
+        flex-direction: column;
     }
 
     .profile__btn-view,
     .profile__btn-reorder {
-        font-size: 11px;
-        padding: 8px;
+        width: 100%;
     }
 
-    .profile__coupon-name {
-        font-size: 12px;
+    .profile__tracker-label {
+        font-size: 8px;
     }
 
-    .profile__coupon-detail {
-        font-size: 11px;
+    .profile__step-label {
+        display: none;
     }
 
-    .profile__coupon-validity {
+    .profile__step-line {
+        width: 10px;
+    }
+}
+
+/* ============================================================
+EXTRA SMALL MOBILE (up to 320px)
+============================================================ */
+@media (max-width: 320px) {
+    .profile__nav-item {
+        padding: 6px 10px;
         font-size: 10px;
     }
 
-    .profile__modal {
-        width: 99vw;
-        padding: 14px 8px;
-    }
-
-    .profile__modal-title {
-        font-size: 15px;
-    }
-
-    .profile__modal-input {
+    .profile__nav-item i {
         font-size: 13px;
-        padding: 9px 10px;
     }
 
-    .profile__pay-delete-box {
-        width: 99vw;
-        padding: 14px 8px;
+    .profile__nav-logout {
+        padding: 6px 10px;
+        font-size: 10px;
     }
 
-    .profile__pay-delete-title {
-        font-size: 15px;
-    }
-
-    .profile__summary-card {
+    .profile__main {
         padding: 10px 8px;
     }
 
-    .profile__summary-title {
-        font-size: 14px;
+    .profile__card {
+        padding: 12px;
     }
 
-    .profile__cart-item-img {
-        width: 40px;
-        height: 40px;
-        font-size: 14px;
+    .profile__user-avatar {
+        width: 50px;
+        height: 50px;
+        font-size: 18px;
+    }
+}
+
+/* ============================================================
+PROPER TABLET FIX (768px - 1024px) - NO OVERLAP
+============================================================ */
+
+@media (min-width: 768px) and (max-width: 1024px) {
+
+    /* Force all elements to respect stacking */
+    * {
+        box-sizing: border-box !important;
     }
 
-    .profile__cart-item-name {
-        font-size: 12px;
+    html,
+    body {
+        overflow-x: hidden !important;
+        width: 100% !important;
     }
 
-    .profile__cart-item-price {
-        font-size: 12px;
-        min-width: 50px;
+    /* Main profile - column layout */
+    .profile {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-top: 110px;
+        padding: 0 !important;
+        min-height: auto !important;
+        position: relative !important;
     }
 
-    .profile__cart-reorder-btn {
-        font-size: 12px;
-        padding: 10px;
+    /* Sidebar - FULL WIDTH at TOP */
+    .profile__sidebar {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        position: relative !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: auto !important;
+        padding: 12px 16px !important;
+        margin: 0 0 20px 0 !important;
+        background: #FFFAF7 !important;
+        border-radius: 0 !important;
+        z-index: 100 !important;
+        display: flex !important;
+        gap: 8px !important;
+        scrollbar-width: thin !important;
     }
 
-    .profile__faq-tab {
-        padding: 4px 7px;
-        font-size: 10px;
+    .profile__sidebar::-webkit-scrollbar {
+        height: 4px !important;
     }
 
-    .profile__faq-search {
-        font-size: 12px;
-        padding: 9px 10px 9px 34px;
+    .profile__sidebar::-webkit-scrollbar-track {
+        background: #e0e0e0 !important;
+        border-radius: 4px !important;
     }
 
-    .profile__settings-group-title {
-        font-size: 12px;
+    .profile__sidebar::-webkit-scrollbar-thumb {
+        background: #e07b39 !important;
+        border-radius: 4px !important;
     }
 
-    .profile__input-field {
-        font-size: 12px;
-        padding: 10px 12px;
+    /* Nav items - horizontal */
+    .profile__nav-item {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        padding: 10px 20px !important;
+        margin: 0 !important;
+        font-size: 13px !important;
+        min-width: 80px !important;
     }
 
-    .profile__notif-row {
-        font-size: 12px;
+    .profile__nav-item i {
+        font-size: 18px !important;
+        margin-bottom: 6px !important;
+        width: auto !important;
     }
 
-    .profile__delete-info {
-        font-size: 11px;
+    .profile__nav-logout {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        margin: 0 10px !important;
+        padding: 10px 20px !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+    }
+
+    .profile__nav-logout i {
+        margin-bottom: 6px !important;
+        font-size: 16px !important;
+    }
+
+    /* MAIN CONTENT - Starts below sidebar */
+    .profile__main {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 20px 30px 20px !important;
+        margin: 0 !important;
+        flex: none !important;
+        overflow-x: hidden !important;
+        clear: both !important;
+        display: block !important;
+    }
+
+    /* Page headers */
+    .profile__page-title {
+        font-size: 22px !important;
+        margin-bottom: 5px !important;
+    }
+
+    .profile__page-subtitle {
+        font-size: 13px !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* Cards */
+    .profile__card {
+        width: 100% !important;
+        margin-bottom: 20px !important;
+        padding: 20px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* User info row - side by side */
+    .profile__user-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        flex-wrap: wrap !important;
+        gap: 15px !important;
+    }
+
+    .profile__user-info {
+        flex: 1 !important;
+    }
+
+    .profile__edit-btn {
+        flex-shrink: 0 !important;
+    }
+
+    /* Overview grid - 2 columns */
+    .profile__overview-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+    }
+
+    .profile__overview-card {
+        padding: 18px !important;
+    }
+
+    /* Help cards - 2 columns */
+    .profile__help-cards {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 16px !important;
+    }
+
+    /* Payment layout - 2 columns */
+    .profile__payment-layout {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 25px !important;
+    }
+
+    /* Address cards */
+    .profile__addr-card {
+        padding: 20px !important;
+    }
+
+    /* Order cards */
+    .profile__order-card {
+        padding: 18px !important;
+    }
+
+    .profile__order-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+    }
+
+    .profile__order-card-footer {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+    }
+
+    /* Delete row */
+    .profile__delete-row {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 15px !important;
+    }
+
+    /* Update button */
+    .profile__update-btn {
+        float: none !important;
+        display: inline-block !important;
+    }
+
+    /* Cart items */
+    .profile__cart-item {
+        display: flex !important;
+        align-items: center !important;
+        gap: 15px !important;
+        flex-wrap: wrap !important;
+    }
+
+    /* Big card visual */
+    .profile__big-card-visual {
+        max-width: 100% !important;
+    }
+
+    /* Payment input row */
+    .profile__pay-input-row {
+        display: flex !important;
+        gap: 12px !important;
+        flex-wrap: wrap !important;
+    }
+
+    /* Tracker - use flex without line */
+    .profile__order-tracker {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        flex-wrap: wrap !important;
+        padding: 15px !important;
+        position: relative !important;
+    }
+
+    .profile__tracker-line {
+        display: none !important;
+    }
+
+    .profile__tracker-step {
+        flex: 1 !important;
+        text-align: center !important;
+    }
+
+    /* Stepper */
+    .profile__stepper {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+    }
+
+    .profile__step-line {
+        width: 50px !important;
+    }
+}
+
+/* ============================================================
+MOBILE SCREENS (up to 767px) - SAME PATTERN
+============================================================ */
+
+@media (max-width: 767px) {
+    .profile {
+        flex-direction: column !important;
+    }
+
+    .profile__sidebar {
+        width: 100% !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        padding: 10px 12px !important;
+        margin-bottom: 15px !important;
+    }
+
+    .profile__nav-item {
+        flex-direction: column !important;
+        padding: 8px 14px !important;
+        font-size: 11px !important;
+    }
+
+    .profile__nav-item i {
+        font-size: 15px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .profile__nav-logout {
+        flex-direction: column !important;
+        padding: 8px 14px !important;
+        font-size: 11px !important;
+    }
+
+    .profile__main {
+        padding: 0 15px 20px 15px !important;
+    }
+
+    .profile__user-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .profile__edit-btn {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .profile__overview-grid,
+    .profile__help-cards,
+    .profile__payment-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    .profile__order-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .profile__order-card-footer {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .profile__order-btns {
+        width: 100% !important;
+        flex-direction: column !important;
+    }
+
+    .profile__btn-view,
+    .profile__btn-reorder {
+        width: 100% !important;
+    }
+
+    .profile__delete-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
     }
 
     .profile__delete-btn {
-        font-size: 12px;
-        padding: 9px 16px;
+        width: 100% !important;
+    }
+
+    .profile__update-btn {
+        width: 100% !important;
+        float: none !important;
+    }
+
+    .profile__tracker-line {
+        display: none !important;
+    }
+
+    .profile__step-line {
+        width: 20px !important;
+    }
+
+    .profile__step-label {
+        display: none !important;
+    }
+}
+
+/* ============================================================
+DESKTOP SCREENS (1025px+) - ORIGINAL DESIGN
+============================================================ */
+
+@media (min-width: 1025px) {
+
+    /* Original design remains intact - no changes */
+    .profile {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: stretch !important;
+    }
+
+    .profile__sidebar {
+        width: 210px !important;
+        min-width: 210px !important;
+        flex-direction: column !important;
+        position: sticky !important;
+        top: 28vh !important;
+        height: 72vh !important;
+        overflow: visible !important;
+    }
+
+    .profile__nav-item {
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        padding: 13px 22px !important;
+    }
+
+    .profile__nav-item i {
+        margin-bottom: 0 !important;
+        margin-right: 12px !important;
+    }
+
+    .profile__nav-logout {
+        flex-direction: row !important;
+        margin: 6px 16px 16px 16px !important;
+        padding: 12px 22px !important;
+    }
+
+    .profile__main {
+        padding: 130px 10px 10px 40px !important;
+    }
+
+    .profile__overview-grid {
+        grid-template-columns: 1fr 1fr !important;
     }
 }

@@ -1,148 +1,325 @@
+/* ============================================================
+   BOOKING POLICY PAGE - ULTIMATE WHITE SPACE FIX
+   ============================================================ */
+
+/* Force fix on html and body */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
 /* Parent Scoped Class */
 .booking {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  background-color: #ffffff;
-  overflow-x: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background-color: #ffffff;
+    overflow-x: hidden !important;
+    position: relative;
 }
 
-/* Image 1: Hero Section (Laptop Context) */
+/* Force all children to not cause white space */
+.booking,
+.booking * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Hero Section */
 .booking .booking-hero {
-  width: 100%;
-  height: 700px;
-  background: url("/assets/images/bookingpolicy.png") no-repeat center
-    center/cover;
-  position: relative;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 700px;
+    background: url("/assets/images/bookingpolicy.png") no-repeat center center/cover;
+    background-size: cover;
+    position: relative;
+    overflow-x: hidden !important;
 }
 
-/* Main Content Container */
+/* Main Content Container - CRITICAL FIX */
 .booking .booking-container {
-  max-width: 1400px;
-  margin: 60px auto;
-  padding: 0 40px;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 60px 0 !important;
+    padding: 0 16px !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
 }
 
-/* Header Styling (Image 2) */
+/* Header Styling */
 .booking .policy-title {
-  font-family: "Playfair Display", serif;
-  font-size: 48px;
-  color: #e37a24;
-  margin-bottom: 20px;
-  font-weight: 600;
+    font-family: "Playfair Display", serif;
+    font-size: 48px;
+    color: #e37a24;
+    margin-bottom: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    word-break: break-word;
 }
 
 .booking .effective-date {
-  font-family: "Poppins", sans-serif;
-  font-weight: 600;
-  font-size: 16px;
-  color: #000;
-  margin-bottom: 30px;
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: #000;
+    margin-bottom: 30px;
+    word-break: break-word;
 }
 
 .booking .intro-text {
-  font-family: "Poppins", sans-serif;
-  font-size: 16px;
-  line-height: 1.8;
-  color: #444;
-  margin-bottom: 50px;
+    font-family: "Poppins", sans-serif;
+    font-size: 16px;
+    line-height: 1.8;
+    color: #444;
+    margin-bottom: 50px;
+    word-break: break-word;
 }
 
 /* Policy Sections Styling */
 .booking .policy-section {
-  margin-bottom: 45px;
+    margin-bottom: 45px;
+    width: 100%;
+    overflow-x: hidden;
 }
 
 .booking .policy-section h2 {
-  font-family: "Playfair Display", serif;
-  font-size: 28px;
-  color: #000;
-  margin-bottom: 20px;
-  font-weight: 600;
+    font-family: "Playfair Display", serif;
+    font-size: 28px;
+    color: #000;
+    margin-bottom: 20px;
+    font-weight: 600;
+    word-break: break-word;
 }
 
 .booking .policy-section p {
-  font-family: "Poppins", sans-serif;
-  font-size: 15px;
-  line-height: 1.8;
-  color: #555;
-  margin-bottom: 15px;
+    font-family: "Poppins", sans-serif;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #555;
+    margin-bottom: 15px;
+    word-break: break-word;
 }
 
-/* List Styling (Bullet points exactly like image) */
+/* List Styling */
 .booking .policy-section ul {
-  list-style: none;
-  padding-left: 10px;
-  margin-bottom: 20px;
+    list-style: none;
+    padding-left: 20px;
+    margin-bottom: 20px;
+    width: 100%;
 }
 
 .booking .policy-section ul li {
-  font-family: "Poppins", sans-serif;
-  font-size: 15px;
-  color: #555;
-  line-height: 1.8;
-  margin-bottom: 10px;
-  position: relative;
-  padding-left: 20px;
+    font-family: "Poppins", sans-serif;
+    font-size: 15px;
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 10px;
+    position: relative;
+    padding-left: 20px;
+    word-break: break-word;
 }
 
 .booking .policy-section ul li::before {
-  content: "•";
-  position: absolute;
-  left: 0;
-  color: #000;
-  font-weight: bold;
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #000;
+    font-weight: bold;
 }
 
 /* Sub-blocks within sections */
 .booking .sub-block {
-  margin-top: 20px;
+    margin-top: 20px;
 }
 
-/* Contact Details Block (Image 3) */
+/* Contact Details Block */
 .booking .contact-details {
-  margin-top: 20px;
+    margin-top: 20px;
 }
 
 .booking .contact-details p {
-  margin-bottom: 8px;
-}
-
-@media (max-width: 1024px) {
-  .booking .booking-container {
-    max-width: 90%;
-  }
-}
-
-@media (max-width: 768px) {
-  .booking .booking-hero {
-    height: 250px;
-  }
-
-  .booking .booking-container {
-    margin: 40px auto;
-    padding: 0 20px;
-  }
-
-  .booking .policy-title {
-    font-size: 36px;
-  }
-
-  .booking .policy-section h2 {
-    font-size: 24px;
-  }
-
-  .booking .intro-text {
+    margin-bottom: 8px;
+    font-family: "Poppins", sans-serif;
     font-size: 15px;
-  }
+    color: #555;
+    word-break: break-word;
 }
 
-@media (max-width: 480px) {
-  .booking .policy-title {
-    font-size: 30px;
-  }
+/* ============================================================
+   RESPONSIVE BREAKPOINTS
+   ============================================================ */
 
-  .booking .policy-section h2 {
-    font-size: 22px;
-  }
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) and (min-width: 768px) {
+    .booking .booking-hero {
+        height: 450px;
+    }
+    
+    .booking .booking-container {
+        margin: 50px 0 !important;
+        padding: 0 20px !important;
+    }
+    
+    .booking .policy-title {
+        font-size: 40px;
+    }
+    
+    .booking .policy-section h2 {
+        font-size: 26px;
+    }
+    
+    .booking .intro-text,
+    .booking .policy-section p,
+    .booking .policy-section ul li {
+        font-size: 15px;
+    }
+}
+
+/* Mobile Large (426px - 767px) */
+@media (max-width: 767px) and (min-width: 426px) {
+    .booking .booking-hero {
+        height: 300px;
+    }
+    
+    .booking .booking-container {
+        margin: 40px 0 !important;
+        padding: 0 16px !important;
+    }
+    
+    .booking .policy-title {
+        font-size: 34px;
+    }
+    
+    .booking .policy-section h2 {
+        font-size: 24px;
+    }
+    
+    .booking .intro-text,
+    .booking .policy-section p,
+    .booking .policy-section ul li {
+        font-size: 14px;
+    }
+}
+
+/* Mobile Medium (376px - 425px) */
+@media (max-width: 425px) and (min-width: 376px) {
+    .booking .booking-hero {
+        height: 250px;
+    }
+    
+    .booking .booking-container {
+        margin: 35px 0 !important;
+        padding: 0 14px !important;
+    }
+    
+    .booking .policy-title {
+        font-size: 30px;
+    }
+    
+    .booking .policy-section h2 {
+        font-size: 22px;
+    }
+    
+    .booking .intro-text,
+    .booking .policy-section p,
+    .booking .policy-section ul li {
+        font-size: 13px;
+    }
+    
+    .booking .policy-section ul {
+        padding-left: 16px;
+    }
+}
+
+/* Mobile Small (320px - 375px) */
+@media (max-width: 375px) and (min-width: 320px) {
+    .booking .booking-hero {
+        height: 200px;
+    }
+    
+    .booking .booking-container {
+        margin: 30px 0 !important;
+        padding: 0 12px !important;
+    }
+    
+    .booking .policy-title {
+        font-size: 26px;
+    }
+    
+    .booking .policy-section h2 {
+        font-size: 20px;
+    }
+    
+    .booking .intro-text,
+    .booking .policy-section p,
+    .booking .policy-section ul li {
+        font-size: 12px;
+    }
+    
+    .booking .policy-section ul {
+        padding-left: 12px;
+    }
+}
+
+/* Mobile Extra Small (below 320px) */
+@media (max-width: 319px) {
+    .booking .booking-hero {
+        height: 160px;
+    }
+    
+    .booking .booking-container {
+        margin: 25px 0 !important;
+        padding: 0 10px !important;
+    }
+    
+    .booking .policy-title {
+        font-size: 24px;
+    }
+    
+    .booking .policy-section h2 {
+        font-size: 18px;
+    }
+    
+    .booking .intro-text,
+    .booking .policy-section p,
+    .booking .policy-section ul li {
+        font-size: 11px;
+    }
+}
+
+/* Desktop Large */
+@media (min-width: 1200px) {
+    .booking .booking-container {
+        max-width: 1200px !important;
+        margin: 60px auto !important;
+        padding: 0 20px !important;
+    }
+    
+    .booking .booking-hero {
+        height: 600px;
+    }
+}
+
+@media (min-width: 1600px) {
+    .booking .booking-container {
+        max-width: 1400px !important;
+        margin: 80px auto !important;
+    }
+    
+    .booking .booking-hero {
+        height: 750px;
+    }
+    
+    .booking .policy-title {
+        font-size: 54px;
+    }
+    
+    .booking .policy-section h2 {
+        font-size: 32px;
+    }
 }

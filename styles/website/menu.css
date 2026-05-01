@@ -1,8 +1,8 @@
 /* Hero Section Styling */
 .menusoup-hero {
     position: relative;
-    height: 100vh;
-    background: url('../../public/assets/images/soupmenu.png') no-repeat center center/cover;
+    height: 130vh;
+    background: url('/assets/images/soupmenu.png') no-repeat center center/cover;
     background-attachment: fixed;
     display: flex;
     align-items: center;
@@ -36,7 +36,8 @@
 .herosoup-content h1 {
     font-size: 6rem;
     font-family: 'Serif', Georgia;
-    font-weight: 700;
+    margin-bottom: 10px;
+
 }
 
 .herosoup-content p {
@@ -69,13 +70,6 @@
     color: #fff;
 }
 
-.menu-empty {
-    text-align: center;
-    font-size: 30px;
-    padding: 30px;
-    color: red;
-}
-
 /* Filter Section */
 .filter-section {
     padding: 40px 5%;
@@ -97,7 +91,6 @@
     cursor: pointer;
     font-size: 14px;
     transition: 0.3s;
-    text-decoration: none;
     color: #000;
 }
 
@@ -110,7 +103,7 @@
 .page-title-section {
     text-align: center;
     padding: 50px 0;
-    background: #fff;
+
 }
 
 .category-heading {
@@ -120,7 +113,6 @@
     font-family: 'Serif', Georgia;
     background: linear-gradient(90deg, #d35400, #e67e22, #f39c12, #e74c3c, #d35400);
     background-size: 200% auto;
-    font-weight: 700;
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -202,7 +194,7 @@
 }
 
 /* Single Card Logic */
-.menu-parent .menu-card-m {
+.menu-parent .menu-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -210,7 +202,7 @@
 }
 
 /* Image Left-Right Reverse Logic */
-.menu-parent .menu-card-m.reverse {
+.menu-parent .menu-card.reverse {
     flex-direction: row-reverse;
 }
 
@@ -220,6 +212,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    margin-bottom: 10px;
 }
 
 .menu-parent .menu-price {
@@ -230,7 +223,7 @@
     font-family: 'Serif', Georgia, serif;
 }
 
-.menu-parent .menu-title-m {
+.menu-parent .menu-title {
     font-size: 2.8rem;
     font-family: 'Serif', Georgia, serif;
     color: #000;
@@ -323,7 +316,7 @@
     transition: transform 0.4s ease;
 }
 
-.menu-parent .menu-card-m:hover .menu-img-box img {
+.menu-parent .menu-card:hover .menu-img-box img {
     transform: scale(1.03);
 }
 
@@ -346,7 +339,7 @@
 }
 
 /* Card Structure */
-.menu-parent .menu-card-m {
+.menu-parent .menu-card {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -354,7 +347,7 @@
 }
 
 /* Reverse class: Image Left, Text Right */
-.menu-parent .menu-card-m.reverse {
+.menu-parent .menu-card.reverse {
     flex-direction: row-reverse;
 }
 
@@ -388,7 +381,7 @@
 }
 
 /* Typography */
-.menu-parent .menu-title-m {
+.menu-parent .menu-title {
     font-size: 3.5rem;
     font-family: 'Serif', Georgia, serif;
     color: #000;
@@ -489,11 +482,11 @@
         padding: 60px 5%;
     }
 
-    .menu-parent .menu-title-m {
+    .menu-parent .menu-title {
         font-size: 2.5rem;
     }
 
-    .menu-parent .menu-card-m {
+    .menu-parent .menu-card {
         gap: 40px;
     }
 }
@@ -508,8 +501,8 @@
         gap: 60px;
     }
 
-    .menu-parent .menu-card-m,
-    .menu-parent .menu-card-m.reverse {
+    .menu-parent .menu-card,
+    .menu-parent .menu-card.reverse {
         flex-direction: column;
         text-align: center;
         gap: 30px;
@@ -523,7 +516,7 @@
         align-items: center;
     }
 
-    .menu-parent .menu-title-m {
+    .menu-parent .menu-title {
         font-size: 2rem;
     }
 
@@ -813,113 +806,190 @@
     }
 }
 
-/* ══════════════════════════════════════════════════
-   VARIANT MODALS — from add-to-cart HTML designs
-   Modal A: custom-card   (portion / custom)
-   Modal B: sweets-customizer (weight)
-   Modal C: cake-customizer-container (pound)
-   Modal D: addon-customizer-wrapper (addon)
-   All scoped to their container class — no conflicts.
-   ══════════════════════════════════════════════════ */
+/* ============================================================
+   ONLY RESPONSIVE FIXES - NO ANIMATIONS REMOVED
+   ============================================================ */
 
-/* ── MODAL A: Half/Full / Custom ── */
-.custom-card{background:#fff;width:100%;max-width:500px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.1);overflow:hidden;position:relative;}
-.custom-card .card-header{padding:20px 24px;}
-.custom-card .category-text{font-size:13px;color:#666;display:block;margin-bottom:4px;}
-.custom-card .title-row{display:flex;justify-content:space-between;align-items:center;}
-.custom-card .main-title{font-size:18px;font-weight:600;}
-.custom-card .close-btn{cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:1px solid #ccc;border-radius:50%;font-size:14px;color:#333;}
-.custom-card .divider{height:1px;background-color:#eee;margin:10px 0;}
-.custom-card .quantity-section{padding:10px 24px 20px;}
-.custom-card .section-label{font-size:14px;font-weight:700;margin-bottom:15px;display:block;}
-.custom-card .options-container{background-color:#fff8f2;border-radius:8px;padding:5px;}
-.custom-card .radio-option{display:flex;align-items:center;justify-content:space-between;padding:15px 15px;cursor:pointer;}
-.custom-card .radio-left{display:flex;align-items:center;gap:12px;}
-.custom-card .radio-input{display:none;}
-.custom-card .custom-radio{width:18px;height:18px;border:2px solid #ccc;border-radius:50%;display:inline-block;position:relative;}
-.custom-card .radio-input:checked + .custom-radio{border-color:#2e7d32;}
-.custom-card .radio-input:checked + .custom-radio::after{content:"";width:10px;height:10px;background:#2e7d32;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
-.custom-card .option-name{font-size:15px;font-weight:500;}
-.custom-card .option-price{font-weight:600;font-size:15px;}
-.custom-card .card-footer{background-color:#fff2e8;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;}
-.custom-card .price-display{display:flex;flex-direction:column;}
-.custom-card .total-price{font-size:22px;font-weight:700;}
-.custom-card .view-custom-link{font-size:13px;font-weight:600;text-decoration:none;color:#000;margin-top:4px;}
-.custom-card .add-cart-btn{background-color:#e86d0a;color:#fff;border:none;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 10px rgba(232,109,10,0.3);transition:transform 0.2s,background 0.2s;}
-.custom-card .add-cart-btn:hover{background-color:#d15f07;transform:translateY(-1px);}
+/* White space removal - only these lines */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+}
 
-/* ── MODAL B: Sweets / By Weight ── */
-.sweets-customizer .modal-card{background:#fff;width:100%;max-width:550px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.08);overflow:hidden;position:relative;}
-.sweets-customizer .modal-header{padding:24px 28px 10px;}
-.sweets-customizer .category-label{font-size:14px;color:#555;display:block;margin-bottom:6px;}
-.sweets-customizer .title-row{display:flex;justify-content:space-between;align-items:center;}
-.sweets-customizer .main-title{font-size:20px;font-weight:700;color:#1a1a1a;margin:0;}
-.sweets-customizer .close-btn{cursor:pointer;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid #ccc;border-radius:50%;font-size:16px;color:#333;}
-.sweets-customizer .divider{height:1px;background-color:#e0e0e0;margin:15px 0;}
-.sweets-customizer .modal-body{padding:0 28px 24px;}
-.sweets-customizer .section-subtitle{font-size:15px;font-weight:700;margin-bottom:15px;display:block;}
-.sweets-customizer .options-bg{background-color:#fff6f0;border-radius:12px;padding:10px;}
-.sweets-customizer .option-row{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;cursor:pointer;border-radius:8px;}
-.sweets-customizer .radio-container{display:flex;align-items:center;gap:12px;}
-.sweets-customizer .hidden-radio{display:none;}
-.sweets-customizer .custom-radio{width:20px;height:20px;border:2px solid #ccc;border-radius:50%;display:inline-block;position:relative;background:#fff;}
-.sweets-customizer .hidden-radio:checked + .custom-radio{border-color:#2e7d32;}
-.sweets-customizer .hidden-radio:checked + .custom-radio::after{content:"";width:10px;height:10px;background:#2e7d32;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
-.sweets-customizer .option-text{font-size:15px;font-weight:600;color:#333;}
-.sweets-customizer .option-price{font-weight:700;font-size:15px;color:#1a1a1a;}
-.sweets-customizer .modal-footer{background-color:#fff9f5;padding:24px 28px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f9f0e8;}
-.sweets-customizer .price-info{display:flex;flex-direction:column;}
-.sweets-customizer .total-amount{font-size:24px;font-weight:800;color:#000;}
-.sweets-customizer .view-link{font-size:14px;font-weight:600;color:#1a1a1a;text-decoration:none;margin-top:5px;}
-.sweets-customizer .add-to-cart-btn{background-color:#e86d0a;color:#fff;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 15px rgba(232,109,10,0.25);transition:0.3s;}
-.sweets-customizer .add-to-cart-btn:hover{background-color:#d15f07;transform:translateY(-1px);}
+.menusoup-hero,
+.filter-section,
+.page-title-section,
+.menu-parent,
+.reservation-section {
+    overflow-x: hidden;
+    width: 100%;
+}
 
-/* ── MODAL C: Cake / By Pound ── */
-.cake-customizer-container .modal-card{background:#fff;width:100%;max-width:550px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.08);overflow:hidden;border:1px solid #efefef;}
-.cake-customizer-container .header{padding:25px 30px 10px;}
-.cake-customizer-container .category-label{font-size:13px;color:#555;display:block;margin-bottom:5px;}
-.cake-customizer-container .title-row{display:flex;justify-content:space-between;align-items:center;}
-.cake-customizer-container .main-title{font-size:19px;font-weight:600;color:#111;margin:0;}
-.cake-customizer-container .close-icon{cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:1px solid #bbb;border-radius:50%;font-size:14px;color:#333;}
-.cake-customizer-container .divider{height:1px;background-color:#eee;margin:15px 0;}
-.cake-customizer-container .body-content{padding:0 30px 20px;}
-.cake-customizer-container .section-title{font-size:15px;font-weight:700;margin-bottom:15px;display:block;}
-.cake-customizer-container .options-wrapper{background-color:#fff6ef;border-radius:12px;padding:8px;}
-.cake-customizer-container .option-item{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;cursor:pointer;position:relative;}
-.cake-customizer-container .radio-group{display:flex;align-items:center;gap:12px;}
-.cake-customizer-container input[type="radio"]{display:none;}
-.cake-customizer-container .custom-radio{height:22px;width:22px;background-color:transparent;border:1px solid #2e7d32;border-radius:50%;display:inline-block;position:relative;}
-.cake-customizer-container input[type="radio"]:checked + .custom-radio::after{content:"";position:absolute;display:block;left:50%;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:#2e7d32;}
-.cake-customizer-container .option-label{font-size:15px;font-weight:600;color:#000;}
-.cake-customizer-container .option-price{font-weight:700;font-size:15px;color:#111;}
-.cake-customizer-container .footer-section{background-color:#fffaf6;padding:25px 30px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f9eee5;}
-.cake-customizer-container .price-area{display:flex;flex-direction:column;}
-.cake-customizer-container .total-price{font-size:24px;font-weight:700;color:#000;}
-.cake-customizer-container .custom-link{font-size:14px;font-weight:600;color:#000;text-decoration:none;margin-top:4px;}
-.cake-customizer-container .add-cart-btn{background-color:#e86d0a;color:#fff;border:none;padding:15px 35px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(232,109,10,0.2);transition:all 0.3s ease;}
-.cake-customizer-container .add-cart-btn:hover{background-color:#d15f07;transform:translateY(-1px);}
+/* Fix hero background attachment on mobile (only change - keeps animation) */
+@media (max-width: 768px) {
+    .menusoup-hero {
+        background-attachment: scroll;
+    }
+}
 
-/* ── MODAL D: Add-ons (checkboxes) ── */
-.addon-customizer-wrapper .modal-card{background-color:#fff;width:100%;max-width:550px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.1);overflow:hidden;position:relative;}
-.addon-customizer-wrapper .close-icon{position:absolute;top:25px;right:25px;cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:1.5px solid #333;border-radius:50%;font-size:14px;font-weight:bold;color:#333;}
-.addon-customizer-wrapper .header{padding:25px 30px 10px;}
-.addon-customizer-wrapper .item-title{font-size:15px;color:#1a1a1a;margin-bottom:5px;}
-.addon-customizer-wrapper .main-heading{font-size:20px;font-weight:600;color:#111;margin:0;}
-.addon-customizer-wrapper .divider{height:1px;background-color:#eee;margin:15px 0;}
-.addon-customizer-wrapper .body-content{padding:0 30px 20px;}
-.addon-customizer-wrapper .section-label{font-size:15px;font-weight:700;margin-bottom:15px;display:block;}
-.addon-customizer-wrapper .options-container{background-color:#fff6f0;border-radius:12px;padding:10px;}
-.addon-customizer-wrapper .option-row{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;cursor:pointer;}
-.addon-customizer-wrapper .left-side{display:flex;align-items:center;gap:12px;}
-.addon-customizer-wrapper input[type="checkbox"]{display:none;}
-.addon-customizer-wrapper .custom-circle{width:20px;height:20px;border:2px solid #ccc;border-radius:50%;display:inline-block;position:relative;background:#fff;}
-.addon-customizer-wrapper input[type="checkbox"]:checked + .custom-circle{border-color:#2e7d32;}
-.addon-customizer-wrapper input[type="checkbox"]:checked + .custom-circle::after{content:"";width:10px;height:10px;background-color:#2e7d32;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
-.addon-customizer-wrapper .option-name{font-size:15px;font-weight:500;color:#333;}
-.addon-customizer-wrapper .option-price{font-weight:600;font-size:15px;color:#1a1a1a;}
-.addon-customizer-wrapper .footer-section{background-color:#fff9f5;padding:25px 30px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f9f0e8;}
-.addon-customizer-wrapper .price-block{display:flex;flex-direction:column;}
-.addon-customizer-wrapper .total-amount{font-size:24px;font-weight:700;color:#000;}
-.addon-customizer-wrapper .view-custom-link{font-size:14px;font-weight:600;color:#000;text-decoration:none;margin-top:4px;}
-.addon-customizer-wrapper .add-btn{background-color:#e86d0a;color:#fff;border:none;padding:14px 35px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(232,109,10,0.25);transition:transform 0.2s;}
-.addon-customizer-wrapper .add-btn:hover{background-color:#d15f07;transform:translateY(-1px);}
+/* Responsive adjustments - only sizes, no animation changes */
+@media (max-width: 1024px) {
+    .menu-parent {
+        padding: 60px 5%;
+    }
+    .menu-parent .menu-card {
+        gap: 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .menusoup-hero {
+        min-height: 500px;
+        height: auto;
+    }
+    
+    .herosoup-content h1 {
+        font-size: 3rem;
+    }
+    
+    .herosoup-content p {
+        font-size: 1.2rem;
+    }
+    
+    .btn-booksoup {
+        padding: 12px 30px;
+        font-size: 1rem;
+    }
+    
+    .category-heading {
+        font-size: 3rem;
+    }
+    
+    .page-title-section p {
+        font-size: 1rem;
+    }
+    
+    .menu-parent {
+        padding: 40px 20px;
+    }
+    
+    .menu-container {
+        gap: 60px;
+    }
+    
+    .menu-parent .menu-card,
+    .menu-parent .menu-card.reverse {
+        flex-direction: column;
+        text-align: center;
+        gap: 30px;
+    }
+    
+    .menu-parent .menu-img-box {
+        width: 100%;
+    }
+    
+    .menu-parent .menu-price-row {
+        align-items: center;
+    }
+    
+    .menu-parent .menu-desc {
+        max-width: 100%;
+        text-align: center;
+    }
+    
+    .menu-parent .menu-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .reservation-section {
+        padding: 60px 20px !important;
+    }
+    
+    .reservation-section .res-main-title {
+        font-size: 2.5rem !important;
+    }
+    
+    .reservation-section .res-sub-text {
+        font-size: 1.2rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .herosoup-content h1 {
+        font-size: 2.2rem;
+    }
+    
+    .herosoup-content p {
+        font-size: 1rem;
+    }
+    
+    .btn-booksoup {
+        padding: 10px 25px;
+        font-size: 0.9rem;
+    }
+    
+    .filter-btn {
+        padding: 6px 14px;
+        font-size: 12px;
+    }
+    
+    .category-heading {
+        font-size: 2.2rem;
+    }
+    
+    .menu-parent .btn-order {
+        width: 100%;
+    }
+    
+    .menu-parent .menu-title {
+        font-size: 1.8rem;
+    }
+    
+    .menu-parent .menu-desc {
+        font-size: 0.9rem;
+    }
+}
+
+/* Reservation form responsive - only layout, no animation changes */
+@media (max-width: 992px) {
+    .reservation-section .res-form-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .reservation-section .res-input-box:nth-child(3) {
+        grid-column: span 2;
+        justify-self: center;
+        width: 50%;
+    }
+}
+
+@media (max-width: 600px) {
+    .reservation-section .res-main-title {
+        font-size: 2rem !important;
+    }
+    
+    .reservation-section .res-form-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px;
+    }
+    
+    .reservation-section .res-input-box:nth-child(3) {
+        grid-column: span 1 !important;
+        width: 100% !important;
+    }
+    
+    .reservation-section .res-input-box input,
+    .reservation-section .res-input-box select {
+        padding: 12px 5px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .reservation-section .res-submit-btn {
+        width: 100% !important;
+        padding: 15px 0 !important;
+    }
+}
