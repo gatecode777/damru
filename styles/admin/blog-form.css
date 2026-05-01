@@ -1,0 +1,395 @@
+/* styles/admin/blog-form.css
+   Blog form — two-column layout + block editor styles.
+   All base form classes (inp, form-card, form-card-body, etc.) come from form.css.
+*/
+
+/* ── Two-column layout ── */
+.bf-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+}
+
+.bf-main {
+    display: flex;
+    flex-direction: column;
+}
+
+.bf-sidebar {
+    position: sticky;
+    top: 70px;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 1024px) {
+    .bf-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .bf-sidebar {
+        position: static;
+    }
+}
+
+/* ── Cover image upload ── */
+.bf-cover-upload {
+    border: 2px dashed #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.15s;
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bf-cover-upload:hover {
+    border-color: #f97316;
+}
+
+.bf-cover-upload.has-image {
+    border-style: solid;
+    border-color: #e5e7eb;
+    cursor: default;
+}
+
+.bf-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #9ca3af;
+    padding: 40px 20px;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.bf-upload-placeholder p {
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+.bf-upload-placeholder small {
+    font-size: 0.75rem;
+}
+
+/* ── Block editor list ── */
+.bf-blocks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* ── Single block ── */
+.bf-block {
+    border: 1px solid #f3f4f6;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+    transition: box-shadow 0.13s;
+}
+
+.bf-block:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.bf-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #fafafa;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.bf-block-info {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.bf-block-type-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.bf-block-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.bf-ctrl-btn {
+    background: none;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #6b7280;
+    transition: all 0.13s;
+}
+
+.bf-ctrl-btn:hover {
+    background: #f3f4f6;
+}
+
+.bf-ctrl-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.bf-ctrl-del:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.bf-block-body {
+    padding: 12px 14px;
+}
+
+/* ── List block ── */
+.bf-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bf-list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bf-list-marker {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    color: #9ca3af;
+    min-width: 20px;
+    flex-shrink: 0;
+}
+
+.bf-add-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: 1.5px dashed #e5e7eb;
+    border-radius: 7px;
+    padding: 5px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    color: #9ca3af;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: all 0.13s;
+}
+
+.bf-add-item:hover {
+    border-color: #f97316;
+    color: #f97316;
+}
+
+/* ── Image block ── */
+.bf-img-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bf-img-upload {
+    border: 2px dashed #e5e7eb;
+    border-radius: 8px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: #9ca3af;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.84rem;
+    transition: border-color 0.13s;
+}
+
+.bf-img-upload:hover {
+    border-color: #f97316;
+}
+
+.bf-img-preview-wrap {
+    position: relative;
+}
+
+.bf-img-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    border: none;
+    border-radius: 6px;
+    padding: 5px 8px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background 0.15s;
+}
+
+.bf-img-remove:hover {
+    background: #dc2626;
+}
+
+/* ── Table block ── */
+.bf-table-wrap {
+    overflow: hidden;
+}
+
+.bf-table-scroll {
+    overflow-x: auto;
+}
+
+.bf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+}
+
+.bf-table th,
+.bf-table td {
+    border: 1px solid #e5e7eb;
+    padding: 4px;
+}
+
+.bf-table th {
+    background: #f9fafb;
+}
+
+.bf-table input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    outline: none;
+    padding: 4px 6px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: #374151;
+}
+
+.bf-table-add-col {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #f97316;
+    font-size: 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    padding: 4px 6px;
+    white-space: nowrap;
+}
+
+/* ── Add block toolbar ── */
+.bf-add-toolbar {
+    border-top: 1px solid #f3f4f6;
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bf-add-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9ca3af;
+}
+
+.bf-add-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.bf-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #f9fafb;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 7px;
+    padding: 5px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.13s;
+}
+
+.bf-add-btn:hover {
+    border-color: #f97316;
+    color: #f97316;
+    background: #fff7ed;
+}
+
+/* ── Author upload ── */
+.bf-author-upload {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border: 1.5px dashed #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.13s;
+}
+
+.bf-author-upload:hover {
+    border-color: #f97316;
+}
+
+.bf-author-preview {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.bf-author-placeholder {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+/* ── Spin animation ── */
+.spin {
+    animation: bf-spin 0.8s linear infinite;
+}
+
+@keyframes bf-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

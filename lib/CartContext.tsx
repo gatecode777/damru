@@ -1,0 +1,185 @@
+"use client";
+
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+
+export interface CartItem {
+  // For DB-backed cart: menuItemId is the MongoDB _id of the MenuItem
+  // For guest cart: id is a local key like "name-variant"
+  id:          string;   // local key = `${menuItemId}-${custom || "plain"}`
+  menuItemId?: string;   // MongoDB MenuItem._id (present when logged in)
+  name:        string;
+  custom:      string;
+  price:       number;
+  qty:         number;
+  image?:      string;
+  variantType: string;
+}
+
+interface CartContextType {
+  items:       CartItem[];
+  isLoggedIn:  boolean;
+  loading:     boolean;
+  addItem:     (item: Omit<CartItem, "qty">, qty?: number) => Promise<void>;
+  removeItem:  (item: CartItem) => Promise<void>;
+  updateQty:   (item: CartItem, qty: number) => Promise<void>;
+  clearCart:   () => Promise<void>;
+  totalItems:  number;
+  totalPrice:  number;
+}
+
+const CartContext = createContext<CartContextType | null>(null);
+
+export function CartProvider({ children }: { children: React.ReactNode }) {
+  const [items,      setItems]      = useState<CartItem[]>([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading,    setLoading]    = useState(true);
+
+  // ── On mount: check login + load cart ──────────────────────
+  useEffect(() => {
+    async function init() {
+      try {
+        // Check if user is logged in
+        const meRes = await fetch("/api/user/me");
+        const meData = await meRes.json();
+        const loggedIn = !!meData.user;
+        setIsLoggedIn(loggedIn);
+
+        if (loggedIn) {
+          // Load cart from DB
+          const cartRes = await fetch("/api/cart");
+          if (cartRes.ok) {
+            const cartData = await cartRes.json();
+            // Map DB items to CartItem shape
+            const mapped: CartItem[] = (cartData.items || []).map((i: {
+              menuItemId: string; name: string; custom: string;
+              price: number; qty: number; image?: string; variantType: string;
+            }) => ({
+              id:          `${i.menuItemId}-${i.custom || "plain"}`,
+              menuItemId:  i.menuItemId,
+              name:        i.name,
+              custom:      i.custom,
+              price:       i.price,
+              qty:         i.qty,
+              image:       i.image,
+              variantType: i.variantType,
+            }));
+            setItems(mapped);
+          }
+        } else {
+          // Guest: load from localStorage
+          try {
+            const saved = localStorage.getItem("damru_cart");
+            if (saved) setItems(JSON.parse(saved));
+          } catch { /* ignore */ }
+        }
+      } catch {
+        // Fallback to localStorage
+        try {
+          const saved = localStorage.getItem("damru_cart");
+          if (saved) setItems(JSON.parse(saved));
+        } catch { /* ignore */ }
+      } finally {
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
+
+  // ── Guest: persist to localStorage ─────────────────────────
+  useEffect(() => {
+    if (!isLoggedIn && !loading) {
+      try { localStorage.setItem("damru_cart", JSON.stringify(items)); }
+      catch { /* ignore */ }
+    }
+  }, [items, isLoggedIn, loading]);
+
+  // ── ADD ITEM ────────────────────────────────────────────────
+  const addItem = useCallback(async (newItem: Omit<CartItem, "qty">, qty: number = 1) => {
+    if (isLoggedIn && newItem.menuItemId) {
+      // DB-backed
+      const res = await fetch("/api/cart/item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          menuItemId:  newItem.menuItemId,
+          variantType: newItem.variantType,
+          custom:      newItem.custom,
+          price:       newItem.price,
+          qty,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const mapped: CartItem[] = (data.items || []).map((i: {
+          menuItemId: string; name: string; custom: string;
+          price: number; qty: number; image?: string; variantType: string;
+        }) => ({
+          id: `${i.menuItemId}-${i.custom || "plain"}`,
+          menuItemId: i.menuItemId, name: i.name, custom: i.custom,
+          price: i.price, qty: i.qty, image: i.image, variantType: i.variantType,
+        }));
+        setItems(mapped);
+      }
+    } else {
+      // Guest: local state
+      setItems(prev => {
+        const exists = prev.find(i => i.id === newItem.id);
+        if (exists) return prev.map(i => i.id === newItem.id ? { ...i, qty: i.qty + qty } : i);
+        return [...prev, { ...newItem, qty }];
+      });
+    }
+  }, [isLoggedIn]);
+
+  // ── REMOVE ITEM ─────────────────────────────────────────────
+  const removeItem = useCallback(async (item: CartItem) => {
+    if (isLoggedIn && item.menuItemId) {
+      await fetch("/api/cart/item", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ menuItemId: item.menuItemId, custom: item.custom }),
+      });
+    }
+    setItems(prev => prev.filter(i => i.id !== item.id));
+  }, [isLoggedIn]);
+
+  // ── UPDATE QTY ──────────────────────────────────────────────
+  const updateQty = useCallback(async (item: CartItem, qty: number) => {
+    if (isLoggedIn && item.menuItemId) {
+      await fetch("/api/cart/item", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ menuItemId: item.menuItemId, custom: item.custom, qty }),
+      });
+    }
+    if (qty < 1) {
+      setItems(prev => prev.filter(i => i.id !== item.id));
+    } else {
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, qty } : i));
+    }
+  }, [isLoggedIn]);
+
+  // ── CLEAR CART ──────────────────────────────────────────────
+  const clearCart = useCallback(async () => {
+    if (isLoggedIn) {
+      await fetch("/api/cart", { method: "DELETE" });
+    } else {
+      try { localStorage.removeItem("damru_cart"); } catch { /* ignore */ }
+    }
+    setItems([]);
+  }, [isLoggedIn]);
+
+  const totalItems = items.reduce((sum, i) => sum + i.qty, 0);
+  const totalPrice = items.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+  return (
+    <CartContext.Provider value={{ items, isLoggedIn, loading, addItem, removeItem, updateQty, clearCart, totalItems, totalPrice }}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+export function useCart() {
+  const ctx = useContext(CartContext);
+  if (!ctx) throw new Error("useCart must be used inside CartProvider");
+  return ctx;
+}

@@ -1,0 +1,698 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useCart } from "@/lib/CartContext";
+
+type AuthScreen = "login" | "register" | "forgot" | "otp" | "reset";
+interface UserInfo { id: string; name: string; email: string; avatar?: string }
+
+async function apiPost(path: string, body: object) {
+  const r = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+
+// ── Isolated OTP input — own state so parent re-renders don't affect it ────────
+import { forwardRef, useImperativeHandle } from "react";
+
+const OtpBoxes = forwardRef<{ getCode: () => string }, object>(function OtpBoxes(_, ref) {
+  const [digits, setDigits] = useState(["", "", "", "", "", ""]);
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useImperativeHandle(ref, () => ({
+    getCode: () => digits.join(""),
+  }));
+
+  function handleChange(index: number, value: string) {
+    // Handle paste
+    if (value.length > 1) {
+      const nums = value.replace(/\D/g, "").slice(0, 6).split("");
+      const next = ["", "", "", "", "", ""];
+      nums.forEach((d, i) => { next[i] = d; });
+      setDigits(next);
+      inputs.current[Math.min(nums.length, 5)]?.focus();
+      return;
+    }
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const next = [...digits];
+    next[index] = digit;
+    setDigits(next);
+    if (digit && index < 5) inputs.current[index + 1]?.focus();
+  }
+
+  function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace") {
+      if (digits[index]) {
+        const next = [...digits]; next[index] = ""; setDigits(next);
+      } else if (index > 0) {
+        inputs.current[index - 1]?.focus();
+      }
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const next = ["", "", "", "", "", ""];
+    pasted.split("").forEach((d, i) => { next[i] = d; });
+    setDigits(next);
+    inputs.current[Math.min(pasted.length, 5)]?.focus();
+  }
+
+  const [focused, setFocused] = useState(-1);
+
+  return (
+    <div style={{ display:"flex", gap:10, justifyContent:"center", margin:"20px 0 10px" }}>
+      {digits.map((digit, index) => (
+        <input
+          key={index}
+          ref={el => { inputs.current[index] = el; }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={digit}
+          onChange={e => handleChange(index, e.target.value)}
+          onKeyDown={e => handleKeyDown(index, e)}
+          onPaste={handlePaste}
+          onFocus={() => setFocused(index)}
+          onBlur={() => setFocused(-1)}
+          style={{
+            width:50, height:56, border:`1.5px solid ${focused===index?"#e67e22":"#e0e0e0"}`,
+            borderRadius:10, textAlign:"center", fontSize:"1.4rem", fontWeight:600,
+            color:"#111", outline:"none", background: focused===index?"#fff":"#fafafa",
+            transition:"border-color 0.2s", fontFamily:"Poppins,sans-serif",
+            boxSizing:"border-box",
+          }}
+        />
+      ))}
+    </div>
+  );
+});
+
+export default function Header() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { totalItems } = useCart();
+  const otpRef = useRef<{ getCode: () => string } | null>(null);
+
+  // ── UI state (your original) ──────────────────────────────────
+  const [isMenuOpen,    setIsMenuOpen]    = useState(false);
+  const [isAuthOpen,    setIsAuthOpen]    = useState(false);
+  const [isSearchOpen,  setIsSearchOpen]  = useState(false);
+  const [activeScreen,  setActiveScreen]  = useState<AuthScreen>("login");
+  const [showPassword,  setShowPassword]  = useState({ login: false, register: false, confirm: false });
+  const [countdown,     setCountdown]     = useState(60);
+  const [isOtpSent,     setIsOtpSent]     = useState(false);
+
+  // ── Search state ──────────────────────────────────────────────
+  const [searchQuery,   setSearchQuery]   = useState("");
+  const [searchResults, setSearchResults] = useState<{ _id:string; name:string; desc:string; image:string; price:number; hasVariants:boolean; category:string; catSlug:string }[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchRef       = useRef<HTMLDivElement>(null);
+  const searchInputRef  = useRef<HTMLInputElement>(null);
+  const searchTimer     = useRef<ReturnType<typeof setTimeout>|null>(null);
+
+  // ── Added: user session + form fields + feedback ──────────────
+  const [user,        setUser]        = useState<UserInfo | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  const [busy,        setBusy]        = useState(false);
+  const [err,         setErr]         = useState("");
+  const [okMsg,       setOkMsg]       = useState("");
+
+  // form fields
+  const [loginEmail,  setLoginEmail]  = useState("");
+  const [loginPw,     setLoginPw]     = useState("");
+  const [regName,     setRegName]     = useState("");
+  const [regPhone,    setRegPhone]    = useState("");
+  const [regEmail,    setRegEmail]    = useState("");
+  const [regPw,       setRegPw]       = useState("");
+  const [regConfirm,  setRegConfirm]  = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [otpToken,    setOtpToken]    = useState("");
+  const [resetToken,  setResetToken]  = useState("");
+  const [newPw,       setNewPw]       = useState("");
+  const [newPwConf,   setNewPwConf]   = useState("");
+  const [showNewPw,   setShowNewPw]   = useState(false);
+  const [showNewConf, setShowNewConf] = useState(false);
+
+  // ── Your original useEffects ──────────────────────────────────
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isOtpSent) return;
+    setCountdown(60);
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setIsOtpSent(false);
+          return 60;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isOtpSent]); // only depends on isOtpSent — starts once, cleans up properly
+
+  // ── Added: fetch session on mount ─────────────────────────────
+  useEffect(() => {
+    fetch("/api/user/me")
+      .then(r => r.json())
+      .then(d => setUser(d.user || null))
+      .catch(() => setUser(null))
+      .finally(() => setUserLoading(false));
+  }, []);
+
+  // ── Search debounce ──────────────────────────────────────────
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      setSearchResults([]); setSearchLoading(false); return;
+    }
+    setSearchLoading(true);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        const data = await res.json();
+        setSearchResults(data.results || []);
+      } catch { setSearchResults([]); }
+      finally { setSearchLoading(false); }
+    }, 300);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [searchQuery]);
+
+  // Close search dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // ── Your original handlers ────────────────────────────────────
+  const toggleMenu   = () => setIsMenuOpen(!isMenuOpen);
+  const toggleAuth   = () => {
+    setIsAuthOpen(!isAuthOpen);
+    setErr(""); setOkMsg("");
+  };
+  const toggleSearch = () => setIsSearchOpen(!isSearchOpen);
+
+
+  // ── Added: API actions ────────────────────────────────────────
+  async function handleLogin() {
+    if (!loginEmail || !loginPw) { setErr("Please fill all fields."); return; }
+    setBusy(true); setErr("");
+    const d = await apiPost("/api/user/login", { email: loginEmail, password: loginPw });
+    setBusy(false);
+    if (d.error) { setErr(d.error); return; }
+    setUser(d.user);
+    setIsAuthOpen(false);
+    router.refresh();
+  }
+
+  async function handleRegister() {
+    if (!regName || !regEmail || !regPw) { setErr("Fill all required fields."); return; }
+    if (regPw !== regConfirm)            { setErr("Passwords don't match."); return; }
+    if (regPw.length < 6)                { setErr("Password min 6 characters."); return; }
+    setBusy(true); setErr("");
+    const d = await apiPost("/api/user/register", { name: regName, email: regEmail, phone: regPhone, password: regPw });
+    setBusy(false);
+    if (d.error) { setErr(d.error); return; }
+    setUser(d.user);
+    setIsAuthOpen(false);
+    router.refresh();
+  }
+
+  async function handleSendOtp() {
+    if (!forgotEmail) { setErr("Enter your email address."); return; }
+    setBusy(true); setErr("");
+    // Switch to OTP screen first so user sees it immediately
+    setActiveScreen("otp");
+    // isOtpSent stays false here — countdown does NOT start yet
+    const d = await apiPost("/api/user/send-otp", { email: forgotEmail });
+    setBusy(false);
+    if (d.error) { setErr(d.error); setActiveScreen("forgot"); return; }
+    setOtpToken(d.otpToken);
+    setOkMsg("OTP sent! Check your inbox.");
+    // Only NOW start the countdown — email is confirmed sent
+    setIsOtpSent(true);
+  }
+
+  async function handleVerifyOtp() {
+    const code = otpRef.current?.getCode() ?? "";
+    if (code.length < 6 || code.replace(/\d/g, "").length > 0) { setErr("Enter all 6 digits."); return; }
+    setBusy(true); setErr("");
+    const d = await apiPost("/api/user/verify-otp", { otpToken, otp: code });
+    setBusy(false);
+    if (d.error) { setErr(d.error); return; }
+    setResetToken(d.resetToken);
+    setOkMsg("OTP verified! Set your new password.");
+    setActiveScreen("reset");
+  }
+
+  async function handleResetPassword() {
+    if (!newPw)             { setErr("Enter new password."); return; }
+    if (newPw.length < 6)   { setErr("Min 6 characters."); return; }
+    if (newPw !== newPwConf) { setErr("Passwords don't match."); return; }
+    setBusy(true); setErr("");
+    const d = await apiPost("/api/user/reset-password", { resetToken, password: newPw });
+    setBusy(false);
+    if (d.error) { setErr(d.error); return; }
+    setOkMsg("Password reset successfully! You can now log in.");
+    setTimeout(() => { setActiveScreen("login"); setErr(""); setOkMsg(""); }, 2000);
+  }
+
+  async function handleLogout() {
+    await fetch("/api/user/logout", { method: "POST" });
+    // Hard reload — instantly clears all client state (cart, user, etc.)
+    // router.refresh() is too slow; window.location gives immediate feedback
+    window.location.href = "/";
+  }
+
+  return (
+    <>
+      <header className="main-header">
+        <div className="header-container">
+          <div className="logo">
+            <Link href="/">
+              <img src="/assets/images/damru.png" alt="Damru Logo" />
+            </Link>
+          </div>
+
+          <nav className="desktop-nav">
+            <div className="menu-toggle" id="openMenu" onClick={toggleMenu}>
+              <i className="ri-menu-line"></i>
+            </div>
+
+            <ul className="nav-links" style={{ display: isMenuOpen ? "flex" : undefined }}>
+              <li><Link href="/"        className={pathname === "/"        ? "active" : ""}>Home</Link></li>
+              <li><Link href="/menu"    className={pathname === "/menu"    ? "active" : ""}>Menu</Link></li>
+              <li><Link href="/about-us" className={pathname === "/about-us" ? "active" : ""}>About Us</Link></li>
+              <li><Link href="/contact-us" className={pathname === "/contact-us" ? "active" : ""}>Contact Us</Link></li>
+            </ul>
+          </nav>
+
+          <div className="header-icons">
+            {/* ── Search — fully self-contained, no dependency on header.css classes ── */}
+            <div ref={searchRef} style={{ position:"relative", display:"flex", alignItems:"center" }}>
+              <button
+                onClick={() => {
+                  setIsSearchOpen(v => !v);
+                  if (!isSearchOpen) setTimeout(() => { searchInputRef.current?.focus(); setSearchFocused(true); }, 80);
+                  else { setSearchFocused(false); setSearchQuery(""); }
+                }}
+                style={{ background:"none", border:"none", cursor:"pointer", fontSize:20, color:"#333", display:"flex", alignItems:"center", padding:"4px 6px" }}
+              >
+                <i className="ri-search-line"></i>
+              </button>
+
+              {/* Expandable input — only rendered when open so CSS class state doesn't matter */}
+              {isSearchOpen && (
+                <div style={{ display:"flex", alignItems:"center", background:"#f5f5f5", borderRadius:24, padding:"0 12px", gap:6, minWidth:220, border:"1.5px solid #e0e0e0", transition:"all 0.2s" }}>
+                  <i className="ri-search-line" style={{ color:"#aaa", fontSize:14 }}></i>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search menu items..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onKeyDown={e => {
+                      if (e.key === "Escape") { setSearchFocused(false); setSearchQuery(""); setIsSearchOpen(false); }
+                    }}
+                    autoComplete="off"
+                    style={{ border:"none", background:"transparent", outline:"none", padding:"8px 0", fontSize:"0.88rem", fontFamily:"Poppins,sans-serif", color:"#111", width:"100%", minWidth:0 }}
+                  />
+                  {searchQuery && (
+                    <button onClick={() => { setSearchQuery(""); setSearchResults([]); searchInputRef.current?.focus(); }}
+                      style={{ background:"none", border:"none", cursor:"pointer", color:"#aaa", fontSize:14, display:"flex", alignItems:"center", padding:0, flexShrink:0 }}>✕</button>
+                  )}
+                </div>
+              )}
+
+              {/* Dropdown — position:fixed so it NEVER gets clipped by header overflow */}
+              {isSearchOpen && searchFocused && searchQuery.length >= 2 && (() => {
+                const rect = searchRef.current?.getBoundingClientRect();
+                return (
+                  <div style={{
+                    position:"fixed",
+                    top: rect ? rect.bottom + 8 : 80,
+                    left: rect ? Math.max(8, rect.right - 380) : 8,
+                    width: 380,
+                    background:"#fff",
+                    borderRadius:14,
+                    boxShadow:"0 12px 40px rgba(0,0,0,0.18)",
+                    border:"1px solid #f0f0f0",
+                    zIndex:999999,
+                    overflow:"hidden",
+                    maxHeight:"70vh",
+                    overflowY:"auto",
+                  }}>
+                    {searchLoading ? (
+                      <div style={{ padding:"20px", fontFamily:"Poppins,sans-serif", fontSize:"0.85rem", color:"#aaa", textAlign:"center" }}>
+                        🔍 Searching…
+                      </div>
+                    ) : searchResults.length === 0 ? (
+                      <div style={{ padding:"20px", fontFamily:"Poppins,sans-serif", fontSize:"0.85rem", color:"#aaa", textAlign:"center" }}>
+                        No results for &ldquo;{searchQuery}&rdquo;
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ padding:"10px 16px 8px", fontFamily:"Poppins,sans-serif", fontSize:"0.7rem", fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:"0.08em", borderBottom:"1px solid #f5f5f5" }}>
+                          {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} · &ldquo;{searchQuery}&rdquo;
+                        </div>
+                        {searchResults.map(item => {
+                          // Navigate to menu page with category query param so user lands on the right category
+                          const href = item.catSlug
+                            ? `/menu?category=${encodeURIComponent(item.catSlug)}`
+                            : "/menu";
+                          return (
+                            <a key={item._id} href={href}
+                              onClick={() => { setSearchFocused(false); setSearchQuery(""); setIsSearchOpen(false); }}
+                              style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", textDecoration:"none", borderBottom:"1px solid #fafafa" }}
+                              onMouseEnter={e => (e.currentTarget.style.background="#fff7ed")}
+                              onMouseLeave={e => (e.currentTarget.style.background="transparent")}
+                            >
+                              <div style={{ width:46, height:46, borderRadius:10, overflow:"hidden", flexShrink:0, background:"#f5f5f5", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                {item.image
+                                  ? <img src={`/uploads/menu-items/${item.image}`} alt={item.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                                  : <span style={{ fontSize:22 }}>🍽️</span>
+                                }
+                              </div>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ fontFamily:"Poppins,sans-serif", fontWeight:600, fontSize:"0.9rem", color:"#111", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.name}</div>
+                                {item.category && <div style={{ fontFamily:"Poppins,sans-serif", fontSize:"0.72rem", color:"#e67e22", fontWeight:600 }}>{item.category}</div>}
+                                {item.desc && <div style={{ fontFamily:"Poppins,sans-serif", fontSize:"0.75rem", color:"#999", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.desc}</div>}
+                              </div>
+                              <div style={{ fontFamily:"Poppins,sans-serif", fontWeight:700, fontSize:"0.9rem", color:"#e67e22", flexShrink:0, textAlign:"right" }}>
+                                {item.hasVariants && <div style={{ fontSize:"0.65rem", fontWeight:400, color:"#aaa" }}>from</div>}
+                                ₹{item.price}
+                              </div>
+                            </a>
+                          );
+                        })}
+                        <a href="/menu" onClick={() => { setSearchFocused(false); setSearchQuery(""); setIsSearchOpen(false); }}
+                          style={{ display:"block", padding:"12px 16px", textAlign:"center", fontFamily:"Poppins,sans-serif", fontSize:"0.84rem", fontWeight:600, color:"#e67e22", textDecoration:"none", borderTop:"1px solid #f5f5f5", background:"#fffbf5" }}>
+                          View All Menu Items →
+                        </a>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Cart — only when logged in */}
+            {!userLoading && user && (
+              <Link href="/cart" className="icon-link" aria-label="Cart" style={{ position: "relative" }}>
+                <i className="ri-shopping-basket-2-line"></i>
+                {totalItems > 0 && (
+                  <span style={{ position:"absolute", top:"-6px", right:"-6px", background:"#e67e22", color:"#fff", borderRadius:"50%", width:"18px", height:"18px", fontSize:"0.65rem", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Poppins,sans-serif" }}>{totalItems > 99 ? "99+" : totalItems}</span>
+                )}
+              </Link>
+            )}
+
+            {/* Profile icon — login modal if not logged in, profile link if logged in */}
+            {userLoading ? (
+              <span className="icon-link" style={{ opacity: 0.4, cursor: "default" }}>
+                <i className="ri-user-3-line"></i>
+              </span>
+            ) : user ? (
+              <Link href="/my-profile" className="icon-link" title={`Hi, ${user.name}`} style={{ position: "relative" }}>
+                {user.avatar ? (
+                  <img
+                    src={`/uploads/avatars/${user.avatar}`}
+                    alt={user.name}
+                    style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #e67e22" }}
+                  />
+                ) : (
+                  <span style={{
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: "#e67e22", color: "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "0.7rem", fontWeight: 700, fontFamily: "Poppins, sans-serif"
+                  }}>
+                    {user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+              </Link>
+            ) : (
+              <button className="icon-link" id="profileIconBtn" onClick={toggleAuth}>
+                <i className="ri-user-3-line"></i>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Full menu overlay — your original structure */}
+      <div className={`full-menu-overlay ${isMenuOpen ? "active" : ""}`} id="fullMenu" style={{ display: isMenuOpen ? "block" : "none" }}>
+        <div className="close-menu" id="closeMenu" onClick={toggleMenu}>
+          <i className="ri-close-line"></i>
+        </div>
+
+        <div className="overlay-content">
+          <div className="overlay-nav">
+            <ul>
+              <li><span className="dot"></span> <Link href="/gallery" onClick={toggleMenu} className={pathname === "/gallery" ? "active-menu" : ""}>GALLERY</Link></li>
+              <li className="has-submenu">
+                <span className="dot" style={{ background: pathname.startsWith("/blogs") ? "#8da33d" : undefined }}></span>
+                <Link href="/blogs" onClick={toggleMenu} className={pathname.startsWith("/blogs") ? "active-menu" : ""}>BLOGS</Link>
+              </li>
+              <li><span className="dot"></span> <Link href="/offers" onClick={toggleMenu} className={pathname === "/offers" ? "active-menu" : ""}>OFFERS</Link></li>
+              <li><span className="dot"></span> <Link href="/branches" onClick={toggleMenu} className={pathname === "/branches" ? "active-menu" : ""}>BANQUET / EVENT</Link></li>
+              {/* Added: show logout or login inside overlay menu */}
+              {user ? (
+                <>
+                  <li><span className="dot"></span> <Link href="/my-profile" onClick={toggleMenu}>MY PROFILE</Link></li>
+                  <li>
+                    <span className="dot" style={{ background: "#e74c3c" }}></span>
+                    <button
+                      onClick={() => { setIsMenuOpen(false); handleLogout(); }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#e74c3c", fontFamily: "inherit", fontSize: "inherit", fontWeight: "inherit" }}
+                    >
+                      LOGOUT
+                    </button>
+                  </li>
+                </>
+              ) : (
+                <li>
+                  <span className="dot"></span>
+                  <button
+                    onClick={() => { setIsMenuOpen(false); setIsAuthOpen(true); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", fontFamily: "inherit", fontSize: "inherit", fontWeight: "inherit" }}
+                  >
+                    LOGIN
+                  </button>
+                </li>
+              )}
+            </ul>
+          </div>
+
+          <div className="overlay-contact">
+            <h3>Contact</h3>
+            <div className="dotted-divider"></div>
+            <p className="contact-detail">+86 852 346 000</p>
+            <p className="contact-detail">info@damrubynamo.com</p>
+            <br /><br />
+            <p className="contact-address">
+              35 A Mansarover, Jaipur (Rajasthan),<br />302020
+            </p>
+            <div className="overlay-socials">
+              <Link href="#"><i className="ri-instagram-line"></i></Link>
+              <Link href="#"><i className="ri-twitter-line"></i></Link>
+              <Link href="#"><i className="ri-facebook-fill"></i></Link>
+              <Link href="#"><i className="ri-youtube-line"></i></Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Auth modal — your original structure, with working handlers */}
+      <div className={`auth-overlay ${isAuthOpen ? "active" : ""}`} id="authOverlay">
+        <div className="auth-modal" id="authModal">
+          <button className="auth-close" id="authClose" onClick={toggleAuth}>✕</button>
+
+          {/* Feedback messages */}
+          {err   && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: "0.85rem", fontFamily: "Poppins, sans-serif" }}>⚠ {err}</div>}
+          {okMsg && <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: "0.85rem", fontFamily: "Poppins, sans-serif" }}>✓ {okMsg}</div>}
+
+          {/* LOGIN */}
+          <div className={`auth-screen ${activeScreen === "login" ? "active" : ""}`} id="screen-login">
+            <h2 className="auth-title">Log In !</h2>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-mail-line"></i></span>
+              <input type="email" placeholder="Email Address" id="login-email"
+                value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleLogin()} />
+            </div>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-shield-keyhole-line"></i></span>
+              <input type={showPassword.login ? "text" : "password"} placeholder="Password" id="login-password"
+                value={loginPw} onChange={e => setLoginPw(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleLogin()} />
+              <button className="toggle-pass" onClick={() => setShowPassword({ ...showPassword, login: !showPassword.login })}>
+                <i className={showPassword.login ? "ri-eye-line" : "ri-eye-off-line"}></i>
+              </button>
+            </div>
+            <div className="auth-forgot-wrap">
+              <button className="auth-link" id="goForgot" onClick={() => { setErr(""); setOkMsg(""); setActiveScreen("forgot"); }}>Forget Password ?</button>
+            </div>
+            <button className="auth-btn" id="loginBtn" onClick={handleLogin} disabled={busy}>
+              {busy ? "Logging in…" : "Log in"}
+            </button>
+            <p className="auth-switch">Don&apos;t have an account ?{" "}
+              <button className="auth-link orange" id="goRegister" onClick={() => { setErr(""); setOkMsg(""); setActiveScreen("register"); }}>Sign Up</button>
+            </p>
+          </div>
+
+          {/* REGISTER */}
+          <div className={`auth-screen ${activeScreen === "register" ? "active" : ""}`} id="screen-register">
+            <h2 className="auth-title">Registration !</h2>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-user-3-line"></i></span>
+              <input type="text" placeholder="Full Name" value={regName} onChange={e => setRegName(e.target.value)} />
+            </div>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-phone-line"></i></span>
+              <input type="tel" placeholder="Contact Number" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
+            </div>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-mail-line"></i></span>
+              <input type="email" placeholder="Email Address" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
+            </div>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-shield-keyhole-line"></i></span>
+              <input type={showPassword.register ? "text" : "password"} placeholder="Password" id="reg-password"
+                value={regPw} onChange={e => setRegPw(e.target.value)} />
+              <button className="toggle-pass" onClick={() => setShowPassword({ ...showPassword, register: !showPassword.register })}>
+                <i className={showPassword.register ? "ri-eye-line" : "ri-eye-off-line"}></i>
+              </button>
+            </div>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-shield-keyhole-line"></i></span>
+              <input type={showPassword.confirm ? "text" : "password"} placeholder="Confirm Password" id="reg-confirm"
+                value={regConfirm} onChange={e => setRegConfirm(e.target.value)} />
+              <button className="toggle-pass" onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}>
+                <i className={showPassword.confirm ? "ri-eye-line" : "ri-eye-off-line"}></i>
+              </button>
+            </div>
+            <p className="auth-terms">By signing below, you agree to the <Link href="#">terms of use</Link> and <Link href="#">privacy notice</Link></p>
+            <button className="auth-btn" onClick={handleRegister} disabled={busy}>
+              {busy ? "Registering…" : "Register"}
+            </button>
+            <p className="auth-switch">
+              <button className="auth-link orange" id="goLogin" onClick={() => { setErr(""); setOkMsg(""); setActiveScreen("login"); }}>← Back to Login Page</button>
+            </p>
+          </div>
+
+          {/* FORGOT PASSWORD */}
+          <div className={`auth-screen ${activeScreen === "forgot" ? "active" : ""}`} id="screen-forgot">
+            <h2 className="auth-title">Forgot Password !</h2>
+            <p className="auth-desc">Please enter your email address below you will receive OTP on your email address.</p>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-mail-line"></i></span>
+              <input type="email" placeholder="Email Address" id="forgot-email"
+                value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSendOtp()} />
+            </div>
+            <button className="auth-btn" id="forgotBtn" onClick={handleSendOtp} disabled={busy}>
+              {busy ? "Sending OTP…" : "Continue"}
+            </button>
+          </div>
+
+          {/* OTP */}
+          <div className={`auth-screen ${activeScreen === "otp" ? "active" : ""}`} id="screen-otp">
+            <h2 className="auth-title">Verify OTP</h2>
+            <p className="auth-desc">Please enter OTP sent to <strong>{forgotEmail}</strong></p>
+            <OtpBoxes ref={otpRef} />
+            <p className="otp-timer">
+              {busy
+                ? <>Sending OTP to your email…</>
+                : isOtpSent
+                  ? <><span id="otp-countdown">{countdown}</span> Seconds</>
+                  : <button className="auth-link orange" onClick={handleSendOtp}>Resend OTP</button>
+              }
+            </p>
+            <button className="auth-btn" id="otpBtn" onClick={handleVerifyOtp} disabled={busy}>
+              {busy ? "Verifying…" : "Continue"}
+            </button>
+          </div>
+
+          {/* RESET PASSWORD — new screen after OTP verified */}
+          <div className={`auth-screen ${activeScreen === "reset" ? "active" : ""}`} id="screen-reset">
+            <h2 className="auth-title">New Password</h2>
+            <p className="auth-desc">Enter your new password below.</p>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-shield-keyhole-line"></i></span>
+              <input type={showNewPw ? "text" : "password"} placeholder="New Password"
+                value={newPw} onChange={e => setNewPw(e.target.value)} />
+              <button className="toggle-pass" onClick={() => setShowNewPw(v => !v)}>
+                <i className={showNewPw ? "ri-eye-line" : "ri-eye-off-line"}></i>
+              </button>
+            </div>
+            <div className="auth-field">
+              <span className="auth-field-icon"><i className="ri-shield-keyhole-line"></i></span>
+              <input type={showNewConf ? "text" : "password"} placeholder="Confirm New Password"
+                value={newPwConf} onChange={e => setNewPwConf(e.target.value)} />
+              <button className="toggle-pass" onClick={() => setShowNewConf(v => !v)}>
+                <i className={showNewConf ? "ri-eye-line" : "ri-eye-off-line"}></i>
+              </button>
+            </div>
+            <button className="auth-btn" onClick={handleResetPassword} disabled={busy}>
+              {busy ? "Saving…" : "Reset Password"}
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <style jsx global>{`
+        .auth-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+        .auth-overlay.active{display:flex}
+        .auth-modal{background:#fff;border-radius:16px;padding:40px 36px 32px;width:100%;max-width:480px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:authSlide 0.3s cubic-bezier(0.4,0,0.2,1);max-height:90vh;overflow-y:auto}
+        @keyframes authSlide{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+        .auth-close{position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;color:#555;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background 0.2s;line-height:1}
+        .auth-close:hover{background:#f0f0f0}
+        .auth-screen{display:none}
+        .auth-screen.active{display:block}
+        .auth-title{font-family:"Playfair Display",serif;font-size:2rem;font-weight:700;color:#111;text-align:center;margin-bottom:28px}
+        .auth-desc{font-size:0.9rem;color:#666;margin-bottom:20px;line-height:1.6}
+        .auth-field{display:flex;align-items:center;border:1.5px solid #e0e0e0;border-radius:10px;padding:0 14px;margin-bottom:14px;background:#fafafa;transition:border-color 0.2s}
+        .auth-field:focus-within{border-color:#e67e22;background:#fff}
+        .auth-field-icon{color:#aaa;font-size:18px;margin-right:10px;display:flex;align-items:center}
+        .auth-field input{flex:1;border:none;background:transparent;outline:none;padding:14px 0;font-size:0.95rem;color:#111;font-family:"Poppins",sans-serif}
+        .auth-field input::placeholder{color:#bbb}
+        .toggle-pass{background:none;border:none;cursor:pointer;color:#aaa;font-size:18px;display:flex;align-items:center;padding:0;transition:color 0.2s}
+        .toggle-pass:hover{color:#555}
+        .auth-forgot-wrap{text-align:right;margin-bottom:20px;margin-top:-4px}
+        .auth-link{background:none;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;color:#111;padding:0;font-family:"Poppins",sans-serif}
+        .auth-link.orange{color:#e67e22}
+        .auth-link:hover{text-decoration:underline}
+        .auth-btn{width:100%;background:#e67e22;color:#fff;border:none;border-radius:10px;padding:16px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:6px;font-family:"Poppins",sans-serif;transition:background 0.2s,transform 0.15s;box-shadow:0 6px 20px rgba(230,126,34,0.35)}
+        .auth-btn:hover:not(:disabled){background:#d4691a;transform:translateY(-1px)}
+        .auth-btn:disabled{opacity:0.65;cursor:not-allowed}
+        .auth-switch{text-align:center;margin-top:18px;font-size:0.9rem;color:#555;font-family:"Poppins",sans-serif}
+        .auth-terms{font-size:0.82rem;color:#555;margin-bottom:16px;line-height:1.6;font-family:"Poppins",sans-serif}
+        .auth-terms a{color:#e67e22;text-decoration:none}
+        /* OTP box styles moved to inline in OtpBoxes component */
+        .otp-timer{text-align:center;color:#e67e22;font-size:0.9rem;font-weight:600;margin-bottom:20px;font-family:"Poppins",sans-serif !important}
+        @media(max-width:520px){.auth-modal{margin:16px;padding:32px 20px 24px}.auth-title{font-size:1.6rem}.otp-input{width:40px;height:48px;font-size:1.2rem}}
+      `}</style>
+    </>
+  );
+}

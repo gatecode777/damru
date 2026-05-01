@@ -1,0 +1,153 @@
+/* styles/admin/user-form.css
+   Styles specific to the User Add/Edit form.
+   Base form styles are in form.css
+*/
+
+/* ── Avatar upload preview ── */
+.avatar-upload-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.avatar-preview {
+  width: 96px;
+  height: 96px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #d1d5db;
+  transition: border-color 0.15s;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-preview.has-image {
+  border-color: #fed7aa;
+}
+
+.avatar-initials {
+  font-family: "DM Sans", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.avatar-upload-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 9px;
+  padding: 8px 14px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.84rem;
+  color: #f97316;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.13s;
+}
+.upload-btn:hover { background: #ffedd5; }
+
+.upload-hint {
+  font-size: 0.74rem;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.upload-success { color: #16a34a; font-size: 0.8rem; font-weight: 500; }
+.upload-error   { color: #dc2626; font-size: 0.8rem; }
+
+/* ── Password field with show/hide ── */
+.pw-wrap {
+  position: relative;
+}
+.pw-wrap .inp {
+  padding-right: 42px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.13s;
+  padding: 0;
+}
+.pw-toggle:hover { color: #374151; }
+
+/* ── Status selector ── */
+.status-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.status-option {
+  flex: 1;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: all 0.13s;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.84rem;
+  color: #6b7280;
+}
+.status-option:hover { border-color: #d1d5db; background: #fff; }
+.status-option.active-sel {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.status-option.inactive-sel {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #6b7280;
+}
+.status-option.suspended-sel {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+}
+.status-option input { display: none; }
+.status-dot-sm {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

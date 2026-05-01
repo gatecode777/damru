@@ -1,0 +1,145 @@
+/* Parent Scoped Class */
+.refund {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background-color: #ffffff;
+  overflow-x: hidden;
+}
+
+/* Image 1: Hero Section */
+.refund .refund-hero {
+  width: 100%;
+  height: 700px;
+  background: url("/assets/images/refundpolicy.png") no-repeat center
+    center/cover;
+  position: relative;
+}
+
+/* Main Content Container */
+.refund .refund-container {
+  max-width: 1400px;
+  margin: 60px auto;
+  padding: 0 40px;
+}
+
+/* Header Styling */
+.refund .policy-title {
+  font-family: "Playfair Display", serif;
+  font-size: 48px;
+  color: #e37a24;
+  margin-bottom: 20px;
+}
+
+.refund .effective-date {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #000;
+  margin-bottom: 30px;
+}
+
+.refund .intro-text {
+  font-family: "Poppins", sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #444;
+  margin-bottom: 50px;
+}
+
+/* Policy Sections */
+.refund .policy-section {
+  margin-bottom: 45px;
+}
+
+.refund .policy-section h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  color: #000;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.refund .policy-section p {
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+/* List Styling (Bullets) */
+.refund .policy-section ul {
+  list-style: none;
+  padding-left: 10px;
+  margin-bottom: 20px;
+}
+
+.refund .policy-section ul li {
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  color: #555;
+  line-height: 1.8;
+  margin-bottom: 10px;
+  position: relative;
+  padding-left: 20px;
+}
+
+.refund .policy-section ul li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #000;
+  font-weight: bold;
+}
+
+/* Specific Sub-Policies and Notes */
+.refund .sub-policy {
+  margin-bottom: 25px;
+}
+
+.refund .note {
+  background-color: #f9f9f9;
+  padding: 10px;
+  border-left: 4px solid #e37a24;
+}
+
+/* Contact Details */
+.refund .contact-details p {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 1024px) {
+  .refund .refund-container {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 768px) {
+  .refund .refund-hero {
+    height: 250px;
+  }
+
+  .refund .refund-container {
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+
+  .refund .policy-title {
+    font-size: 36px;
+  }
+
+  .refund .policy-section h2 {
+    font-size: 24px;
+  }
+
+  .refund .intro-text {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .refund .policy-title {
+    font-size: 30px;
+  }
+}

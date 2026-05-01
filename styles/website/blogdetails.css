@@ -1,0 +1,430 @@
+/* ----- PAGE WRAPPER ----- */
+.sb-page {
+  font-family: "Poppins", sans-serif;
+  color: #444;
+  line-height: 1.6;
+  background-color: #fff;
+  padding: 180px 0 100px;
+  width: 100%;
+}
+
+/* ----- TOP HEADER ----- */
+.sb-page__top-header {
+  text-align: center;
+  margin-bottom: 50px;
+  padding: 0 30px;
+}
+
+.sb-page__breadcrumb {
+  font-size: 18px;
+  color: #222;
+  margin-bottom: 15px;
+}
+.sb-page__breadcrumb a {
+  color: #888;
+}
+
+.sb-page__main-title {
+  font-family: "Playfair Display", serif;
+  font-size: 42px;
+  color: #000;
+  margin-top: 50px;
+  margin-bottom: 100px;
+}
+
+/* ----- GRID CONTAINER (main + sidebar) ----- */
+.sb-page__container {
+  max-width: 1500px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2.8fr 1.2fr;
+  gap: 50px;
+  padding: 0 30px;
+}
+
+/* MAIN CONTENT — .sb-main*/
+
+.sb-main h2,
+.sb-main h3 {
+  font-family: "Playfair Display", serif;
+  color: #000;
+  margin-bottom: 16px;
+  margin-top: 30px;
+}
+
+.sb-main h2 {
+  font-size: 28px;
+}
+.sb-main h3 {
+  font-size: 20px;
+}
+
+.sb-main__intro {
+  font-size: 16px;
+  margin-bottom: 30px;
+}
+
+/* Gallery */
+.sb-main__gallery {
+  display: grid;
+  /* grid-template-columns: 1.5fr 1fr; */
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.sb-main__gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+.sb-main__gallery-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* List */
+.sb-main__list {
+  margin: 16px 0 20px 20px;
+  padding: 0;
+}
+
+.sb-main__list li {
+  margin-bottom: 10px;
+}
+
+/* Quote */
+.sb-main__quote {
+  font-size: 22px;
+  font-style: italic;
+  color: #7a9c1e;
+  font-weight: 500;
+  margin: 40px 0;
+  line-height: 1.4;
+}
+
+/* Table */
+.sb-main__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 30px 0;
+  font-size: 15px;
+}
+
+.sb-main__table th {
+  background-color: #2d8a01;
+  color: #fff;
+  padding: 15px;
+  text-align: left;
+}
+
+.sb-main__table td {
+  background-color: #ccff99;
+  padding: 15px;
+  border: 1px solid #fff;
+}
+
+/* Author */
+.sb-main__author {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding: 30px 0;
+  border-top: 1px solid #eee;
+  margin-top: 50px;
+}
+
+.sb-main__author img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sb-main__author h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.sb-main__author p {
+  margin: 0;
+  color: #666;
+}
+
+/* ============================================
+   SIDEBAR — .sb-sidebar
+   ============================================ */
+
+.sb-sidebar__widget {
+  margin-bottom: 150px;
+}
+
+.sb-sidebar__title {
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  color: #000;
+  text-align: center;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.sb-sidebar__search {
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-bottom: 2px solid #000;
+  outline: none;
+  font-size: 16px;
+  font-family: "Poppins", sans-serif;
+  background: transparent;
+}
+
+.sb-sidebar__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sb-sidebar__list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  font-size: 16px;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.sb-sidebar__comments {
+  font-size: 13px;
+}
+
+.sb-sidebar__comment-item {
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.sb-sidebar__comment-item span {
+  color: #aaa;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.sb-sidebar__comment-item strong {
+  color: #333;
+}
+
+.sb-sidebar__post {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+.sb-sidebar__post img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.sb-sidebar__post-info h4 {
+  font-size: 14px;
+  margin: 0 0 5px 0;
+  line-height: 1.4;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  color: #222;
+}
+
+.sb-sidebar__post-info small {
+  color: #999;
+  font-size: 11px;
+}
+
+.sb-sidebar__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sb-sidebar__tags a {
+  padding: 6px 18px;
+  border: 1px solid #ccc;
+  text-decoration: none;
+  color: #333;
+  font-size: 13px;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.sb-sidebar__tags a:hover {
+  background: #000;
+  color: #fff;
+}
+
+/* 
+   FULL WIDTH SECTION — .sb-fullwidth
+   Grid ke baad, poori screen width mein
+    */
+
+.sb-fullwidth {
+  width: 100%;
+  padding: 0 30px;
+  box-sizing: border-box;
+}
+
+/* Prev/Next Nav */
+.sb-fullwidth__nav {
+  display: flex;
+  gap: 0;
+  margin: 50px 0;
+  width: 100%;
+}
+
+.sb-fullwidth__nav-box {
+  flex: 1;
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #fff;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  text-decoration: none;
+  padding: 20px;
+}
+
+.sb-fullwidth__nav-box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.sb-fullwidth__nav-box span,
+.sb-fullwidth__nav-box h4 {
+  position: relative;
+  z-index: 2;
+  margin: 4px 0;
+}
+
+/* Comments */
+.sb-fullwidth__comments {
+  margin-top: 60px;
+  max-width: 1600px;
+  padding: 50px;
+}
+
+.sb-fullwidth__section-title {
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  color: #000;
+  margin-bottom: 30px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.sb-fullwidth__comment {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.sb-fullwidth__comment--reply {
+  margin-left: 70px;
+}
+
+.sb-fullwidth__comment img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sb-fullwidth__comment-body {
+  flex: 1;
+}
+
+.sb-fullwidth__comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.sb-fullwidth__reply-btn {
+  font-weight: bold;
+  text-decoration: none;
+  color: #000;
+  font-size: 14px;
+}
+
+/* Reply Form */
+.sb-fullwidth__form {
+  margin-top: 50px;
+  max-width: 1600px;
+  padding: 50px;
+}
+
+.sb-fullwidth__form label {
+  display: block;
+  margin-top: 20px;
+  font-weight: 500;
+}
+
+.sb-fullwidth__form input,
+.sb-fullwidth__form textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  margin-top: 8px;
+  box-sizing: border-box;
+  display: block;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+.sb-fullwidth__post-btn {
+  background: #fff;
+  border: 1px solid #000;
+  padding: 12px 35px;
+  margin-top: 25px;
+  font-weight: bold;
+  font-family: "Poppins", sans-serif;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sb-fullwidth__post-btn:hover {
+  background: #f2f2f2;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 992px) {
+  .sb-page__container {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .sb-fullwidth__nav {
+    flex-direction: column;
+  }
+
+  .sb-main__gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .sb-page__main-title {
+    font-size: 30px;
+  }
+}
