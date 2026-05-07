@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import Coupon from "@/models/Coupon";
 import CouponsClient from "./CouponsClient";
@@ -11,6 +12,10 @@ export const metadata = { title: "Coupons" };
 export default async function CouponsPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("coupons", "view")) redirect("/admin/dashboard");
 
   let coupons: {
     _id: string; code: string; description: string; type: string;
@@ -43,6 +48,11 @@ export default async function CouponsPage() {
               <h2 className="page-title">Coupons</h2>
               <p className="page-sub">{coupons.length} coupons · {active} active</p>
             </div>
+            {perms.can("coupons", "create") && (
+              <div style={{ display: "flex", gap: 8 }}>
+                {/* Create button is inside CouponsClient, but we can also show it here */}
+              </div>
+            )}
           </div>
 
           {/* Stats */}
@@ -60,7 +70,7 @@ export default async function CouponsPage() {
             ))}
           </div>
 
-          <CouponsClient coupons={coupons} />
+          <CouponsClient coupons={coupons} perms={serializePerms(perms)} />
 
         </main>
       </div>

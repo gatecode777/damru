@@ -28,7 +28,7 @@ const DEFAULT: Settings = {
 const TABS = [
   { id:"general",       label:"General",       icon:Globe },
   { id:"email",         label:"Email / SMTP",  icon:Mail },
-  { id:"notifications", label:"Notifications", icon:Bell },
+  // { id:"notifications", label:"Notifications", icon:Bell },
   { id:"orders",        label:"Orders",        icon:ShoppingBag },
   { id:"maintenance",   label:"Maintenance",   icon:Wrench },
 ];

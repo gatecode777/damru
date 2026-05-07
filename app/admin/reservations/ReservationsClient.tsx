@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Search, X, CalendarDays, Clock, Users, StickyNote, Trash2, Loader2, ChevronDown } from "lucide-react";
 import type { ReservationRow } from "./page";
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   pending:   { bg: "#fffbeb", color: "#b45309", border: "#fde68a", dot: "#f59e0b" },
   confirmed: { bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0", dot: "#16a34a" },
@@ -30,13 +32,14 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ── Status dropdown — uses fixed positioning to escape table overflow ───────────
-function StatusDropdown({ reservation, onUpdated }: { reservation: ReservationRow; onUpdated: (id: string, status: string) => void }) {
+function StatusDropdown({ reservation, onUpdated, canEdit }: { reservation: ReservationRow; onUpdated: (id: string, status: string) => void; canEdit: boolean }) {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState({ top: 0, left: 0 });
   const [isPending, startTransition] = useTransition();
   const btnRef = useRef<HTMLButtonElement>(null);
 
   function openDropdown() {
+    if (!canEdit) return;
     if (!btnRef.current) return;
     const rect = btnRef.current.getBoundingClientRect();
     setPos({ top: rect.bottom + 4, left: rect.left });
@@ -56,6 +59,11 @@ function StatusDropdown({ reservation, onUpdated }: { reservation: ReservationRo
   }
 
   const s = STATUS_STYLE[reservation.status] ?? STATUS_STYLE.pending;
+
+  // If user can't edit, show static badge instead of dropdown
+  if (!canEdit) {
+    return <StatusBadge status={reservation.status} />;
+  }
 
   return (
     <>
@@ -129,8 +137,10 @@ function DetailRow({ r }: { r: ReservationRow }) {
 // ════════════════════════════════════════════════════════════
 // Main ReservationsClient
 // ════════════════════════════════════════════════════════════
-export default function ReservationsClient({ reservations: initial }: { reservations: ReservationRow[] }) {
+export default function ReservationsClient({ reservations: initial, perms }: { reservations: ReservationRow[]; perms?: Perms }) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.reservations?.[action]);
+  
   const [reservations, setReservations] = useState<ReservationRow[]>(initial);
   const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -163,6 +173,7 @@ export default function ReservationsClient({ reservations: initial }: { reservat
   }
 
   async function handleDelete(id: string, name: string) {
+    if (!can("delete")) return;
     if (!confirm(`Delete reservation for "${name}"? This cannot be undone.`)) return;
     setDeletingId(id);
     await fetch(`/api/reservations/${id}`, { method: "DELETE" });
@@ -261,7 +272,7 @@ export default function ReservationsClient({ reservations: initial }: { reservat
                           </span>
                         </td>
                         <td onClick={e => e.stopPropagation()}>
-                          <StatusDropdown reservation={r} onUpdated={handleStatusUpdated} />
+                          <StatusDropdown reservation={r} onUpdated={handleStatusUpdated} canEdit={can("edit")} />
                         </td>
                         <td>
                           <span style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.78rem", color: "#6b7280" }}>
@@ -275,12 +286,14 @@ export default function ReservationsClient({ reservations: initial }: { reservat
                                 <StickyNote size={14} />
                               </span>
                             )}
-                            <button onClick={() => handleDelete(r._id, r.userName)} disabled={deletingId === r._id}
-                              style={{ background: "#fef2f2", border: "none", borderRadius: 7, padding: "5px 8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}>
-                              {deletingId === r._id
-                                ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />
-                                : <Trash2 size={13} />}
-                            </button>
+                            {can("delete") && (
+                              <button onClick={() => handleDelete(r._id, r.userName)} disabled={deletingId === r._id}
+                                style={{ background: "#fef2f2", border: "none", borderRadius: 7, padding: "5px 8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}>
+                                {deletingId === r._id
+                                  ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />
+                                  : <Trash2 size={13} />}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

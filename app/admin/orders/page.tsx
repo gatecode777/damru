@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
 import OrdersClient from "./OrdersClient";
@@ -20,6 +21,10 @@ export type OrderRow = {
 export default async function OrdersPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("orders", "view")) redirect("/admin/dashboard");
 
   let orders: OrderRow[] = [];
 
@@ -62,6 +67,8 @@ export default async function OrdersPage() {
     revenue:    orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + o.total, 0),
   };
 
+  const serializedPerms = serializePerms(perms);
+
   return (
     <>
       <AdminSidebar />
@@ -95,7 +102,7 @@ export default async function OrdersPage() {
             ))}
           </div>
 
-          <OrdersClient orders={orders} />
+          <OrdersClient orders={orders} perms={serializedPerms} />
 
         </main>
       </div>

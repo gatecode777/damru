@@ -9,16 +9,25 @@ import {
 import { deleteBlogCategory, toggleBlogCategoryActive } from "@/app/actions/blog-categories";
 import { useRouter } from "next/navigation";
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 interface Category {
   _id: string; name: string; slug: string;
   description: string; sortOrder: number;
   isActive: boolean; createdAt: string;
 }
 
+interface Props { categories: Category[]; perms?: Perms; }
+
 const PAGE_SIZE = 15;
 
-export default function BlogCategoriesClient({ categories }: { categories: Category[] }) {
+export default function BlogCategoriesClient({ categories, perms }: Props) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.blog_categories?.[action]);
+  
+  const canEdit = can("edit");
+  const canDelete = can("delete");
+  const canCreate = can("create");
 
   const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState<"all"|"active"|"inactive">("all");
@@ -57,6 +66,7 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
   function clearSel() { setSelected(new Set()); }
 
   async function handleBulkDelete() {
+    if (!canDelete) return;
     if (!confirm(`Delete ${selected.size} categor${selected.size > 1 ? "ies" : "y"}? This cannot be undone.`)) return;
     setBulkLoading(true);
     for (const id of selected) await deleteBlogCategory(id);
@@ -64,6 +74,7 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
   }
 
   async function handleBulkToggle(activate: boolean) {
+    if (!canEdit) return;
     setBulkLoading(true);
     const toChange = categories.filter(c => selected.has(c._id) && c.isActive !== activate);
     for (const c of toChange) await toggleBlogCategoryActive(c._id, c.isActive);
@@ -71,11 +82,13 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
   }
 
   async function handleDelete(id: string, name: string) {
+    if (!canDelete) return;
     if (!confirm(`Delete blog category "${name}"?\nBlog posts using this category will show it as plain text.`)) return;
     await deleteBlogCategory(id); router.refresh();
   }
 
   async function handleToggleActive(id: string, current: boolean) {
+    if (!canEdit) return;
     await toggleBlogCategoryActive(id, current); router.refresh();
   }
 
@@ -119,7 +132,9 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
         </div>
         <div className="toolbar-right">
           <button className="btn-outline" onClick={handleExport}><Download size={13}/> Export CSV</button>
-          <Link href="/admin/blog-categories/new" className="btn-primary">+ Add Category</Link>
+          {canCreate && (
+            <Link href="/admin/blog-categories/new" className="btn-primary">+ Add Category</Link>
+          )}
         </div>
       </div>
 
@@ -159,17 +174,25 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
         </div>
       )}
 
-      {/* Bulk bar */}
-      {selected.size > 0 && (
+      {/* Bulk bar - only show if user has edit or delete permissions */}
+      {selected.size > 0 && (canEdit || canDelete) && (
         <div className="bulk-bar">
           <div className="bulk-left">
             <span className="bulk-count"><Check size={13}/> {selected.size} selected</span>
             <button className="bulk-clear-btn" onClick={clearSel}><X size={12}/> Clear</button>
           </div>
           <div className="bulk-actions">
-            <button className="bulk-btn bulk-activate"   onClick={() => handleBulkToggle(true)}  disabled={bulkLoading}><Eye    size={13}/> Set Active</button>
-            <button className="bulk-btn bulk-deactivate" onClick={() => handleBulkToggle(false)} disabled={bulkLoading}><EyeOff size={13}/> Set Inactive</button>
-            <button className="bulk-btn bulk-delete-btn" onClick={handleBulkDelete}              disabled={bulkLoading}><Trash2 size={13}/> {bulkLoading ? "Deleting…" : "Delete Selected"}</button>
+            {canEdit && (
+              <>
+                <button className="bulk-btn bulk-activate"   onClick={() => handleBulkToggle(true)}  disabled={bulkLoading}><Eye    size={13}/> Set Active</button>
+                <button className="bulk-btn bulk-deactivate" onClick={() => handleBulkToggle(false)} disabled={bulkLoading}><EyeOff size={13}/> Set Inactive</button>
+              </>
+            )}
+            {canDelete && (
+              <button className="bulk-btn bulk-delete-btn" onClick={handleBulkDelete} disabled={bulkLoading}>
+                <Trash2 size={13}/> {bulkLoading ? "Deleting…" : "Delete Selected"}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -179,8 +202,13 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
         {filtered.length === 0 && !search && statusFilter === "all" ? (
           <div className="empty-state">
             <Tag size={40}/>
-            <p>No blog categories yet.{" "}
-              <Link href="/admin/blog-categories/new" style={{ color:"#f97316" }}>Add the first one →</Link>
+            <p>
+              No blog categories yet.
+              {canCreate && (
+                <Link href="/admin/blog-categories/new" style={{ color:"#f97316" }}>
+                  {" "}Add the first one →
+                </Link>
+              )}
             </p>
           </div>
         ) : (
@@ -189,11 +217,13 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>
-                      <input type="checkbox" className="cb-cat" checked={allOnPage}
-                        ref={el => { if (el) el.indeterminate = !allOnPage && someOnPage; }}
-                        onChange={toggleAll} />
-                    </th>
+                    {(canEdit || canDelete) && (
+                      <th>
+                        <input type="checkbox" className="cb-cat" checked={allOnPage}
+                          ref={el => { if (el) el.indeterminate = !allOnPage && someOnPage; }}
+                          onChange={toggleAll} />
+                      </th>
+                    )}
                     <th>Name</th>
                     <th>Slug</th>
                     <th>Description</th>
@@ -205,16 +235,18 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
                 </thead>
                 <tbody>
                   {paginated.length === 0 ? (
-                    <tr><td colSpan={8} style={{ textAlign:"center", padding:"48px 20px", color:"#9ca3af" }}>
+                    <tr><td colSpan={(canEdit || canDelete) ? 8 : 7} style={{ textAlign:"center", padding:"48px 20px", color:"#9ca3af" }}>
                       No categories match your search or filters.
                     </td></tr>
                   ) : (
                     paginated.map(cat => (
                       <tr key={cat._id} className={selected.has(cat._id) ? "row-selected" : ""}>
-                        <td>
-                          <input type="checkbox" className="cb-cat"
-                            checked={selected.has(cat._id)} onChange={() => toggleOne(cat._id)} />
-                        </td>
+                        {(canEdit || canDelete) && (
+                          <td>
+                            <input type="checkbox" className="cb-cat"
+                              checked={selected.has(cat._id)} onChange={() => toggleOne(cat._id)} />
+                          </td>
+                        )}
                         <td>
                           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                             <div style={{ width:32, height:32, borderRadius:8, background:"#f0fdf4", border:"1.5px solid #bbf7d0", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
@@ -231,22 +263,32 @@ export default function BlogCategoriesClient({ categories }: { categories: Categ
                         </td>
                         <td><span className="sort-badge">{cat.sortOrder}</span></td>
                         <td>
-                          <button onClick={() => handleToggleActive(cat._id, cat.isActive)}
-                            style={{ background:"none", border:"none", cursor:"pointer", padding:0 }} title="Click to toggle">
-                            {cat.isActive
+                          {canEdit ? (
+                            <button onClick={() => handleToggleActive(cat._id, cat.isActive)}
+                              style={{ background:"none", border:"none", cursor:"pointer", padding:0 }} title="Click to toggle">
+                              {cat.isActive
+                                ? <span className="badge-active"><span className="status-dot"/>Active</span>
+                                : <span className="badge-inactive"><span className="status-dot"/>Inactive</span>}
+                            </button>
+                          ) : (
+                            cat.isActive
                               ? <span className="badge-active"><span className="status-dot"/>Active</span>
-                              : <span className="badge-inactive"><span className="status-dot"/>Inactive</span>}
-                          </button>
+                              : <span className="badge-inactive"><span className="status-dot"/>Inactive</span>
+                          )}
                         </td>
                         <td style={{ color:"#9ca3af", fontSize:"0.78rem", whiteSpace:"nowrap" }}>
                           {new Date(cat.createdAt).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
                         </td>
                         <td>
                           <div className="actions-cell">
-                            <Link href={`/admin/blog-categories/edit/${cat._id}`} className="btn-edit">Edit</Link>
-                            <button className="btn-danger" onClick={() => handleDelete(cat._id, cat.name)}>
-                              <Trash2 size={12}/> Delete
-                            </button>
+                            {canEdit && (
+                              <Link href={`/admin/blog-categories/edit/${cat._id}`} className="btn-edit">Edit</Link>
+                            )}
+                            {canDelete && (
+                              <button className="btn-danger" onClick={() => handleDelete(cat._id, cat.name)}>
+                                <Trash2 size={12}/> Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

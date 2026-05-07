@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import UserModel from "@/models/User";
 import { fallbackUsers } from "@/lib/fallbackData";
@@ -14,6 +15,10 @@ export const metadata = { title: "Users" };
 export default async function UsersPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("users", "view")) redirect("/admin/dashboard");
 
   type UserRow = {
     _id: string; name: string; email: string;
@@ -36,10 +41,11 @@ export default async function UsersPage() {
     counts.forEach((c: { _id: string; count: number }) => { countMap[c._id] = c.count; });
     fromDB = true;
   } catch {
+    users = fallbackUsers.map(u => ({ ...u, city: u.city ?? "" }));
     countMap = { active: 6, inactive: 1, suspended: 1 };
   }
 
-  const totalSpend = users.reduce((s, u) => s + u.totalSpend, 0);
+  // const totalSpend = users.reduce((s, u) => s + u.totalSpend, 0);
 
   return (
     <>
@@ -70,7 +76,7 @@ export default async function UsersPage() {
               { label: "Active",    value: countMap.active    || 0, color: "#16a34a" },
               { label: "Inactive",  value: countMap.inactive  || 0, color: "#6b7280" },
               { label: "Suspended", value: countMap.suspended || 0, color: "#dc2626" },
-              { label: "Revenue",   value: `₹${totalSpend.toLocaleString("en-IN")}`, color: "#7c3aed" },
+              // { label: "Revenue",   value: `₹${totalSpend.toLocaleString("en-IN")}`, color: "#7c3aed" },
             ].map(s => (
               <div key={s.label} className="user-stat">
                 <span className="us-value" style={{ color: s.color }}>{s.value}</span>
@@ -80,7 +86,7 @@ export default async function UsersPage() {
           </div>
 
           {/* All interactive parts delegated to client component */}
-          <UsersClient users={users} countMap={countMap} fromDB={fromDB} />
+          <UsersClient users={users} countMap={countMap} fromDB={fromDB} perms={serializePerms(perms)} />
 
         </main>
       </div>

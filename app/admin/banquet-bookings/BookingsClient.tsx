@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Phone, Mail, CalendarDays, Users, MessageSquare, Trash2, X, CheckCircle, Clock, PhoneCall, XCircle, ChevronDown, ChevronUp, Building2 } from "lucide-react";
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 type Status = "new" | "contacted" | "confirmed" | "cancelled";
 
 interface Booking {
@@ -23,10 +25,12 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function BookingRow({ booking, onUpdate, onDelete }: {
+function BookingRow({ booking, onUpdate, onDelete, canEdit, canDelete }: {
   booking: Booking;
   onUpdate: (id: string, status: Status, note: string) => Promise<void>;
   onDelete: (id: string) => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }) {
   const [open,   setOpen]   = useState(false);
   const [status, setStatus] = useState<Status>(booking.status);
@@ -34,6 +38,7 @@ function BookingRow({ booking, onUpdate, onDelete }: {
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if (!canEdit) return;
     setSaving(true);
     await onUpdate(booking._id, status, note);
     setSaving(false);
@@ -110,41 +115,55 @@ function BookingRow({ booking, onUpdate, onDelete }: {
             </div>
           )}
 
-          {/* Admin controls */}
-          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap", paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
-            <div className="field" style={{ margin: 0 }}>
-              <label className="field-label">Status</label>
-              <select className="inp-select" value={status} onChange={e => setStatus(e.target.value as Status)}
-                style={{ minWidth: 140 }}>
-                <option value="new">New</option>
-                <option value="contacted">Contacted</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+          {/* Admin controls - only show if user has edit permission */}
+          {canEdit && (
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap", paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
+              <div className="field" style={{ margin: 0 }}>
+                <label className="field-label">Status</label>
+                <select className="inp-select" value={status} onChange={e => setStatus(e.target.value as Status)}
+                  style={{ minWidth: 140 }}>
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div className="field" style={{ flex: 1, minWidth: 200, margin: 0 }}>
+                <label className="field-label">Admin Note</label>
+                <input className="inp" placeholder="e.g. Called, asked for more details…" value={note}
+                  onChange={e => setNote(e.target.value)} />
+              </div>
+              <div style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
+                <button className="btn-submit" onClick={save} disabled={saving} style={{ padding: "8px 18px" }}>
+                  {saving ? "Saving…" : "Save"}
+                </button>
+                <a href={`tel:${booking.phone}`} className="btn-outline" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
+                  <Phone size={13} /> Call
+                </a>
+                <a href={`mailto:${booking.email}`} className="btn-outline" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
+                  <Mail size={13} /> Email
+                </a>
+                {canDelete && (
+                  <button className="btn-danger" onClick={() => onDelete(booking._id)} style={{ padding: "8px 12px" }}>
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="field" style={{ flex: 1, minWidth: 200, margin: 0 }}>
-              <label className="field-label">Admin Note</label>
-              <input className="inp" placeholder="e.g. Called, asked for more details…" value={note}
-                onChange={e => setNote(e.target.value)} />
-            </div>
-            <div style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
-              <button className="btn-submit" onClick={save} disabled={saving} style={{ padding: "8px 18px" }}>
-                {saving ? "Saving…" : "Save"}
-              </button>
-              <a href={`tel:${booking.phone}`} className="btn-outline" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
-                <Phone size={13} /> Call
-              </a>
-              <a href={`mailto:${booking.email}`} className="btn-outline" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
-                <Mail size={13} /> Email
-              </a>
-              <button className="btn-danger" onClick={() => onDelete(booking._id)} style={{ padding: "8px 12px" }}>
-                <Trash2 size={13} />
-              </button>
-            </div>
-          </div>
+          )}
 
-          {/* Existing admin note display */}
-          {booking.adminNote && booking.adminNote !== note && (
+          {/* Show existing admin note even if no edit permission */}
+          {!canEdit && booking.adminNote && (
+            <div style={{ paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
+              <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>Admin Note</div>
+              <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: 13, color: "#374151", background: "#f9fafb", padding: "10px 12px", borderRadius: 8 }}>
+                {booking.adminNote}
+              </div>
+            </div>
+          )}
+
+          {/* Existing admin note display for edit mode */}
+          {canEdit && booking.adminNote && booking.adminNote !== note && (
             <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
               Previous note: {booking.adminNote}
             </div>
@@ -155,7 +174,13 @@ function BookingRow({ booking, onUpdate, onDelete }: {
   );
 }
 
-export default function BookingsClient({ initialBookings }: { initialBookings: Booking[] }) {
+export default function BookingsClient({ initialBookings, perms }: { initialBookings: Booking[]; perms?: Perms }) {
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.banquetBookings?.[action]);
+  
+  const canView = can("view");
+  const canEdit = can("edit");
+  const canDelete = can("delete");
+  
   const [bookings,     setBookings]     = useState<Booking[]>(initialBookings);
   const [filter,       setFilter]       = useState<"all" | Status>("all");
   const [search,       setSearch]       = useState("");
@@ -165,6 +190,7 @@ export default function BookingsClient({ initialBookings }: { initialBookings: B
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(""), 3000); }
 
   async function handleUpdate(id: string, status: Status, adminNote: string) {
+    if (!canEdit) return;
     const res  = await fetch("/api/banquet-bookings", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status, adminNote }),
@@ -177,6 +203,7 @@ export default function BookingsClient({ initialBookings }: { initialBookings: B
   }
 
   async function handleDelete(id: string) {
+    if (!canDelete) return;
     await fetch("/api/banquet-bookings", {
       method: "DELETE", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
@@ -204,9 +231,21 @@ export default function BookingsClient({ initialBookings }: { initialBookings: B
     cancelled: bookings.filter(b => b.status === "cancelled").length,
   };
 
+  // If user doesn't have view permission, show access denied
+  if (!canView) {
+    return (
+      <div className="card" style={{ padding: 60, textAlign: "center" }}>
+        <Building2 size={40} style={{ color: "#dc2626", margin: "0 auto 12px", display: "block" }} />
+        <p style={{ fontFamily: "DM Sans, sans-serif", color: "#dc2626" }}>
+          You don't have permission to view banquet bookings.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      {/* Stats */}
+      {/* Stats - clickable only if user has permission to filter */}
       <div className="menu-stats" style={{ marginBottom: 20 }}>
         {[
           { key: "all",       label: "Total",     color: "#f97316" },
@@ -239,13 +278,19 @@ export default function BookingsClient({ initialBookings }: { initialBookings: B
       ) : (
         <div>
           {filtered.map(b => (
-            <BookingRow key={b._id} booking={b} onUpdate={handleUpdate} onDelete={(id) => setDeleteId(id)} />
+            <BookingRow 
+              key={b._id} 
+              booking={b} 
+              onUpdate={handleUpdate} 
+              onDelete={(id) => setDeleteId(id)}
+              canEdit={canEdit}
+              canDelete={canDelete} />
           ))}
         </div>
       )}
 
-      {/* Delete confirm */}
-      {deleteId && (
+      {/* Delete confirm - only show if user has delete permission */}
+      {deleteId && canDelete && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999,
           display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="card" style={{ padding: 28, maxWidth: 380, width: "90%", borderRadius: 14 }}>

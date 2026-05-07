@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import Reservation from "@/models/Reservation";
 import ReservationsClient from "./ReservationsClient";
@@ -18,6 +19,10 @@ export type ReservationRow = {
 export default async function ReservationsPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("reservations", "view")) redirect("/admin/dashboard");
 
   let reservations: ReservationRow[] = [];
 
@@ -52,6 +57,8 @@ export default async function ReservationsPage() {
     upcoming,
   };
 
+  const serializedPerms = serializePerms(perms);
+
   return (
     <>
       <AdminSidebar />
@@ -83,7 +90,7 @@ export default async function ReservationsPage() {
             ))}
           </div>
 
-          <ReservationsClient reservations={reservations} />
+          <ReservationsClient reservations={reservations} perms={serializedPerms} />
 
         </main>
       </div>

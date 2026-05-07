@@ -19,6 +19,8 @@ interface Coupon {
   isActive: boolean; createdAt: string;
 }
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
@@ -32,11 +34,13 @@ const emptyForm = {
 };
 
 // ── Coupon Card ──────────────────────────────────────────────
-function CouponCard({ coupon, onEdit, onDelete, onToggle }: {
+function CouponCard({ coupon, onEdit, onDelete, onToggle, canEdit, canDelete }: {
   coupon: Coupon;
   onEdit: (c: Coupon) => void;
   onDelete: (c: Coupon) => void;
   onToggle: (c: Coupon) => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }) {
   const expired   = isExpired(coupon);
   const exhausted = isExhausted(coupon);
@@ -113,18 +117,24 @@ function CouponCard({ coupon, onEdit, onDelete, onToggle }: {
 
         {/* Actions */}
         <div style={{ display: "flex", gap: 6, marginTop: 8, borderTop: "1px solid #f3f4f6", paddingTop: 8 }}>
-          <button onClick={() => onEdit(coupon)} title="Edit"
-            style={{ flex: 1, background: "#f3f4f6", border: "none", borderRadius: 7, padding: "6px", cursor: "pointer", color: "#374151", fontSize: "0.78rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-            Edit
-          </button>
-          <button onClick={() => onToggle(coupon)} title={coupon.isActive ? "Deactivate" : "Activate"}
-            style={{ flex: 1, background: coupon.isActive ? "#fffbeb" : "#f0fdf4", border: "none", borderRadius: 7, padding: "6px", cursor: "pointer", color: coupon.isActive ? "#f59e0b" : "#16a34a", fontSize: "0.78rem", fontWeight: 600 }}>
-            {coupon.isActive ? "Pause" : "Activate"}
-          </button>
-          <button onClick={() => onDelete(coupon)} title="Delete"
-            style={{ background: "#fef2f2", border: "none", borderRadius: 7, padding: "6px 8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}>
-            <Trash2 size={13}/>
-          </button>
+          {canEdit && (
+            <button onClick={() => onEdit(coupon)} title="Edit"
+              style={{ flex: 1, background: "#f3f4f6", border: "none", borderRadius: 7, padding: "6px", cursor: "pointer", color: "#374151", fontSize: "0.78rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              Edit
+            </button>
+          )}
+          {canEdit && (
+            <button onClick={() => onToggle(coupon)} title={coupon.isActive ? "Deactivate" : "Activate"}
+              style={{ flex: 1, background: coupon.isActive ? "#fffbeb" : "#f0fdf4", border: "none", borderRadius: 7, padding: "6px", cursor: "pointer", color: coupon.isActive ? "#f59e0b" : "#16a34a", fontSize: "0.78rem", fontWeight: 600 }}>
+              {coupon.isActive ? "Pause" : "Activate"}
+            </button>
+          )}
+          {canDelete && (
+            <button onClick={() => onDelete(coupon)} title="Delete"
+              style={{ background: "#fef2f2", border: "none", borderRadius: 7, padding: "6px 8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}>
+              <Trash2 size={13}/>
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -360,8 +370,10 @@ function DeleteConfirm({ coupon, onClose, onDeleted }: {
 // ════════════════════════════════════════════════════════════
 // Main CouponsClient
 // ════════════════════════════════════════════════════════════
-export default function CouponsClient({ coupons: initialCoupons }: { coupons: Coupon[] }) {
+export default function CouponsClient({ coupons: initialCoupons, perms }: { coupons: Coupon[]; perms?: Perms }) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.coupons?.[action]);
+  
   const [coupons,      setCoupons]      = useState<Coupon[]>(initialCoupons);
   const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState<"all"|"active"|"inactive">("all");
@@ -399,13 +411,23 @@ export default function CouponsClient({ coupons: initialCoupons }: { coupons: Co
   }
 
   async function handleToggle(coupon: Coupon) {
+    if (!can("edit")) return;
     // Optimistic
     setCoupons(prev => prev.map(c => c._id === coupon._id ? { ...c, isActive: !c.isActive } : c));
     await toggleCouponActive(coupon._id, coupon.isActive);
   }
 
-  function openCreate() { setEditCoupon(null); setShowForm(true); }
-  function openEdit(c: Coupon) { setEditCoupon(c); setShowForm(true); }
+  function openCreate() { 
+    if (!can("create")) return;
+    setEditCoupon(null); 
+    setShowForm(true); 
+  }
+  
+  function openEdit(c: Coupon) { 
+    if (!can("edit")) return;
+    setEditCoupon(c); 
+    setShowForm(true); 
+  }
 
   return (
     <>
@@ -431,7 +453,9 @@ export default function CouponsClient({ coupons: initialCoupons }: { coupons: Co
           </div>
         </div>
         <div className="toolbar-right">
-          <button className="btn-primary" onClick={openCreate}><Plus size={14}/> New Coupon</button>
+          {can("create") && (
+            <button className="btn-primary" onClick={openCreate}><Plus size={14}/> New Coupon</button>
+          )}
         </div>
       </div>
 
@@ -443,7 +467,11 @@ export default function CouponsClient({ coupons: initialCoupons }: { coupons: Co
             <p>
               {search || statusFilter !== "all"
                 ? "No coupons match your filters."
-                : <>No coupons yet. <button onClick={openCreate} style={{ background:"none",border:"none",cursor:"pointer",color:"#f97316",fontWeight:600,fontSize:"inherit",padding:0 }}>Create the first one →</button></>}
+                : can("create") ? (
+                  <>No coupons yet. <button onClick={openCreate} style={{ background:"none",border:"none",cursor:"pointer",color:"#f97316",fontWeight:600,fontSize:"inherit",padding:0 }}>Create the first one →</button></>
+                ) : (
+                  "No coupons available."
+                )}
             </p>
           </div>
         </div>
@@ -451,7 +479,8 @@ export default function CouponsClient({ coupons: initialCoupons }: { coupons: Co
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
           {filtered.map(coupon => (
             <CouponCard key={coupon._id} coupon={coupon}
-              onEdit={openEdit} onDelete={setDeleteTarget} onToggle={handleToggle} />
+              onEdit={openEdit} onDelete={setDeleteTarget} onToggle={handleToggle}
+              canEdit={can("edit")} canDelete={can("delete")} />
           ))}
         </div>
       )}
@@ -459,7 +488,7 @@ export default function CouponsClient({ coupons: initialCoupons }: { coupons: Co
       {showForm && (
         <CouponFormModal editCoupon={editCoupon} onClose={() => { setShowForm(false); setEditCoupon(null); }} onSaved={handleSaved} />
       )}
-      {deleteTarget && (
+      {deleteTarget && can("delete") && (
         <DeleteConfirm coupon={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={handleDeleted} />
       )}
     </>

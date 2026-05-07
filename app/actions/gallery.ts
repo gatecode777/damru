@@ -3,9 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/mongodb";
 import GalleryTab from "@/models/GalleryTab";
+import { getAdminPerms } from "@/lib/adminPermissions";
 
 // ── Upsert a tab (create or update basic info + banner) ──────
 export async function upsertGalleryTab(formData: FormData) {
+  // Check if user has create or edit permission for gallery
+  const perms = await getAdminPerms();
+  const isCreating = !(await isTabExists(formData.get("tabKey") as string));
+  
+  if (isCreating) {
+    if (!perms.can("gallery", "create")) throw new Error("Forbidden - You don't have permission to create gallery tabs.");
+  } else {
+    if (!perms.can("gallery", "edit")) throw new Error("Forbidden - You don't have permission to edit gallery tabs.");
+  }
+  
   await connectDB();
 
   const tabKey      = (formData.get("tabKey")      as string)?.trim().toLowerCase();
@@ -32,8 +43,20 @@ export async function upsertGalleryTab(formData: FormData) {
   return { success: true };
 }
 
+// Helper function to check if a tab exists
+async function isTabExists(tabKey: string): Promise<boolean> {
+  if (!tabKey) return false;
+  await connectDB();
+  const tab = await GalleryTab.findOne({ tabKey }).lean();
+  return !!tab;
+}
+
 // ── Delete a tab ─────────────────────────────────────────────
 export async function deleteGalleryTab(id: string) {
+  // Check if user has delete permission for gallery
+  const perms = await getAdminPerms();
+  if (!perms.can("gallery", "delete")) throw new Error("Forbidden - You don't have permission to delete gallery tabs.");
+  
   await connectDB();
   try {
     await GalleryTab.findByIdAndDelete(id);
@@ -47,6 +70,10 @@ export async function deleteGalleryTab(id: string) {
 
 // ── Toggle tab active status ─────────────────────────────────
 export async function toggleGalleryTabActive(id: string, current: boolean) {
+  // Check if user has edit permission for gallery
+  const perms = await getAdminPerms();
+  if (!perms.can("gallery", "edit")) throw new Error("Forbidden - You don't have permission to change gallery tab status.");
+  
   await connectDB();
   await GalleryTab.findByIdAndUpdate(id, { isActive: !current });
   revalidatePath("/admin/gallery");
@@ -56,6 +83,10 @@ export async function toggleGalleryTabActive(id: string, current: boolean) {
 
 // ── Add item to a tab ────────────────────────────────────────
 export async function addGalleryItem(tabId: string, formData: FormData) {
+  // Check if user has create permission for gallery
+  const perms = await getAdminPerms();
+  if (!perms.can("gallery", "create")) throw new Error("Forbidden - You don't have permission to add gallery items.");
+  
   await connectDB();
 
   const image        = (formData.get("image")       as string)?.trim();
@@ -87,6 +118,10 @@ export async function updateGalleryItem(
   itemId: string,
   formData: FormData
 ) {
+  // Check if user has edit permission for gallery
+  const perms = await getAdminPerms();
+  if (!perms.can("gallery", "edit")) throw new Error("Forbidden - You don't have permission to update gallery items.");
+  
   await connectDB();
 
   const image        = (formData.get("image")       as string)?.trim() || "";
@@ -125,6 +160,10 @@ export async function updateGalleryItem(
 
 // ── Delete an item from a tab ────────────────────────────────
 export async function deleteGalleryItem(tabId: string, itemId: string) {
+  // Check if user has delete permission for gallery
+  const perms = await getAdminPerms();
+  if (!perms.can("gallery", "delete")) throw new Error("Forbidden - You don't have permission to delete gallery items.");
+  
   await connectDB();
   try {
     await GalleryTab.findByIdAndUpdate(tabId, {

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import Category from "@/models/Category";
 import CategoriesClient from "./CategoriesClient";
@@ -11,6 +12,10 @@ export const metadata = { title: "Categories" };
 export default async function CategoriesPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("categories", "view")) redirect("/admin/dashboard");
 
   let categories: {
     _id: string; name: string; slug: string; description: string;
@@ -56,7 +61,7 @@ export default async function CategoriesPage() {
           </div>
 
           {/* All interactive parts — search, filters, table, bulk, pagination */}
-          <CategoriesClient categories={categories} />
+          <CategoriesClient categories={categories} perms={serializePerms(perms)} />
 
         </main>
       </div>

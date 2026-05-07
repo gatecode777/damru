@@ -1,16 +1,11 @@
 /**
  * lib/mongodb.ts — Node.js runtime ONLY.
  * Never imported by middleware.ts or any Edge-runtime file.
- * auth.config.ts (used by middleware) does NOT import this.
  */
 
-// Set public DNS before ANYTHING else - this MUST be the first line
 import dns from "dns";
-// dns.setServers(["8.8.8.8","1.1.1.1"]);
-dns.setServers(["8.8.8.8","1.1.1.1"]);
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
-// Force Node.js to use these DNS servers for all lookups
-// This is critical for mongodb+srv:// connections
 import { setDefaultResultOrder } from "dns";
 setDefaultResultOrder("ipv4first");
 
@@ -23,7 +18,6 @@ if (!MONGODB_URI) {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var _mongooseCache: {
     conn:    typeof mongoose | null;
     promise: Promise<typeof mongoose> | null;
@@ -36,32 +30,37 @@ if (!global._mongooseCache) {
 
 const cache = global._mongooseCache;
 
-export async function connectDB() {
-  if (cache.conn) return cache.conn;
-
-  if (!cache.promise) {
-    // Log the connection attempt
-    console.log("🔄 Connecting to MongoDB with URI:", MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, "//***:***@"));
-    
-    cache.promise = mongoose.connect(MONGODB_URI, {
-      bufferCommands:          false,
-      serverSelectionTimeoutMS: 15000, // Increased timeout
+// ── Eagerly start connecting as soon as this module is imported ──────────────
+// Instead of waiting for the first connectDB() call from a page,
+// kick off the connection promise immediately at module load time.
+// connectDB() then just awaits the already-in-progress promise.
+if (!cache.promise) {
+  console.log("🔄 MongoDB: starting connection...");
+  cache.promise = mongoose
+    .connect(MONGODB_URI, {
+      bufferCommands:           false,
+      serverSelectionTimeoutMS: 15000,
       socketTimeoutMS:          45000,
-      family:                   4,     // Force IPv4
-      // Add these options for better SRV resolution
-      tls: true,
+      family:                   4,
+      tls:                      true,
       tlsAllowInvalidCertificates: false,
+    })
+    .then((m) => {
+      cache.conn = m;
+      console.log("✅ MongoDB connected");
+      return m;
+    })
+    .catch((err) => {
+      console.error("❌ MongoDB connection error:", err);
+      cache.promise = null; // allow retry
+      throw err;
     });
-  }
+}
 
-  try {
-    cache.conn = await cache.promise;
-    console.log("✅ MongoDB connected successfully");
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err);
-    cache.promise = null; // Allow retry on next request
-    throw err;
-  }
-
+export async function connectDB() {
+  // If already connected, return immediately — no await needed
+  if (cache.conn) return cache.conn;
+  // Otherwise await the already-in-progress promise
+  cache.conn = await cache.promise;
   return cache.conn;
 }

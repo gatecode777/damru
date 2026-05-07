@@ -1,7 +1,9 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import BlogCategory from "@/models/BlogCategory";
 import BlogCategoriesClient from "./BlogCategoriesClient";
@@ -11,6 +13,10 @@ export const metadata = { title: "Blog Categories" };
 export default async function BlogCategoriesPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("blogCategories", "view")) redirect("/admin/dashboard");
 
   let categories: {
     _id: string; name: string; slug: string; description: string;
@@ -25,6 +31,7 @@ export default async function BlogCategoriesPage() {
 
   const activeCount   = categories.filter(c => c.isActive).length;
   const inactiveCount = categories.length - activeCount;
+  const serializedPerms = serializePerms(perms);
 
   return (
     <>
@@ -38,6 +45,11 @@ export default async function BlogCategoriesPage() {
               <h2 className="page-title">Blog Categories</h2>
               <p className="page-sub">{categories.length} categories · used to organise blog posts</p>
             </div>
+            {perms.can("blog_categories", "create") && (
+              <Link href="/admin/blog-categories/new" className="btn-primary">
+                + Add Category
+              </Link>
+            )}
           </div>
 
           <div className="cat-stats">
@@ -53,7 +65,7 @@ export default async function BlogCategoriesPage() {
             ))}
           </div>
 
-          <BlogCategoriesClient categories={categories} />
+          <BlogCategoriesClient categories={categories} perms={serializedPerms} />
 
         </main>
       </div>

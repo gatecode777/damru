@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import GalleryTab from "@/models/GalleryTab";
 import GalleryClient from "./GalleryClient";
@@ -11,6 +12,10 @@ export const metadata = { title: "Gallery Manager" };
 export default async function AdminGalleryPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("gallery", "view")) redirect("/admin/dashboard");
 
   let tabs: {
     _id: string; tabKey: string; label: string;
@@ -24,12 +29,12 @@ export default async function AdminGalleryPage() {
 
   try {
     await connectDB();
-
     const raw = await GalleryTab.find().sort({ sortOrder: 1 });
     tabs = JSON.parse(JSON.stringify(raw));
   } catch { /* show empty */ }
 
   const totalItems = tabs.reduce((sum, t) => sum + t.items.length, 0);
+  const serializedPerms = serializePerms(perms);
 
   return (
     <>
@@ -60,7 +65,7 @@ export default async function AdminGalleryPage() {
             ))}
           </div>
 
-          <GalleryClient tabs={tabs} />
+          <GalleryClient tabs={tabs} perms={serializedPerms} />
 
         </main>
       </div>

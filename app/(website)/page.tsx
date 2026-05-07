@@ -5,6 +5,8 @@ import { connectDB } from "@/lib/mongodb";
 import CategoryModel from "@/models/Category";
 import MenuItemModel from "@/models/MenuItem";
 import BlogModel from "@/models/Blog";
+import { fmtDate } from "@/lib/formatDate";
+import BranchModel from "@/models/Branch";
 
 export const metadata: Metadata = {
   title: "Damru By Namo | Restaurant & Banquet Hall, Jaipur",
@@ -15,6 +17,7 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   // ── Fetch Shakes menu items ──────────────────────────────────
   let shakeItems: { _id: string; name: string; description: string; image: string; basePrice: number }[] = [];
+  let branches: { _id: string; name: string; slug: string; description: string; cardImage: string; cardAlt: string; contact: string; timing: string }[] = [];
   let blogs: { _id: string; title: string; slug: string; excerpt: string; coverImage: string; author: { name: string; avatar: string }; readTime: number; publishedAt: string; createdAt: string; category?: string }[] = [];
 
   try {
@@ -49,11 +52,19 @@ export default async function HomePage() {
       createdAt: String(b.createdAt),
       category: b.category?.name || "",
     }));
+    // Fetch active branches
+    const rawBranches = await BranchModel.find({ isActive: true }).sort({ sortOrder: 1 }).lean() as any[];
+    branches = rawBranches.map(b => ({
+      _id: String(b._id), name: b.name, slug: b.slug,
+      description: b.description || "",
+      cardImage: b.cardImage || "", cardAlt: b.cardAlt || "",
+      contact: b.contact || "", timing: b.timing || "",
+    }));
+
   } catch (e) { console.error("Home page DB error:", e); }
 
   return (
-    <div className="damru-theme-wrapper">
-      <main>
+    <main>
 
         {/* ── Hero Section ── */}
         <section className="hero">
@@ -74,7 +85,7 @@ export default async function HomePage() {
                   <div
                     key={n}
                     className={`thumb${n === 1 ? " active" : ""}`}
-
+  
                   >
                     <img src={`/assets/images/plate${n}.png`} alt={`Dish ${n}`} />
                   </div>
@@ -182,50 +193,50 @@ export default async function HomePage() {
             <div className="ms-list">
               {shakeItems.length > 0
                 ? shakeItems.map((item, i) => (
-                  <div key={item._id} className={`ms-item${i % 2 !== 0 ? " ms-reverse" : ""}`}>
-                    <div className="ms-content">
-                      <div className="ms-price-row">
-                        <span className="ms-line" />
-                        <span className="ms-price">₹{item.basePrice}</span>
+                    <div key={item._id} className={`ms-item${i % 2 !== 0 ? " ms-reverse" : ""}`}>
+                      <div className="ms-content">
+                        <div className="ms-price-row">
+                          <span className="ms-line" />
+                          <span className="ms-price">₹{item.basePrice}</span>
+                        </div>
+                        <h3 className="ms-item-name">{item.name}</h3>
+                        <p className="ms-item-desc">{item.description}</p>
+                        <div className="ms-btn-group">
+                          <Link href="/menu" className="ms-order-btn">Order Now</Link>
+                        </div>
                       </div>
-                      <h3 className="ms-item-name">{item.name}</h3>
-                      <p className="ms-item-desc">{item.description}</p>
-                      <div className="ms-btn-group">
-                        <Link href="/menu" className="ms-order-btn">Order Now</Link>
+                      <div className="ms-image-box">
+                        {item.image
+                          ? <img src={`/uploads/menu-items/${item.image}`} alt={item.name} />
+                          : <img src="/assets/images/menu1.png" alt={item.name} />
+                        }
                       </div>
                     </div>
-                    <div className="ms-image-box">
-                      {item.image
-                        ? <img src={`/uploads/menu-items/${item.image}`} alt={item.name} />
-                        : <img src="/assets/images/menu1.png" alt={item.name} />
-                      }
-                    </div>
-                  </div>
-                ))
+                  ))
                 : /* Fallback to static if no DB items */
-                [
-                  { img: "menu1", name: "Belgian Chocolate Shake", desc: "Rich, velvety shake made with indulgent Belgian chocolate", price: "₹229" },
-                  { img: "menu2", name: "Belgian Hot Chocolate Shake", desc: "Rich Belgian chocolate blended into a smooth, indulgent shake", price: "₹269" },
-                  { img: "menu3", name: "Biscoff Frappe Shake", desc: "Creamy frappe blended with rich Biscoff indulgence", price: "₹349" },
-                  { img: "menu4", name: "Blur Berry Cheese Cake Shake", desc: "Creamy cheesecake blended with luscious blueberry sweetness", price: "₹375" },
-                ].map((item, i) => (
-                  <div key={item.name} className={`ms-item${i % 2 !== 0 ? " ms-reverse" : ""}`}>
-                    <div className="ms-content">
-                      <div className="ms-price-row">
-                        <span className="ms-line" />
-                        <span className="ms-price">{item.price}</span>
+                  [
+                    { img: "menu1", name: "Belgian Chocolate Shake",      desc: "Rich, velvety shake made with indulgent Belgian chocolate",   price: "₹229" },
+                    { img: "menu2", name: "Belgian Hot Chocolate Shake",   desc: "Rich Belgian chocolate blended into a smooth, indulgent shake", price: "₹269" },
+                    { img: "menu3", name: "Biscoff Frappe Shake",          desc: "Creamy frappe blended with rich Biscoff indulgence",           price: "₹349" },
+                    { img: "menu4", name: "Blur Berry Cheese Cake Shake",  desc: "Creamy cheesecake blended with luscious blueberry sweetness",  price: "₹375" },
+                  ].map((item, i) => (
+                    <div key={item.name} className={`ms-item${i % 2 !== 0 ? " ms-reverse" : ""}`}>
+                      <div className="ms-content">
+                        <div className="ms-price-row">
+                          <span className="ms-line" />
+                          <span className="ms-price">{item.price}</span>
+                        </div>
+                        <h3 className="ms-item-name">{item.name}</h3>
+                        <p className="ms-item-desc">{item.desc}</p>
+                        <div className="ms-btn-group">
+                          <Link href="/menu" className="ms-order-btn">Order Now</Link>
+                        </div>
                       </div>
-                      <h3 className="ms-item-name">{item.name}</h3>
-                      <p className="ms-item-desc">{item.desc}</p>
-                      <div className="ms-btn-group">
-                        <Link href="/menu" className="ms-order-btn">Order Now</Link>
+                      <div className="ms-image-box">
+                        <img src={`/assets/images/${item.img}.png`} alt={item.name} />
                       </div>
                     </div>
-                    <div className="ms-image-box">
-                      <img src={`/assets/images/${item.img}.png`} alt={item.name} />
-                    </div>
-                  </div>
-                ))
+                  ))
               }
             </div>
 
@@ -252,14 +263,14 @@ export default async function HomePage() {
           <div className="hero-content-wrapper">
             <div className="hero-card">
               <h1>Elegant Banquet Hall for Your Special Events</h1>
-              <a href="/banquet" className="explore-btn">
+              <a href="/branches" className="explore-btn">
                 Explore Now <span className="arrow">→</span>
               </a>
             </div>
           </div>
         </section>
 
-        {/* ── Our Branches ── */}
+        {/* ── Our Branches — Dynamic from DB ── */}
         <section className="branches-section-3d">
           <div className="container">
             <div className="section-header">
@@ -269,39 +280,35 @@ export default async function HomePage() {
             </div>
 
             <div className="branches-grid-3d">
-              {[
-                {
-                  img: "OB1", cls: "reveal-3d-left",
-                  name: "Damru By Namo (Mansarovar, Jaipur)",
-                  desc: "Our Mansarovar branch offers a perfect blend of great food and a spacious banquet hall, ideal for birthdays, family gatherings, and small celebrations.",
-                },
-                {
-                  img: "OB2", cls: "reveal-3d-center",
-                  name: "Damru By Namo (Gandhipath, Vaishali, Jaipur)",
-                  desc: "Located in Vaishali Nagar, this branch is perfect for weddings, corporate events, and grand celebrations with modern facilities and expert catering.",
-                },
-                {
-                  img: "OB3", cls: "reveal-3d-right",
-                  name: "Damru By Namo (Coaching Hub, Pratap Nagar, Jaipur)",
-                  desc: "Our Pratap Nagar branch offers a lively dining experience along with banquet services, making it ideal for student parties, birthdays, and casual events.",
-                },
-              ].map((b) => (
-                <div key={b.name} className={`branch-card-3d ${b.cls}`}>
-                  <div className="branch-img-wrapper">
-                    <img src={`/assets/images/${b.img}.png`} alt={b.name} />
-                  </div>
-                  <div className="branch-info">
-                    <h3>{b.name}</h3>
-                    <div className="dotted-divider" />
-                    <p className="description">{b.desc}</p>
-                    <div className="contact-details">
-                      <p><strong>Contact Us:</strong> +91 XXXXX XXXXX</p>
-                      <p><strong>Timing:</strong> 11:00 AM – 11:00 PM</p>
+              {(branches.length > 0 ? branches : [
+                { _id:"f1", name:"Damru By Namo (Mansarovar, Jaipur)", slug:"", description:"Our Mansarovar branch offers a perfect blend of great food and a spacious banquet hall, ideal for birthdays, family gatherings, and small celebrations.", cardImage:"", cardAlt:"", contact:"+91 XXXXX XXXXX", timing:"11:00 AM – 11:00 PM" },
+                { _id:"f2", name:"Damru By Namo (Gandhipath, Vaishali, Jaipur)", slug:"", description:"Located in Vaishali Nagar, this branch is perfect for weddings, corporate events, and grand celebrations with modern facilities and expert catering.", cardImage:"", cardAlt:"", contact:"+91 XXXXX XXXXX", timing:"11:00 AM – 11:00 PM" },
+                { _id:"f3", name:"Damru By Namo (Coaching Hub, Pratap Nagar, Jaipur)", slug:"", description:"Our Pratap Nagar branch offers a lively dining experience along with banquet services, making it ideal for student parties, birthdays, and casual events.", cardImage:"", cardAlt:"", contact:"+91 XXXXX XXXXX", timing:"11:00 AM – 11:00 PM" },
+              ]).map((b, i) => {
+                const cls = ["reveal-3d-left","reveal-3d-center","reveal-3d-right"][i] ?? "reveal-3d-left";
+                const staticImgs = ["/assets/images/OB1.png","/assets/images/OB2.png","/assets/images/OB3.png"];
+                const imgSrc = b.cardImage ? `/uploads/branches/${b.cardImage}` : (staticImgs[i] ?? staticImgs[0]);
+                return (
+                  <div key={b._id} className={`branch-card-3d ${cls}`}>
+                    <div className="branch-img-wrapper">
+                      <img src={imgSrc} alt={b.cardAlt || b.name} />
                     </div>
-                    <a href="/contact-us" className="read-more-btn">Read More <span>→</span></a>
+                    <div className="branch-info">
+                      <h3>{b.name}</h3>
+                      <div className="dotted-divider" />
+                      <p className="description">{b.description}</p>
+                      <div className="contact-details">
+                        {b.contact && <p><strong>Contact Us:</strong> {b.contact}</p>}
+                        {b.timing  && <p><strong>Timing:</strong> {b.timing}</p>}
+                      </div>
+                      {b.slug
+                        ? <a href={`/branches/${b.slug}`} className="read-more-btn">Read More <span>→</span></a>
+                        : <a href="/contact-us" className="read-more-btn">Contact Us <span>→</span></a>
+                      }
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -371,14 +378,14 @@ export default async function HomePage() {
             {/* Blog cards — dynamic from DB, fallback to static */}
             <div className="blog-grid-3d">
               {(blogs.length > 0 ? blogs : [
-                { _id: "f1", slug: "", title: "Fruit and vegetables and protection against diseases", excerpt: "A healthy blend of fresh fruits and vegetables packed with nutrients that support immunity and overall well-being.", coverImage: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800", author: { name: "Damru By Namo", avatar: "https://i.pravatar.cc/150?img=32" }, readTime: 3, publishedAt: "", createdAt: "", category: "Healthy Food" },
-                { _id: "f2", slug: "", title: "Asparagus Spring Salad with Rocket, Goat's Cheese", excerpt: "A refreshing spring salad combining crisp greens, creamy cheese, and vibrant flavors for a light yet satisfying dish.", coverImage: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800", author: { name: "Damru By Namo", avatar: "https://i.pravatar.cc/150?img=44" }, readTime: 2, publishedAt: "", createdAt: "", category: "Special Dish" },
-                { _id: "f3", slug: "", title: "Damru Special Mushroom Cheese Burger", excerpt: "A juicy mushroom patty layered with melted cheese and fresh toppings, delivering a rich and indulgent bite.", coverImage: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800", author: { name: "Damru By Namo", avatar: "https://i.pravatar.cc/150?img=47" }, readTime: 4, publishedAt: "", createdAt: "", category: "Special Dish" },
+                { _id:"f1", slug:"", title:"Fruit and vegetables and protection against diseases", excerpt:"A healthy blend of fresh fruits and vegetables packed with nutrients that support immunity and overall well-being.", coverImage:"https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800", author:{ name:"Damru By Namo", avatar:"https://i.pravatar.cc/150?img=32" }, readTime:3, publishedAt:"", createdAt:"", category:"Healthy Food" },
+                { _id:"f2", slug:"", title:"Asparagus Spring Salad with Rocket, Goat's Cheese",  excerpt:"A refreshing spring salad combining crisp greens, creamy cheese, and vibrant flavors for a light yet satisfying dish.",    coverImage:"https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800", author:{ name:"Damru By Namo", avatar:"https://i.pravatar.cc/150?img=44" }, readTime:2, publishedAt:"", createdAt:"", category:"Special Dish" },
+                { _id:"f3", slug:"", title:"Damru Special Mushroom Cheese Burger",                excerpt:"A juicy mushroom patty layered with melted cheese and fresh toppings, delivering a rich and indulgent bite.",             coverImage:"https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800", author:{ name:"Damru By Namo", avatar:"https://i.pravatar.cc/150?img=47" }, readTime:4, publishedAt:"", createdAt:"", category:"Special Dish" },
               ]).map((b, i) => {
-                const cls = ["reveal-3d-left", "reveal-3d-center", "reveal-3d-right"][i] ?? "reveal-3d-left";
-                const imgSrc = b.coverImage.startsWith("http") ? b.coverImage : `/uploads/blogs/${b.coverImage}`;
+                const cls       = ["reveal-3d-left","reveal-3d-center","reveal-3d-right"][i] ?? "reveal-3d-left";
+                const imgSrc    = b.coverImage.startsWith("http") ? b.coverImage : `/uploads/blogs/${b.coverImage}`;
                 const avatarSrc = !b.author.avatar ? "https://i.pravatar.cc/150?img=32" : b.author.avatar.startsWith("http") ? b.author.avatar : `/uploads/authors/${b.author.avatar}`;
-                const dateStr = b.publishedAt || b.createdAt ? new Date(b.publishedAt || b.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
+                const dateStr   = fmtDate(b.publishedAt || b.createdAt);
                 return (
                   <div key={b._id} className={`blog-card ${cls}`}>
                     <div className="blog-img-wrapper">
@@ -392,10 +399,7 @@ export default async function HomePage() {
                       </div>
                       <h3>{b.title}</h3>
                       <div className="dotted-divider" />
-                      <p className="blog-desc">
-                        {b.excerpt?.split(' ').slice(0, 15).join(' ')}
-                        {b.excerpt?.split(' ').length > 10 && '...'}
-                      </p>
+                      <p className="blog-desc">{b.excerpt}</p>
                       <Link href={b.slug ? `/blogs/${b.slug}` : "/blogs"} className="read-more-link">Read More <span>→</span></Link>
                     </div>
                   </div>
@@ -456,14 +460,14 @@ export default async function HomePage() {
               {[
                 { img: "/assets/images/dietplan2.jpg", label: "Starters" },
                 { img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800", label: "Mains" },
-                { img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=800", label: "Soups" },
+                { img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=800",  label: "Soups"  },
               ].map((g) => (
                 <div key={g.label} className="lens-card lens-reveal">
                   <img src={g.img} alt={g.label} className="lens-img" />
                   <div className="lens-vignette" />
                   <div className="lens-content">
                     <h3 className="lens-title">{g.label}</h3>
-                    {/* <span className="lens-arrow">→</span> */}
+                    <span className="lens-arrow">→</span>
                   </div>
                 </div>
               ))}
@@ -506,7 +510,6 @@ export default async function HomePage() {
           </div>
         </section>
 
-      </main>
-    </div>
+  </main>
   );
 }

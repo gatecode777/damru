@@ -39,3 +39,7 @@ button {
   --radius: 12px;
   --radius-sm: 8px;
 }
+
+.auth-overlay { display: none; }
+.auth-screen  { display: none; }
+.full-menu-overlay { display: none; }

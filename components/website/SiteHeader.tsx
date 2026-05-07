@@ -474,7 +474,7 @@ export default function Header() {
                 <Link href="/blogs" onClick={toggleMenu} className={pathname.startsWith("/blogs") ? "active-menu" : ""}>BLOGS</Link>
               </li>
               <li><span className="dot"></span> <Link href="/offers" onClick={toggleMenu} className={pathname === "/offers" ? "active-menu" : ""}>OFFERS</Link></li>
-              <li><span className="dot"></span> <Link href="/branches" onClick={toggleMenu} className={pathname === "/branches" ? "active-menu" : ""}>BANQUET / EVENT</Link></li>
+              <li><span className="dot"></span> <Link href="/branches" onClick={toggleMenu} className={pathname.startsWith("/branches") ? "active-menu" : ""}>BANQUET / EVENT</Link></li>
               {/* Added: show logout or login inside overlay menu */}
               {user ? (
                 <>
@@ -660,39 +660,6 @@ export default function Header() {
 
         </div>
       </div>
-
-      <style jsx global>{`
-        .auth-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
-        .auth-overlay.active{display:flex}
-        .auth-modal{background:#fff;border-radius:16px;padding:40px 36px 32px;width:100%;max-width:480px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:authSlide 0.3s cubic-bezier(0.4,0,0.2,1);max-height:90vh;overflow-y:auto}
-        @keyframes authSlide{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
-        .auth-close{position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;color:#555;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background 0.2s;line-height:1}
-        .auth-close:hover{background:#f0f0f0}
-        .auth-screen{display:none}
-        .auth-screen.active{display:block}
-        .auth-title{font-family:"Playfair Display",serif;font-size:2rem;font-weight:700;color:#111;text-align:center;margin-bottom:28px}
-        .auth-desc{font-size:0.9rem;color:#666;margin-bottom:20px;line-height:1.6}
-        .auth-field{display:flex;align-items:center;border:1.5px solid #e0e0e0;border-radius:10px;padding:0 14px;margin-bottom:14px;background:#fafafa;transition:border-color 0.2s}
-        .auth-field:focus-within{border-color:#e67e22;background:#fff}
-        .auth-field-icon{color:#aaa;font-size:18px;margin-right:10px;display:flex;align-items:center}
-        .auth-field input{flex:1;border:none;background:transparent;outline:none;padding:14px 0;font-size:0.95rem;color:#111;font-family:"Poppins",sans-serif}
-        .auth-field input::placeholder{color:#bbb}
-        .toggle-pass{background:none;border:none;cursor:pointer;color:#aaa;font-size:18px;display:flex;align-items:center;padding:0;transition:color 0.2s}
-        .toggle-pass:hover{color:#555}
-        .auth-forgot-wrap{text-align:right;margin-bottom:20px;margin-top:-4px}
-        .auth-link{background:none;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;color:#111;padding:0;font-family:"Poppins",sans-serif}
-        .auth-link.orange{color:#e67e22}
-        .auth-link:hover{text-decoration:underline}
-        .auth-btn{width:100%;background:#e67e22;color:#fff;border:none;border-radius:10px;padding:16px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:6px;font-family:"Poppins",sans-serif;transition:background 0.2s,transform 0.15s;box-shadow:0 6px 20px rgba(230,126,34,0.35)}
-        .auth-btn:hover:not(:disabled){background:#d4691a;transform:translateY(-1px)}
-        .auth-btn:disabled{opacity:0.65;cursor:not-allowed}
-        .auth-switch{text-align:center;margin-top:18px;font-size:0.9rem;color:#555;font-family:"Poppins",sans-serif}
-        .auth-terms{font-size:0.82rem;color:#555;margin-bottom:16px;line-height:1.6;font-family:"Poppins",sans-serif}
-        .auth-terms a{color:#e67e22;text-decoration:none}
-        /* OTP box styles moved to inline in OtpBoxes component */
-        .otp-timer{text-align:center;color:#e67e22;font-size:0.9rem;font-weight:600;margin-bottom:20px;font-family:"Poppins",sans-serif !important}
-        @media(max-width:520px){.auth-modal{margin:16px;padding:32px 20px 24px}.auth-title{font-size:1.6rem}.otp-input{width:40px;height:48px;font-size:1.2rem}}
-      `}</style>
     </>
   );
 }

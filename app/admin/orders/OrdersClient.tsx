@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Search, X, Eye, ShoppingBag } from "lucide-react";
 import type { OrderRow } from "./page";
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 const STATUS_COLORS: Record<string, { bg: string; color: string; dot: string }> = {
   pending:          { bg: "#fffbeb", color: "#b45309", dot: "#f59e0b" },
   confirmed:        { bg: "#eff6ff", color: "#1d4ed8", dot: "#3b82f6" },
@@ -40,7 +42,12 @@ function StatusBadge({ status }: { status: string }) {
 
 const ALL_STATUSES = ["pending","confirmed","preparing","out_for_delivery","delivered","cancelled"];
 
-export default function OrdersClient({ orders: initialOrders }: { orders: OrderRow[] }) {
+export default function OrdersClient({ orders: initialOrders, perms }: { orders: OrderRow[]; perms?: Perms }) {
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.orders?.[action]);
+  
+  // Note: Orders page typically only needs view permission since edit/delete are on detail page
+  const canView = can("view");
+
   const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [payFilter,    setPayFilter]    = useState("all");
@@ -58,6 +65,18 @@ export default function OrdersClient({ orders: initialOrders }: { orders: OrderR
       return true;
     });
   }, [initialOrders, search, statusFilter, payFilter]);
+
+  // If user doesn't have view permission, show access denied
+  if (!canView) {
+    return (
+      <div className="card" style={{ padding: 60, textAlign: "center" }}>
+        <ShoppingBag size={40} style={{ color: "#dc2626", margin: "0 auto 12px", display: "block" }} />
+        <p style={{ fontFamily: "DM Sans, sans-serif", color: "#dc2626" }}>
+          You don't have permission to view orders.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>

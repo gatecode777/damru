@@ -11,6 +11,8 @@ import {
   addGalleryItem, updateGalleryItem, deleteGalleryItem,
 } from "@/app/actions/gallery";
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 interface GalleryItem {
   _id: string; image: string; alt: string; title: string;
   description: string; type: string; overlayClass: string; sortOrder: number;
@@ -26,17 +28,16 @@ const lbl: React.CSSProperties = { fontSize: "0.75rem", fontWeight: 600, color: 
 const inp: React.CSSProperties = { width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "7px 10px", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: "#111827", outline: "none", boxSizing: "border-box" };
 
 // ── Image upload ─────────────────────────────────────────────
-function ImageUpload({ current, target, onDone, label, height = 140 }: {
+function ImageUpload({ current, target, onDone, label, height = 140, canEdit }: {
   current: string; target: string; onDone: (f: string) => void;
-  label: string; height?: number;
+  label: string; height?: number; canEdit?: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
   const [preview,   setPreview]   = useState(current);
   const ref = useRef<HTMLInputElement>(null);
 
-
-
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!canEdit) return;
     const file = e.target.files?.[0]; if (!file) return;
     setPreview(URL.createObjectURL(file));
     setUploading(true);
@@ -53,10 +54,10 @@ function ImageUpload({ current, target, onDone, label, height = 140 }: {
     <div>
       <label style={lbl}>{label}</label>
       <div
-        style={{ border: "2px dashed #e5e7eb", borderRadius: 10, overflow: "hidden", cursor: "pointer", height, display: "flex", alignItems: "center", justifyContent: "center", background: "#fafafa", position: "relative", transition: "border-color 0.15s" }}
-        onClick={() => ref.current?.click()}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = "#f97316")}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = "#e5e7eb")}
+        style={{ border: "2px dashed #e5e7eb", borderRadius: 10, overflow: "hidden", cursor: canEdit ? "pointer" : "default", height, display: "flex", alignItems: "center", justifyContent: "center", background: "#fafafa", position: "relative", transition: "border-color 0.15s" }}
+        onClick={() => canEdit && ref.current?.click()}
+        onMouseEnter={e => { if (canEdit) e.currentTarget.style.borderColor = "#f97316"; }}
+        onMouseLeave={e => { if (canEdit) e.currentTarget.style.borderColor = "#e5e7eb"; }}
       >
         {preview ? (
           <>
@@ -70,12 +71,12 @@ function ImageUpload({ current, target, onDone, label, height = 140 }: {
         ) : (
           <div style={{ textAlign: "center", color: "#9ca3af", fontFamily: "DM Sans,sans-serif" }}>
             {uploading ? <Loader2 size={20} style={{ animation: "spin 0.8s linear infinite" }} /> : <ImageIcon size={24} />}
-            <p style={{ fontSize: "0.78rem", marginTop: 6 }}>{uploading ? "Uploading…" : "Click to upload"}</p>
+            <p style={{ fontSize: "0.78rem", marginTop: 6 }}>{uploading ? "Uploading…" : canEdit ? "Click to upload" : "No image"}</p>
           </div>
         )}
       </div>
       <input ref={ref} type="file" accept="image/*" style={{ display: "none" }} onChange={handleChange} />
-      {preview && !preview.startsWith("blob:") && (
+      {preview && !preview.startsWith("blob:") && canEdit && (
         <button type="button" onClick={() => { setPreview(""); onDone(""); }}
           style={{ marginTop: 4, background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.75rem", fontFamily: "DM Sans,sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
           <Trash2 size={11}/> Remove
@@ -86,10 +87,11 @@ function ImageUpload({ current, target, onDone, label, height = 140 }: {
 }
 
 // ── Item row ─────────────────────────────────────────────────
-function ItemRow({ item, tabId, onItemSaved, onItemDeleted }: {
+function ItemRow({ item, tabId, onItemSaved, onItemDeleted, canEdit, canDelete }: {
   item: GalleryItem; tabId: string;
   onItemSaved: (itemId: string, patch: Partial<GalleryItem>) => void;
   onItemDeleted: (itemId: string) => void;
+  canEdit: boolean; canDelete: boolean;
 }) {
   const [expanded,  setExpanded]  = useState(false);
   const [saving,    setSaving]    = useState(false);
@@ -103,6 +105,7 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted }: {
   const [sortOrder, setSortOrder] = useState(item.sortOrder);
 
   async function handleSave() {
+    if (!canEdit) return;
     setSaving(true);
     const fd = new FormData();
     fd.append("image", image); fd.append("alt", alt); fd.append("title", title);
@@ -110,16 +113,15 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted }: {
     fd.append("overlayClass", overlay); fd.append("sortOrder", String(sortOrder));
     await updateGalleryItem(tabId, item._id, fd);
     setSaving(false);
-    // Optimistic: update parent state immediately
     onItemSaved(item._id, { image, alt, title, description: desc, type, overlayClass: overlay, sortOrder });
     setExpanded(false);
   }
 
   async function handleDelete() {
+    if (!canDelete) return;
     if (!confirm(`Delete "${title}"?`)) return;
     setDeleting(true);
     await deleteGalleryItem(tabId, item._id);
-    // Optimistic: remove from parent state immediately
     onItemDeleted(item._id);
   }
 
@@ -132,16 +134,18 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted }: {
           <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", fontWeight: 500, color: "#111827", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</p>
           <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.72rem", color: "#9ca3af", margin: 0 }}>{type} · {overlay || "bottom"} overlay · sort {sortOrder}</p>
         </div>
-        <button type="button" onClick={e => { e.stopPropagation(); handleDelete(); }} disabled={deleting}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", display: "flex", padding: 4, borderRadius: 6 }}>
-          {deleting ? <Loader2 size={14} style={{ animation: "spin 0.8s linear infinite" }} /> : <Trash2 size={14} />}
-        </button>
+        {canDelete && (
+          <button type="button" onClick={e => { e.stopPropagation(); handleDelete(); }} disabled={deleting}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", display: "flex", padding: 4, borderRadius: 6 }}>
+            {deleting ? <Loader2 size={14} style={{ animation: "spin 0.8s linear infinite" }} /> : <Trash2 size={14} />}
+          </button>
+        )}
         {expanded ? <ChevronUp size={14} style={{ color: "#9ca3af" }} /> : <ChevronDown size={14} style={{ color: "#9ca3af" }} />}
       </div>
 
-      {expanded && (
+      {expanded && canEdit && (
         <div style={{ padding: 14, background: "#fff", borderTop: "1px solid #f3f4f6", display: "flex", flexDirection: "column", gap: 10 }}>
-          <ImageUpload current={image ? `/uploads/gallery/${image}` : ""} target="gallery" label="Image" onDone={setImage} height={120} />
+          <ImageUpload current={image ? `/uploads/gallery/${image}` : ""} target="gallery" label="Image" onDone={setImage} height={120} canEdit={canEdit} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <div><label style={lbl}>Title *</label><input style={inp} value={title} onChange={e => setTitle(e.target.value)} /></div>
             <div><label style={lbl}>Description</label><input style={inp} value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Lunch • Dinner" /></div>
@@ -175,9 +179,10 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted }: {
 }
 
 // ── Add Item Form ────────────────────────────────────────────
-function AddItemForm({ tabId, onItemAdded }: {
+function AddItemForm({ tabId, onItemAdded, canCreate }: {
   tabId: string;
   onItemAdded: (item: GalleryItem) => void;
+  canCreate: boolean;
 }) {
   const [show,    setShow]    = useState(false);
   const [saving,  setSaving]  = useState(false);
@@ -190,6 +195,7 @@ function AddItemForm({ tabId, onItemAdded }: {
   const [sort,    setSort]    = useState(0);
 
   async function handleAdd() {
+    if (!canCreate) return;
     if (!image || !title) { alert("Image and title are required."); return; }
     setSaving(true);
     const fd = new FormData();
@@ -198,10 +204,11 @@ function AddItemForm({ tabId, onItemAdded }: {
     fd.append("overlayClass", overlay); fd.append("sortOrder", String(sort));
     await addGalleryItem(tabId, fd);
     setSaving(false); setShow(false);
-    // Optimistic: add a temporary item immediately (real _id from refresh)
     onItemAdded({ _id: `temp-${Date.now()}`, image, alt, title, description: desc, type, overlayClass: overlay, sortOrder: sort });
     setImage(""); setTitle(""); setDesc(""); setAlt(""); setType("wide"); setOverlay(""); setSort(0);
   }
+
+  if (!canCreate) return null;
 
   if (!show) return (
     <button type="button" onClick={() => setShow(true)}
@@ -215,7 +222,7 @@ function AddItemForm({ tabId, onItemAdded }: {
   return (
     <div style={{ border: "2px solid #f97316", borderRadius: 10, padding: 16, background: "#fff7ed" }}>
       <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", fontWeight: 700, color: "#f97316", marginBottom: 12 }}>New Image</p>
-      <ImageUpload current="" target="gallery" label="Image *" onDone={setImage} height={120} />
+      <ImageUpload current="" target="gallery" label="Image *" onDone={setImage} height={120} canEdit={true} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
         <div><label style={lbl}>Title *</label><input style={inp} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Fresh Tomato Soup" /></div>
         <div><label style={lbl}>Description</label><input style={inp} value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Lunch • Dinner" /></div>
@@ -251,16 +258,19 @@ function AddItemForm({ tabId, onItemAdded }: {
 }
 
 // ── Add Tab Form ─────────────────────────────────────────────
-function AddTabForm({ existingCount, onTabCreated, onClose }: {
+function AddTabForm({ existingCount, onTabCreated, onClose, canCreate }: {
   existingCount: number;
   onTabCreated: (tab: GalleryTab) => void;
   onClose: () => void;
+  canCreate: boolean;
 }) {
   const [label,     setLabel]     = useState("");
   const [tabKey,    setTabKey]    = useState("");
   const [sortOrder, setSortOrder] = useState(existingCount);
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState("");
+
+  if (!canCreate) return null;
 
   function handleLabelChange(val: string) {
     setLabel(val);
@@ -281,7 +291,6 @@ function AddTabForm({ existingCount, onTabCreated, onClose }: {
     const res = await upsertGalleryTab(fd);
     setSaving(false);
     if (res?.error) { setError(res.error); return; }
-    // Optimistic: add new tab to local state immediately
     const newTab: GalleryTab = {
       _id:         `temp-${Date.now()}`,
       tabKey:      tabKey.trim(),
@@ -342,8 +351,15 @@ function AddTabForm({ existingCount, onTabCreated, onClose }: {
 // ════════════════════════════════════════════════════════════
 // Main GalleryClient — all state managed locally, no router.refresh()
 // ════════════════════════════════════════════════════════════
-export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[] }) {
+export default function GalleryClient({ tabs: initialTabs, perms }: { tabs: GalleryTab[]; perms?: Perms }) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.gallery?.[action]);
+  
+  const canView = can("view");
+  const canEdit = can("edit");
+  const canDelete = can("delete");
+  const canCreate = can("create");
+
   const [tabs,         setTabs]         = useState<GalleryTab[]>(initialTabs);
   const [activeTabIdx, setActiveTabIdx] = useState(0);
   const [savingTab,    setSavingTab]    = useState(false);
@@ -365,23 +381,23 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
 
   // ── Tab CRUD — optimistic updates, no full page refresh ──
   function handleTabCreated(newTab: GalleryTab) {
+    if (!canCreate) return;
     setTabs(prev => {
       const updated = [...prev, newTab];
       setActiveTabIdx(updated.length - 1);
       setBannerImage(""); setBannerAlt(""); setLabel(newTab.label);
       return updated;
     });
-    // Sync server in background (no await — already saved)
     router.refresh();
   }
 
   async function handleDeleteTab() {
+    if (!canDelete) return;
     if (!tab) return;
     if (!confirm(`Delete tab "${tab.label}"?\n\nThis will also delete all ${tab.items.length} image(s). This cannot be undone.`)) return;
     setDeletingTab(true);
     await deleteGalleryTab(tab._id);
     setDeletingTab(false);
-    // Optimistic: remove tab from local state immediately
     setTabs(prev => {
       const updated = prev.filter((_, i) => i !== activeTabIdx);
       const newIdx = Math.min(activeTabIdx, updated.length - 1);
@@ -397,12 +413,13 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
   }
 
   async function handleToggleTab(id: string, current: boolean) {
-    // Optimistic: flip isActive immediately
+    if (!canEdit) return;
     setTabs(prev => prev.map(t => t._id === id ? { ...t, isActive: !current } : t));
     await toggleGalleryTabActive(id, current);
   }
 
   async function handleSaveTab() {
+    if (!canEdit) return;
     if (!tab) return;
     setSavingTab(true);
     const fd = new FormData();
@@ -414,19 +431,20 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
     fd.append("isActive",    String(tab.isActive));
     await upsertGalleryTab(fd);
     setSavingTab(false);
-    // Optimistic: update label in sidebar immediately
     setTabs(prev => prev.map((t, i) => i === activeTabIdx ? { ...t, label, bannerImage, bannerAlt } : t));
   }
 
   // ── Item CRUD — all optimistic ────────────────────────────
   function handleItemAdded(item: GalleryItem) {
+    if (!canCreate) return;
     setTabs(prev => prev.map((t, i) =>
       i === activeTabIdx ? { ...t, items: [...t.items, item] } : t
     ));
-    router.refresh(); // background sync to get real _id
+    router.refresh();
   }
 
   function handleItemSaved(itemId: string, patch: Partial<GalleryItem>) {
+    if (!canEdit) return;
     setTabs(prev => prev.map((t, i) =>
       i === activeTabIdx
         ? { ...t, items: t.items.map(it => it._id === itemId ? { ...it, ...patch } : it) }
@@ -435,11 +453,20 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
   }
 
   function handleItemDeleted(itemId: string) {
+    if (!canDelete) return;
     setTabs(prev => prev.map((t, i) =>
       i === activeTabIdx
         ? { ...t, items: t.items.filter(it => it._id !== itemId) }
         : t
     ));
+  }
+
+  if (!canView) {
+    return (
+      <div style={{ background: "#fff", borderRadius: 14, padding: 60, textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+        <p style={{ fontFamily: "DM Sans,sans-serif", color: "#dc2626" }}>You don't have permission to view the gallery.</p>
+      </div>
+    );
   }
 
   if (tabs.length === 0) {
@@ -449,13 +476,13 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
         <div style={{ background: "#fff", borderRadius: 14, padding: 60, textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
           <ImageIcon size={40} style={{ color: "#d1d5db", margin: "0 auto 12px", display: "block" }} />
           <p style={{ fontFamily: "DM Sans,sans-serif", color: "#9ca3af", marginBottom: 16 }}>No gallery tabs yet. Create your first tab to get started.</p>
-          {showAddTab
-            ? <AddTabForm existingCount={0} onTabCreated={handleTabCreated} onClose={() => setShowAddTab(false)} />
+          {canCreate && (showAddTab
+            ? <AddTabForm existingCount={0} onTabCreated={handleTabCreated} onClose={() => setShowAddTab(false)} canCreate={canCreate} />
             : <button type="button" onClick={() => setShowAddTab(true)}
                 style={{ background: "#f97316", color: "#fff", border: "none", borderRadius: 10, padding: "10px 24px", fontFamily: "DM Sans,sans-serif", fontSize: "0.9rem", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <Plus size={15}/> Create First Tab
               </button>
-          }
+          )}
         </div>
       </>
     );
@@ -484,16 +511,18 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
                 <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.875rem", fontWeight: i === activeTabIdx ? 600 : 400, color: i === activeTabIdx ? "#f97316" : "#374151", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.label}</p>
                 <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.72rem", color: "#9ca3af", margin: 0 }}>{t.items.length} image{t.items.length !== 1 ? "s" : ""}</p>
               </div>
-              <button type="button" onClick={e => { e.stopPropagation(); handleToggleTab(t._id, t.isActive); }}
-                title={t.isActive ? "Active — click to deactivate" : "Inactive — click to activate"}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 6, color: t.isActive ? "#16a34a" : "#d1d5db" }}>
-                {t.isActive ? <Eye size={14}/> : <EyeOff size={14}/>}
-              </button>
+              {canEdit && (
+                <button type="button" onClick={e => { e.stopPropagation(); handleToggleTab(t._id, t.isActive); }}
+                  title={t.isActive ? "Active — click to deactivate" : "Inactive — click to activate"}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 6, color: t.isActive ? "#16a34a" : "#d1d5db" }}>
+                  {t.isActive ? <Eye size={14}/> : <EyeOff size={14}/>}
+                </button>
+              )}
             </div>
           ))}
 
-          {showAddTab ? (
-            <AddTabForm existingCount={tabs.length} onTabCreated={handleTabCreated} onClose={() => setShowAddTab(false)} />
+          {canCreate && (showAddTab ? (
+            <AddTabForm existingCount={tabs.length} onTabCreated={handleTabCreated} onClose={() => setShowAddTab(false)} canCreate={canCreate} />
           ) : (
             <button type="button" onClick={() => setShowAddTab(true)}
               style={{ width: "100%", padding: "12px 16px", background: "none", border: "none", borderTop: "1px solid #f3f4f6", cursor: "pointer", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", color: "#9ca3af", display: "flex", alignItems: "center", gap: 6 }}
@@ -501,7 +530,7 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
               onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
               <Plus size={14}/> Add New Tab
             </button>
-          )}
+          ))}
         </div>
 
         {/* ── RIGHT: Tab editor ── */}
@@ -518,15 +547,19 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
                   <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.75rem", color: "#9ca3af", margin: 0 }}>Configure banner and label for this tab</p>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button type="button" onClick={handleDeleteTab} disabled={deletingTab}
-                    style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                    {deletingTab ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> : <Trash2 size={13}/>}
-                    {deletingTab ? "Deleting…" : "Delete Tab"}
-                  </button>
-                  <button type="button" onClick={handleSaveTab} disabled={savingTab}
-                    style={{ background: "#f97316", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                    {savingTab ? <><Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Saving…</> : <><Save size={13}/> Save Tab</>}
-                  </button>
+                  {canDelete && (
+                    <button type="button" onClick={handleDeleteTab} disabled={deletingTab}
+                      style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                      {deletingTab ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> : <Trash2 size={13}/>}
+                      {deletingTab ? "Deleting…" : "Delete Tab"}
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button type="button" onClick={handleSaveTab} disabled={savingTab}
+                      style={{ background: "#f97316", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                      {savingTab ? <><Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Saving…</> : <><Save size={13}/> Save Tab</>}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -536,18 +569,17 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
                     label="Banner Image (shown at top when this tab is active)"
                     onDone={f => {
                       setBannerImage(f);
-                      // Also persist per-tab so switching tabs shows correct banner
                       setTabs(prev => prev.map((t, i) => i === activeTabIdx ? { ...t, bannerImage: f } : t));
-                    }} height={180} />
+                    }} height={180} canEdit={canEdit} />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div>
                     <label style={lbl}>Tab Label</label>
-                    <input style={inp} value={label} onChange={e => setLabel(e.target.value)} />
+                    <input style={inp} value={label} onChange={e => canEdit && setLabel(e.target.value)} disabled={!canEdit} />
                   </div>
                   <div>
                     <label style={lbl}>Banner Alt Text</label>
-                    <input style={inp} value={bannerAlt} onChange={e => setBannerAlt(e.target.value)} />
+                    <input style={inp} value={bannerAlt} onChange={e => canEdit && setBannerAlt(e.target.value)} disabled={!canEdit} />
                   </div>
                   <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 8 }}>
                     <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.75rem", color: "#6b7280", margin: 0 }}>
@@ -557,7 +589,7 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
                     <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.75rem", color: "#6b7280", margin: "4px 0 0" }}>
                       <strong>Status:</strong>{" "}
                       <span style={{ color: tab.isActive ? "#16a34a" : "#9ca3af", fontWeight: 600 }}>{tab.isActive ? "Active" : "Inactive"}</span>
-                      <span style={{ color: "#d1d5db" }}> — eye icon on left to toggle</span>
+                      {canEdit && <span style={{ color: "#d1d5db" }}> — eye icon on left to toggle</span>}
                     </p>
                     <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.75rem", color: "#6b7280", margin: "4px 0 0" }}>
                       <strong>Images:</strong>{" "}
@@ -592,11 +624,13 @@ export default function GalleryClient({ tabs: initialTabs }: { tabs: GalleryTab[
                   sortedItems.map(item => (
                     <ItemRow key={item._id} item={item} tabId={tab._id}
                       onItemSaved={handleItemSaved}
-                      onItemDeleted={handleItemDeleted} />
+                      onItemDeleted={handleItemDeleted}
+                      canEdit={canEdit}
+                      canDelete={canDelete} />
                   ))
                 )}
                 <div style={{ marginTop: 8 }}>
-                  <AddItemForm tabId={tab._id} onItemAdded={handleItemAdded} />
+                  <AddItemForm tabId={tab._id} onItemAdded={handleItemAdded} canCreate={canCreate} />
                 </div>
               </div>
             </div>

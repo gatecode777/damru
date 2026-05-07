@@ -60,7 +60,11 @@ const DEFAULTS: AppSettings = {
   maintenanceMsg:    "We'll be back soon!",
 };
 
-export async function getSettings(): Promise<AppSettings> {
+import { cache } from "react";
+
+// cache() deduplicates calls within a single request/render pass
+// so multiple server components calling getSettings() only hit DB once
+export const getSettings = cache(async (): Promise<AppSettings> => {
   try {
     await connectDB();
     const doc = await SiteSettings.findOne().lean() as any;
@@ -69,4 +73,4 @@ export async function getSettings(): Promise<AppSettings> {
   } catch {
     return DEFAULTS;
   }
-}
+});

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import MenuItem from "@/models/MenuItem";
 import Category from "@/models/Category";
@@ -14,6 +15,10 @@ export const metadata = { title: "Menu Items" };
 export default async function MenuPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("menu", "view")) redirect("/admin/dashboard");
 
   let items: {
     _id: string; name: string; slug: string; description: string;
@@ -37,6 +42,8 @@ export default async function MenuPage() {
     categories = JSON.parse(JSON.stringify(rawCats));
   } catch { /* show empty */ }
 
+  const serializedPerms = serializePerms(perms);
+
   return (
     <>
       <AdminSidebar />
@@ -51,14 +58,16 @@ export default async function MenuPage() {
               <p className="page-sub">{items.length} items across {categories.length} categories</p>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              {categories.length === 0 && (
+              {categories.length === 0 && perms.can("categories", "create") && (
                 <Link href="/admin/categories/new" className="btn-outline">
                   Add a category first
                 </Link>
               )}
-              <Link href="/admin/menu/new" className="btn-primary">
-                <Plus size={15} /> Add Menu Item
-              </Link>
+              {perms.can("menu", "create") && (
+                <Link href="/admin/menu/new" className="btn-primary">
+                  <Plus size={15} /> Add Menu Item
+                </Link>
+              )}
             </div>
           </div>
 
@@ -83,15 +92,19 @@ export default async function MenuPage() {
               <div className="empty-state">
                 <UtensilsCrossed size={40} />
                 <p>No menu items yet.{" "}
-                  <Link href="/admin/menu/new" style={{ color: "#f97316" }}>
-                    Add the first item →
-                  </Link>
+                  {perms.can("menu", "create") ? (
+                    <Link href="/admin/menu/new" style={{ color: "#f97316" }}>
+                      Add the first item →
+                    </Link>
+                  ) : (
+                    <span style={{ color: "#9ca3af" }}>Contact admin to add items</span>
+                  )}
                 </p>
               </div>
             </div>
           ) : (
             /* All interactive: search, filters, table, pagination — client */
-            <MenuClient items={items} categories={categories} />
+            <MenuClient items={items} categories={categories} perms={serializedPerms} />
           )}
 
         </main>

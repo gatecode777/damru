@@ -14,7 +14,7 @@ export default function BanquetPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission
-    console.log(formData);
+    // console.log(formData);
   };
 
   return (

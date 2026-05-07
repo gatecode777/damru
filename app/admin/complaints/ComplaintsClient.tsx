@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Search, X, MessageSquareWarning, Trash2, Loader2, ChevronDown, Save } from "lucide-react";
 import type { ComplaintRow } from "./page";
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   open:        { bg: "#fef2f2", color: "#b91c1c", border: "#fecaca", dot: "#dc2626" },
   in_progress: { bg: "#fffbeb", color: "#b45309", border: "#fde68a", dot: "#f59e0b" },
@@ -27,13 +29,14 @@ function fmtDate(d: string) {
 }
 
 // ── Fixed-position status dropdown ───────────────────────────
-function StatusDropdown({ complaint, onUpdated }: { complaint: ComplaintRow; onUpdated: (id: string, patch: Partial<ComplaintRow>) => void }) {
+function StatusDropdown({ complaint, onUpdated, canEdit }: { complaint: ComplaintRow; onUpdated: (id: string, patch: Partial<ComplaintRow>) => void; canEdit: boolean }) {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState({ top: 0, left: 0 });
   const [isPending, startTransition] = useTransition();
   const btnRef = useRef<HTMLButtonElement>(null);
 
   function openDrop() {
+    if (!canEdit) return;
     if (!btnRef.current) return;
     const r = btnRef.current.getBoundingClientRect();
     setPos({ top: r.bottom + 4, left: r.left });
@@ -54,6 +57,16 @@ function StatusDropdown({ complaint, onUpdated }: { complaint: ComplaintRow; onU
 
   const s = STATUS_STYLE[complaint.status] ?? STATUS_STYLE.open;
   const label = complaint.status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+  // If user can't edit, show static badge instead of dropdown
+  if (!canEdit) {
+    return (
+      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, borderRadius: 8, padding: "5px 10px", fontFamily: "DM Sans,sans-serif", fontSize: "0.78rem", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot }} />
+        {label}
+      </span>
+    );
+  }
 
   return (
     <>
@@ -86,12 +99,13 @@ function StatusDropdown({ complaint, onUpdated }: { complaint: ComplaintRow; onU
 }
 
 // ── Expanded detail panel ─────────────────────────────────────
-function DetailPanel({ complaint, onUpdated }: { complaint: ComplaintRow; onUpdated: (id: string, patch: Partial<ComplaintRow>) => void }) {
+function DetailPanel({ complaint, onUpdated, canEdit }: { complaint: ComplaintRow; onUpdated: (id: string, patch: Partial<ComplaintRow>) => void; canEdit: boolean }) {
   const [note,     setNote]     = useState(complaint.adminNote || "");
   const [saving,   setSaving]   = useState(false);
   const [isPending,startTransition] = useTransition();
 
   async function saveNote() {
+    if (!canEdit) return;
     setSaving(true);
     const res = await fetch(`/api/complaints/${complaint._id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -145,15 +159,18 @@ function DetailPanel({ complaint, onUpdated }: { complaint: ComplaintRow; onUpda
               value={note}
               onChange={e => setNote(e.target.value)}
               rows={5}
-              placeholder="Write a response or internal note here…"
-              style={inp}
+              placeholder={canEdit ? "Write a response or internal note here…" : "No edit permission to add notes"}
+              style={{ ...inp, background: canEdit ? "#fff" : "#f9fafb" }}
+              disabled={!canEdit}
             />
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-              <button onClick={saveNote} disabled={saving}
-                style={{ background: "#f97316", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                {saving ? <><Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Saving…</> : <><Save size={13}/> Save Note</>}
-              </button>
-            </div>
+            {canEdit && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                <button onClick={saveNote} disabled={saving}
+                  style={{ background: "#f97316", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  {saving ? <><Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Saving…</> : <><Save size={13}/> Save Note</>}
+                </button>
+              </div>
+            )}
             {complaint.adminNote && note === complaint.adminNote && (
               <div style={{ marginTop: 10, padding: "10px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8 }}>
                 <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.72rem", fontWeight: 700, color: "#15803d", margin: "0 0 4px" }}>SAVED NOTE</p>
@@ -170,8 +187,10 @@ function DetailPanel({ complaint, onUpdated }: { complaint: ComplaintRow; onUpda
 // ════════════════════════════════════════════════════════════
 // Main ComplaintsClient
 // ════════════════════════════════════════════════════════════
-export default function ComplaintsClient({ complaints: initial }: { complaints: ComplaintRow[] }) {
+export default function ComplaintsClient({ complaints: initial, perms }: { complaints: ComplaintRow[]; perms?: Perms }) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.complaints?.[action]);
+  
   const [complaints,  setComplaints]  = useState<ComplaintRow[]>(initial);
   const [search,      setSearch]      = useState("");
   const [statusFilter,setStatusFilter]= useState("all");
@@ -202,6 +221,7 @@ export default function ComplaintsClient({ complaints: initial }: { complaints: 
   }
 
   async function handleDelete(id: string, subject: string) {
+    if (!can("delete")) return;
     if (!confirm(`Delete complaint "${subject}"? This cannot be undone.`)) return;
     setDeletingId(id);
     await fetch(`/api/complaints/${id}`, { method: "DELETE" });
@@ -293,7 +313,7 @@ export default function ComplaintsClient({ complaints: initial }: { complaints: 
                           </div>
                         </td>
                         <td onClick={e => e.stopPropagation()}>
-                          <StatusDropdown complaint={c} onUpdated={handleUpdated} />
+                          <StatusDropdown complaint={c} onUpdated={handleUpdated} canEdit={can("edit")} />
                         </td>
                         <td>
                           <span style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.78rem", color: "#6b7280" }}>
@@ -307,16 +327,18 @@ export default function ComplaintsClient({ complaints: initial }: { complaints: 
                                 Noted
                               </span>
                             )}
-                            <button onClick={() => handleDelete(c._id, c.subject)} disabled={deletingId === c._id}
-                              style={{ background: "#fef2f2", border: "none", borderRadius: 7, padding: "5px 8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}>
-                              {deletingId === c._id
-                                ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />
-                                : <Trash2 size={13} />}
-                            </button>
+                            {can("delete") && (
+                              <button onClick={() => handleDelete(c._id, c.subject)} disabled={deletingId === c._id}
+                                style={{ background: "#fef2f2", border: "none", borderRadius: 7, padding: "5px 8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}>
+                                {deletingId === c._id
+                                  ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />
+                                  : <Trash2 size={13} />}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
-                      {isExpanded && <DetailPanel key={`${c._id}-detail`} complaint={c} onUpdated={handleUpdated} />}
+                      {isExpanded && <DetailPanel key={`${c._id}-detail`} complaint={c} onUpdated={handleUpdated} canEdit={can("edit")} />}
                     </React.Fragment>
                   );
                 })}

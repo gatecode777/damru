@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { connectDB } from "@/lib/mongodb";
 import Blog from "@/models/Blog";
+import { getAdminPerms } from "@/lib/adminPermissions";
 
 function toSlug(title: string) {
   return title.toLowerCase()
@@ -51,6 +52,10 @@ function parseBlogFormData(formData: FormData) {
 
 // ── Create ───────────────────────────────────────────────────
 export async function createBlog(formData: FormData) {
+  // Check if user has create permission for blogs
+  const perms = await getAdminPerms();
+  if (!perms.can("blogs", "create")) throw new Error("Forbidden - You don't have permission to create blog posts.");
+  
   await connectDB();
   const data = parseBlogFormData(formData);
   if (!data.title) return { error: "Title is required." };
@@ -74,6 +79,10 @@ export async function createBlog(formData: FormData) {
 
 // ── Update ───────────────────────────────────────────────────
 export async function updateBlog(id: string, formData: FormData) {
+  // Check if user has edit permission for blogs
+  const perms = await getAdminPerms();
+  if (!perms.can("blogs", "edit")) throw new Error("Forbidden - You don't have permission to update blog posts.");
+  
   await connectDB();
   const data = parseBlogFormData(formData);
   if (!data.title) return { error: "Title is required." };
@@ -100,6 +109,10 @@ export async function updateBlog(id: string, formData: FormData) {
 
 // ── Delete ───────────────────────────────────────────────────
 export async function deleteBlog(id: string) {
+  // Check if user has delete permission for blogs
+  const perms = await getAdminPerms();
+  if (!perms.can("blogs", "delete")) throw new Error("Forbidden - You don't have permission to delete blog posts.");
+  
   await connectDB();
   try {
     await Blog.findByIdAndDelete(id);
@@ -112,6 +125,10 @@ export async function deleteBlog(id: string) {
 
 // ── Toggle status ────────────────────────────────────────────
 export async function toggleBlogStatus(id: string, currentStatus: string) {
+  // Check if user has edit permission for blogs
+  const perms = await getAdminPerms();
+  if (!perms.can("blogs", "edit")) throw new Error("Forbidden - You don't have permission to change blog status.");
+  
   await connectDB();
   const newStatus = currentStatus === "published" ? "draft" : "published";
   try {

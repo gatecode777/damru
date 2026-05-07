@@ -1,5 +1,6 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/formatDate";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,7 +14,7 @@ interface SearchResult { _id: string; title: string; slug: string; coverImage: s
 interface UserInfo { id: string; name: string; email: string; avatar?: string }
 
 function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  return fmtDateTime(d);
 }
 
 function Avatar({ name, avatar, size = 40 }: { name: string; avatar?: string; size?: number }) {

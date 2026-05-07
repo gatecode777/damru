@@ -1,13 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-/**
- * Root layout — intentionally minimal.
- * This wraps BOTH the website and the admin panel.
- *
- * Website fonts/styles → app/(website)/layout.tsx
- * Admin fonts/styles   → app/admin/layout.tsx
- */
 export const metadata: Metadata = {
   title: {
     default: "Damru By Namo",
@@ -16,10 +9,17 @@ export const metadata: Metadata = {
   description: "Damru By Namo — Restaurant & Banquet Hall, Jaipur",
 };
 
+// ── This is what makes responsive / media queries work on mobile ──
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

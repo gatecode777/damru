@@ -21,7 +21,8 @@ interface MenuItem {
   category: { _id: string; name: string } | null;
   createdAt: string;
 }
-interface Props { items: MenuItem[]; categories: Category[] }
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+interface Props { items: MenuItem[]; categories: Category[]; perms?: Perms; }
 
 const VARIANT_LABELS: Record<string, string> = {
   none: "Fixed Price", portion: "Half / Full", weight: "By Weight",
@@ -29,8 +30,9 @@ const VARIANT_LABELS: Record<string, string> = {
 };
 const PAGE_SIZE = 12;
 
-export default function MenuClient({ items, categories }: Props) {
+export default function MenuClient({ items, categories, perms }: Props) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.menu?.[action]);
 
   // ── Filter state ─────────────────────────────────────────────
   const [search,       setSearch]       = useState("");
@@ -93,12 +95,14 @@ export default function MenuClient({ items, categories }: Props) {
 
   // ── Bulk actions ─────────────────────────────────────────────
   async function handleBulkDelete() {
+    if (!can("delete")) return;
     if (!confirm(`Delete ${selected.size} item(s)? Cannot be undone.`)) return;
     setBulkLoading(true);
     for (const id of selected) await deleteMenuItem(id);
     setBulkLoading(false); clearSel(); router.refresh();
   }
   async function handleBulkToggle(activate: boolean) {
+    if (!can("edit")) return;
     setBulkLoading(true);
     const toChange = items.filter(i => selected.has(i._id) && i.isActive !== activate);
     for (const i of toChange) await toggleMenuItemActive(i._id, i.isActive);
@@ -107,10 +111,12 @@ export default function MenuClient({ items, categories }: Props) {
 
   // ── Single actions ───────────────────────────────────────────
   async function handleDelete(id: string, name: string) {
+    if (!can("delete")) return;
     if (!confirm(`Delete "${name}"? Cannot be undone.`)) return;
     await deleteMenuItem(id); router.refresh();
   }
   async function handleToggleActive(id: string, current: boolean) {
+    if (!can("edit")) return;
     await toggleMenuItemActive(id, current); router.refresh();
   }
 
@@ -168,7 +174,9 @@ export default function MenuClient({ items, categories }: Props) {
         </div>
         <div className="toolbar-right">
           <button className="btn-outline" onClick={handleExport}><Download size={13} /> Export CSV</button>
-          <Link href="/admin/menu/new" className="btn-primary">+ Add Item</Link>
+          {can("create") && (
+            <Link href="/admin/menu/new" className="btn-primary">+ Add Item</Link>
+          )}
         </div>
       </div>
 
@@ -241,17 +249,25 @@ export default function MenuClient({ items, categories }: Props) {
         </div>
       )}
 
-      {/* ── Bulk bar ── */}
-      {selected.size > 0 && (
+      {/* ── Bulk bar (only show if user has edit or delete permissions) ── */}
+      {selected.size > 0 && (can("edit") || can("delete")) && (
         <div className="bulk-bar">
           <div className="bulk-left">
             <span className="bulk-count"><Check size={13} /> {selected.size} selected</span>
             <button className="bulk-clear-btn" onClick={clearSel}><X size={12} /> Clear</button>
           </div>
           <div className="bulk-actions">
-            <button className="bulk-btn bulk-activate"   onClick={() => handleBulkToggle(true)}  disabled={bulkLoading}><Eye    size={13} /> Set Active</button>
-            <button className="bulk-btn bulk-deactivate" onClick={() => handleBulkToggle(false)} disabled={bulkLoading}><EyeOff size={13} /> Set Inactive</button>
-            <button className="bulk-btn bulk-delete-btn" onClick={handleBulkDelete}              disabled={bulkLoading}><Trash2 size={13} /> {bulkLoading ? "Deleting…" : "Delete Selected"}</button>
+            {can("edit") && (
+              <>
+                <button className="bulk-btn bulk-activate"   onClick={() => handleBulkToggle(true)}  disabled={bulkLoading}><Eye    size={13} /> Set Active</button>
+                <button className="bulk-btn bulk-deactivate" onClick={() => handleBulkToggle(false)} disabled={bulkLoading}><EyeOff size={13} /> Set Inactive</button>
+              </>
+            )}
+            {can("delete") && (
+              <button className="bulk-btn bulk-delete-btn" onClick={handleBulkDelete} disabled={bulkLoading}>
+                <Trash2 size={13} /> {bulkLoading ? "Deleting…" : "Delete Selected"}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -262,13 +278,15 @@ export default function MenuClient({ items, categories }: Props) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>
-                  <input type="checkbox" className="cb-menu"
-                    checked={allOnPage}
-                    ref={el => { if (el) el.indeterminate = !allOnPage && someOnPage; }}
-                    onChange={toggleAll}
-                  />
-                </th>
+                {(can("edit") || can("delete")) && (
+                  <th>
+                    <input type="checkbox" className="cb-menu"
+                      checked={allOnPage}
+                      ref={el => { if (el) el.indeterminate = !allOnPage && someOnPage; }}
+                      onChange={toggleAll}
+                    />
+                  </th>
+                )}
                 <th>Item</th>
                 <th>Category</th>
                 <th>Type &amp; Price</th>
@@ -281,7 +299,7 @@ export default function MenuClient({ items, categories }: Props) {
             </thead>
             <tbody>
               {paginated.length === 0 ? (
-                <tr><td colSpan={9} style={{ textAlign:"center", padding:"52px 20px", color:"#9ca3af" }}>
+                <tr><td colSpan={can("edit") || can("delete") ? 9 : 8} style={{ textAlign:"center", padding:"52px 20px", color:"#9ca3af" }}>
                   {search || activeFilterCount > 0 || catFilter !== "all"
                     ? "No items match your filters." : "No menu items yet."}
                 </td></tr>
@@ -295,7 +313,11 @@ export default function MenuClient({ items, categories }: Props) {
 
                 return (
                   <tr key={item._id} className={isChecked ? "row-selected" : ""}>
-                    <td><input type="checkbox" className="cb-menu" checked={isChecked} onChange={() => toggleOne(item._id)} /></td>
+                    {(can("edit") || can("delete")) && (
+                      <td>
+                        <input type="checkbox" className="cb-menu" checked={isChecked} onChange={() => toggleOne(item._id)} />
+                      </td>
+                    )}
                     <td>
                       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                         {item.image ? (
@@ -325,12 +347,18 @@ export default function MenuClient({ items, categories }: Props) {
                         : ''}
                     </td>
                     <td>
-                      <button onClick={() => handleToggleActive(item._id, item.isActive)}
-                        title="Click to toggle" style={{ background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                        {item.isActive
+                      {can("edit") ? (
+                        <button onClick={() => handleToggleActive(item._id, item.isActive)}
+                          title="Click to toggle" style={{ background:"none", border:"none", cursor:"pointer", padding:0 }}>
+                          {item.isActive
+                            ? <span className="badge-active"><span className="status-dot" />Active</span>
+                            : <span className="badge-inactive"><span className="status-dot" />Inactive</span>}
+                        </button>
+                      ) : (
+                        item.isActive
                           ? <span className="badge-active"><span className="status-dot" />Active</span>
-                          : <span className="badge-inactive"><span className="status-dot" />Inactive</span>}
-                      </button>
+                          : <span className="badge-inactive"><span className="status-dot" />Inactive</span>
+                      )}
                     </td>
                     <td>
                       {item.isFeatured
@@ -340,10 +368,14 @@ export default function MenuClient({ items, categories }: Props) {
                     <td><span className="sort-badge">{item.sortOrder}</span></td>
                     <td>
                       <div className="actions-cell">
-                        <Link href={`/admin/menu/edit/${item._id}`} className="btn-edit">Edit</Link>
-                        <button className="btn-danger" onClick={() => handleDelete(item._id, item.name)}>
-                          <Trash2 size={12} /> Delete
-                        </button>
+                        {can("edit") && (
+                          <Link href={`/admin/menu/edit/${item._id}`} className="btn-edit">Edit</Link>
+                        )}
+                        {can("delete") && (
+                          <button className="btn-danger" onClick={() => handleDelete(item._id, item.name)}>
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

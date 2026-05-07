@@ -1,5 +1,7 @@
 "use server";
 
+import { getAdminPerms } from "@/lib/adminPermissions";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { unlink } from "fs/promises";
@@ -106,6 +108,8 @@ export async function updateUser(id: string, formData: FormData) {
 
 // ── Delete User ──────────────────────────────────────────────────────
 export async function deleteUser(id: string) {
+  const perms = await getAdminPerms();
+  if (!perms.can("users", "delete")) throw new Error("Forbidden");
   await connectDB();
   try {
     const user = await User.findByIdAndDelete(id);
@@ -119,6 +123,8 @@ export async function deleteUser(id: string) {
 
 // ── Toggle status ─────────────────────────────────────────────────────
 export async function toggleUserStatus(id: string, currentStatus: string) {
+  const perms = await getAdminPerms();
+  if (!perms.can("users", "edit")) throw new Error("Forbidden");
   await connectDB();
   const next = currentStatus === "active" ? "inactive" : "active";
   try {

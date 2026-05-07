@@ -75,9 +75,6 @@ export default async function WebsiteLayout({ children }: { children: React.Reac
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
       />
 
-      {/* Main website CSS from /public/css/ — loaded via <link> for plain CSS files */}
-      <link rel="stylesheet" href="/css/header.css" />
-
       {/* Header */}
       <CartProvider>
         <SiteHeader />

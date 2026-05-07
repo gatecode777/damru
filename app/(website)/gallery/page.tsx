@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 const PAGE_SIZE = 10;
 
@@ -16,9 +17,9 @@ interface GalleryTab {
 }
 
 export default function GalleryPage() {
-  const [tabs,         setTabs]         = useState<GalleryTab[]>([]);
-  const [activeKey,    setActiveKey]    = useState("all");
-  const [loading,      setLoading]      = useState(true);
+  const [tabs, setTabs] = useState<GalleryTab[]>([]);
+  const [activeKey, setActiveKey] = useState("all");
+  const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
@@ -37,10 +38,10 @@ export default function GalleryPage() {
     setVisibleCount(PAGE_SIZE);
   }
 
-  const activeTab    = tabs.find(t => t.tabKey === activeKey);
-  const sortedItems  = activeTab ? [...activeTab.items].sort((a, b) => a.sortOrder - b.sortOrder) : [];
+  const activeTab = tabs.find(t => t.tabKey === activeKey);
+  const sortedItems = activeTab ? [...activeTab.items].sort((a, b) => a.sortOrder - b.sortOrder) : [];
   const visibleItems = sortedItems.slice(0, visibleCount);
-  const hasMore      = sortedItems.length > visibleCount;
+  const hasMore = sortedItems.length > visibleCount;
 
   if (loading) {
     return (
@@ -96,6 +97,9 @@ export default function GalleryPage() {
                     <h3>{item.title}</h3>
                     <p>{item.description}</p>
                   </div>
+                  <Link href="/menu" className="arrow-icon">
+                    →
+                  </Link>
                 </div>
               </div>
             ))

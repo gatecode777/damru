@@ -17,10 +17,12 @@ interface User {
   avatar?: string; createdAt: string;
 }
 
+interface Perms { role:string; isSuperAdmin:boolean; permissions:Record<string,any>; }
 interface Props {
   users: User[];
   countMap: Record<string, number>;
   fromDB: boolean;
+  perms?: Perms;
 }
 
 const AVATAR_COLORS = ["#f97316","#2563eb","#7c3aed","#059669","#e11d48","#d97706","#0284c7","#16a34a"];
@@ -30,9 +32,10 @@ const STATUS_BADGE: Record<string, { cls: string; dot: string }> = {
   suspended: { cls: "sbadge-suspended", dot: "#ef4444" },
 };
 
-export default function UsersClient({ users, countMap, fromDB }: Props) {
+export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
   const router   = useRouter();
   const [, startTransition] = useTransition();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.users?.[action]);
 
   // ── Filter / search state ──────────────────────────────────────
   const [search,         setSearch]         = useState("");
@@ -49,11 +52,19 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
+  // ── Unique cities for filter dropdown ─────────────────────────
+  const cities = useMemo(() => {
+    // const all = users.map(u => u.city).filter(Boolean) as string[];
+    // return ["all", ...Array.from(new Set(all)).sort()];
+  }, [users]);
+
   // ── Filtered + searched users ─────────────────────────────────
   const filtered = useMemo(() => {
     return users.filter(u => {
       // Status tab
       if (statusFilter !== "all" && u.status !== statusFilter) return false;
+      // City filter
+      // if (cityFilter !== "all" && u.city !== cityFilter) return false;
       // Spend range
       if (spendMin !== "" && u.totalSpend < Number(spendMin)) return false;
       if (spendMax !== "" && u.totalSpend > Number(spendMax)) return false;
@@ -107,6 +118,7 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
 
   // ── Active filter count (for badge) ───────────────────────────
   const activeFilterCount = [
+    // cityFilter !== "all",
     spendMin !== "",
     spendMax !== "",
   ].filter(Boolean).length;
@@ -167,7 +179,7 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
           <div className="searchbox">
             <Search size={14} className="search-ic" />
             <input
-              placeholder="Search name, email, phone..."
+              placeholder="Search name, email, phone…"
               className="search-inp"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -183,7 +195,7 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
           </div>
 
           {/* Filter toggle button */}
-          <button
+          {/* <button
             className={`btn-outline${showFilters ? " filter-active" : ""}`}
             onClick={() => setShowFilters(v => !v)}
           >
@@ -193,16 +205,18 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
               <span className="filter-badge">{activeFilterCount}</span>
             )}
             <ChevronDown size={12} style={{ transition: "transform 0.15s", transform: showFilters ? "rotate(180deg)" : "none" }} />
-          </button>
+          </button> */}
         </div>
 
         <div className="toolbar-right">
           <button className="btn-outline" onClick={handleExport}>
             <Download size={13} /> Export CSV
           </button>
-          <Link href="/admin/users/new" className="btn-primary">
-            + Add User
-          </Link>
+          {can("create") && (
+            <Link href="/admin/users/new" className="btn-primary">
+              + Add User
+            </Link>
+          )}
         </div>
       </div>
 
@@ -210,7 +224,20 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
       {showFilters && (
         <div className="filter-panel">
           <div className="filter-panel-inner">
-            <div className="filter-group">
+            {/* <div className="filter-group">
+              <label className="filter-label">City</label>
+              <select
+                className="filter-select"
+                value={cityFilter}
+                onChange={e => { setCityFilter(e.target.value); setPage(1); }}
+              >
+                {cities.map(c => (
+                  <option key={c} value={c}>{c === "all" ? "All Cities" : c}</option>
+                ))}
+              </select>
+            </div> */}
+
+            {/* <div className="filter-group">
               <label className="filter-label">Min Spend (₹)</label>
               <input
                 type="number" min={0} placeholder="0"
@@ -228,12 +255,13 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
                 value={spendMax}
                 onChange={e => { setSpendMax(e.target.value); setPage(1); }}
               />
-            </div>
+            </div> */}
 
             {activeFilterCount > 0 && (
               <button
                 className="filter-clear-btn"
                 onClick={() => {
+                  // setCityFilter("all");
                   setSpendMin("");
                   setSpendMax("");
                   setPage(1);
@@ -293,7 +321,8 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
             <button
               className="bulk-btn bulk-delete"
               onClick={handleBulkDelete}
-              disabled={bulkLoading}
+              disabled={!can("delete")}
+              // disabled={bulkLoading}
             >
               <Trash2 size={13} /> {bulkLoading ? "Deleting…" : "Delete Selected"}
             </button>
@@ -320,7 +349,8 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
                 </th>
                 <th>User</th>
                 <th>Contact</th>
-                <th>Total Spend</th>
+                {/* <th>City</th> */}
+                {/* <th>Total Spend</th> */}
                 <th>Status</th>
                 <th>Joined</th>
                 <th>Actions</th>
@@ -367,7 +397,7 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
                                 style={{ objectFit: "cover", borderRadius: 10 }}
                               />
                             ) : (
-                              <span style={{ fontSize: "0.78rem", fontFamily: "DM Sans, sans-serif", fontWeight: 700 }}>
+                              <span style={{ fontSize: "0.78rem", fontFamily: "Syne, sans-serif", fontWeight: 700 }}>
                                 {initials}
                               </span>
                             )}
@@ -384,7 +414,8 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
                           <span className="contact-row"><Phone size={11} /> {u.phone || "—"}</span>
                         </div>
                       </td>
-                      <td className="spend-cell">₹{u.totalSpend.toLocaleString("en-IN")}</td>
+                      {/* <td style={{ color: "#4b5563", fontSize: "0.84rem" }}>{u.city || "—"}</td> */}
+                      {/* <td className="spend-cell">₹{u.totalSpend.toLocaleString("en-IN")}</td> */}
                       <td>
                         <span className={badge.cls}>
                           <span className="sdot" style={{ background: badge.dot }} />
@@ -396,13 +427,13 @@ export default function UsersClient({ users, countMap, fromDB }: Props) {
                       </td>
                       <td>
                         <div className="actions-cell">
-                          <Link href={`/admin/users/edit/${u._id}`} className="btn-edit">Edit</Link>
-                          <button
+                          {can("edit") && <Link href={`/admin/users/edit/${u._id}`} className="btn-edit">Edit</Link>}
+                          {can("delete") && <button
                             className="btn-danger"
                             onClick={() => handleDelete(u._id, u.name, u.avatar)}
                           >
                             <Trash2 size={12} /> Delete
-                          </button>
+                          </button>}
                         </div>
                       </td>
                     </tr>

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import Blog from "@/models/Blog";
 import BlogsClient from "./BlogsClient";
@@ -13,6 +14,10 @@ export const metadata = { title: "Blogs" };
 export default async function BlogsPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("blogs", "view")) redirect("/admin/dashboard");
 
   let blogs: {
     _id: string; title: string; slug: string; excerpt: string;
@@ -29,6 +34,7 @@ export default async function BlogsPage() {
   const published = blogs.filter(b => b.status === "published").length;
   const drafts    = blogs.filter(b => b.status === "draft").length;
   const categories = [...new Set(blogs.map(b => b.category))].length;
+  const serializedPerms = serializePerms(perms);
 
   return (
     <>
@@ -42,9 +48,11 @@ export default async function BlogsPage() {
               <h2 className="page-title">Blog Posts</h2>
               <p className="page-sub">{blogs.length} posts · {published} published · {drafts} drafts</p>
             </div>
-            <Link href="/admin/blogs/new" className="btn-primary">
-              <Plus size={15} /> New Post
-            </Link>
+            {perms.can("blogs", "create") && (
+              <Link href="/admin/blogs/new" className="btn-primary">
+                <Plus size={15} /> New Post
+              </Link>
+            )}
           </div>
 
           {/* Stats */}
@@ -66,13 +74,18 @@ export default async function BlogsPage() {
             <div className="card">
               <div className="empty-state">
                 <FileText size={40} />
-                <p>No blog posts yet.{" "}
-                  <Link href="/admin/blogs/new" style={{ color: "#f97316" }}>Write the first one →</Link>
+                <p>
+                  No blog posts yet.
+                  {perms.can("blogs", "create") ? (
+                    <Link href="/admin/blogs/new" style={{ color: "#f97316" }}> Write the first one →</Link>
+                  ) : (
+                    <span style={{ color: "#9ca3af" }}> Contact admin to create posts</span>
+                  )}
                 </p>
               </div>
             </div>
           ) : (
-            <BlogsClient blogs={blogs} />
+            <BlogsClient blogs={blogs} perms={serializedPerms} />
           )}
 
         </main>

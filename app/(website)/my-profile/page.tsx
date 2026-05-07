@@ -1,5 +1,6 @@
 "use client";
 
+import { fmtDate, fmtDateFull } from "@/lib/formatDate";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -20,7 +21,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; icon: string }> 
   cancelled:        { bg:"#fef2f2", color:"#b91c1c", icon:"fa-solid fa-ban" },
 };
 
-function fmtDate(d: string) { return new Date(d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}); }
+// fmtDate imported from @/lib/formatDate
 
 
 // ── Help & Support section — Tabs: Complaint Form | My Complaints | My Reservations ──
@@ -323,7 +324,7 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                         <div style={{flex:1}}>
                           <div style={{fontFamily:"Poppins,sans-serif",fontSize:13,fontWeight:600,color:"#1a1a1a",marginBottom:3}}>{c.subject}</div>
-                          <div style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888"}}>{c.issueType} · {new Date(c.createdAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}</div>
+                          <div style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888"}}>{c.issueType} · {fmtDate(c.createdAt)}</div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                           <span style={{fontFamily:"Poppins,sans-serif",fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:cs.bg,color:cs.color}}>
@@ -374,7 +375,7 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
                         <div>
                           <div style={{fontFamily:"Poppins,sans-serif",fontSize:13,fontWeight:600,color:"#1a1a1a"}}>
                             <i className="fa-solid fa-calendar-days" style={{color:"#e67e22",marginRight:6}}></i>
-                            {new Date(r.date).toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"})}
+                            {fmtDateFull(r.date)}
                           </div>
                           <div style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",marginTop:3}}>
                             <i className="fa-regular fa-clock" style={{marginRight:5}}></i>{r.time}
@@ -392,7 +393,7 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
                         </div>
                       )}
                       <div style={{fontFamily:"Poppins,sans-serif",fontSize:11,color:"#bbb",marginTop:8,textAlign:"right"}}>
-                        Booked on {new Date(r.createdAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}
+                        Booked on {fmtDate(r.createdAt)}
                       </div>
                     </div>
                   );

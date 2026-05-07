@@ -12,8 +12,10 @@ interface Branch {
   isActive: boolean; sortOrder: number;
 }
 
-export default function BranchesClient({ initialBranches }: { initialBranches: Branch[] }) {
+interface PermsData { role:string; isSuperAdmin:boolean; permissions:Record<string,any>; }
+export default function BranchesClient({ initialBranches, perms }: { initialBranches: Branch[]; perms?: PermsData; }) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.["branches"]?.[action]);
   const [branches, setBranches]       = useState<Branch[]>(initialBranches);
   const [deleteId, setDeleteId]       = useState<string | null>(null);
   const [deleting, setDeleting]       = useState(false);
@@ -61,9 +63,11 @@ export default function BranchesClient({ initialBranches }: { initialBranches: B
             <span className="ms-label">{s.label}</span>
           </div>
         ))}
-        <Link href="/admin/branches/new" className="btn-primary" style={{ marginLeft: "auto", alignSelf: "center" }}>
-          <Plus size={14} /> Add Branch
-        </Link>
+        {can("create") && (
+          <Link href="/admin/branches/new" className="btn-primary" style={{ marginLeft: "auto", alignSelf: "center" }}>
+            <Plus size={14} /> Add Branch
+          </Link>
+        )}
       </div>
 
       {/* Empty state */}
@@ -73,9 +77,11 @@ export default function BranchesClient({ initialBranches }: { initialBranches: B
           <p style={{ fontFamily: "DM Sans, sans-serif", color: "#9ca3af", fontSize: 14, marginBottom: 16 }}>
             No branches yet. Add your first branch location.
           </p>
-          <Link href="/admin/branches/new" className="btn-primary" style={{ display: "inline-flex" }}>
-            <Plus size={14} /> Add Branch
-          </Link>
+          {can("create") && (
+            <Link href="/admin/branches/new" className="btn-primary" style={{ display: "inline-flex" }}>
+              <Plus size={14} /> Add Branch
+            </Link>
+          )}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
@@ -123,24 +129,28 @@ export default function BranchesClient({ initialBranches }: { initialBranches: B
 
                 {/* Actions */}
                 <div style={{ display: "flex", gap: 8 }}>
+                  {can("edit") && (
                   <Link href={`/admin/branches/edit/${b._id}`} className="btn-edit"
                     style={{ flex: 1, justifyContent: "center" }}>
                     <Edit2 size={12} /> Edit
                   </Link>
+                  )}
                   <a href={`/branches/${b.slug}`} target="_blank" rel="noreferrer" className="btn-outline"
                     style={{ padding: "5px 10px" }} title="Preview on website">
                     <ExternalLink size={13} />
                   </a>
-                  <button className="btn-outline" onClick={() => toggleActive(b)}
+                  {can("edit") && <button className="btn-outline" onClick={() => toggleActive(b)}
                     style={{ padding: "5px 10px" }} title={b.isActive ? "Deactivate" : "Activate"}>
                     {b.isActive
                       ? <ToggleRight size={15} style={{ color: "#16a34a" }} />
                       : <ToggleLeft size={15} style={{ color: "#9ca3af" }} />
                     }
-                  </button>
+                  </button>}
+                  {can("delete") && (
                   <button className="btn-danger" onClick={() => setDeleteId(b._id)} style={{ padding: "5px 10px" }}>
                     <Trash2 size={13} />
                   </button>
+                  )}
                 </div>
               </div>
             </div>

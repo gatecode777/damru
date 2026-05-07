@@ -1,5 +1,6 @@
 "use client";
 
+import { fmtDateLong } from "@/lib/formatDate";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
@@ -218,7 +219,7 @@ export default function CheckoutPage() {
               <b>Free</b>
               <span style={{ color: "#666", fontSize: 13 }}>Regular shipment</span>
             </div>
-            <b>{new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</b>
+            <b>{"2-3 business days"}</b>
           </div>
           <div className="btn-row">
             <button className="btn btn-back" onClick={() => setStep(1)}>Back</button>
@@ -234,7 +235,7 @@ export default function CheckoutPage() {
 
             {/* Summary */}
             <div className="summary-card">
-              <h3 className="checkout-pay-heading">Summary</h3>
+              <h3>Summary</h3>
               {items.map(item => (
                 <div key={item.id} className="summary-item">
                   {item.image
@@ -292,7 +293,7 @@ export default function CheckoutPage() {
 
             {/* Payment */}
             <div>
-              <h3 className="checkout-pay-heading">Payment</h3>
+              <h3>Payment</h3>
               <div className="tab-header">
                 {(["cod","upi","card"] as const).map(m => (
                   <div key={m} className={`tab-link${payMethod === m ? " active" : ""}`} onClick={() => setPayMethod(m)}>

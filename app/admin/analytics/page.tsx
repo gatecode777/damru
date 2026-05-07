@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import OrderModel from "@/models/Order";
 import UserModel from "@/models/User";
@@ -17,11 +18,14 @@ export default async function AnalyticsPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
 
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("analytics", "view")) redirect("/admin/dashboard");
+
   let totalUsers = 0, totalOrders = 0, totalRevenue = 0, totalReservations = 0, totalComplaints = 0;
   let monthlyData:  { month: string; revenue: number; count: number }[] = [];
   let topItems:     { name: string; revenue: number; count: number }[] = [];
   let statusData:   { status: string; count: number; pct: number }[] = [];
-  let categoryData: { name: string; count: number; revenue: number }[] = [];
   let paymentData:  { method: string; count: number; pct: number }[] = [];
   let fromDB = false;
 
@@ -131,6 +135,26 @@ export default async function AnalyticsPage() {
   };
 
   const PAY_LABEL: Record<string,string> = { cod:"Cash on Delivery", upi:"UPI", card:"Credit / Debit Card" };
+
+  // If user doesn't have view permission, show access denied
+  if (!perms.can("analytics", "view")) {
+    return (
+      <>
+        <AdminSidebar />
+        <div className="page-layout">
+          <AdminHeader title="Analytics" />
+          <main className="page-main">
+            <div className="card" style={{ padding: 60, textAlign: "center" }}>
+              <TrendingUp size={40} style={{ color: "#dc2626", margin: "0 auto 12px", display: "block" }} />
+              <p style={{ fontFamily: "DM Sans, sans-serif", color: "#dc2626" }}>
+                You don't have permission to view analytics.
+              </p>
+            </div>
+          </main>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

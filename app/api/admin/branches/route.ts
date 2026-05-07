@@ -1,3 +1,4 @@
+import { checkApiPerm } from "@/lib/checkApiPerm";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
@@ -18,6 +19,7 @@ export async function GET() {
 
 // POST — create branch
 export async function POST(req: NextRequest) {
+  const deny = await checkApiPerm("branches", "create"); if (deny) return deny;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
@@ -32,6 +34,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH — update branch
 export async function PATCH(req: NextRequest) {
+  const deny = await checkApiPerm("branches", "edit"); if (deny) return deny;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
@@ -47,6 +50,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE — delete branch
 export async function DELETE(req: NextRequest) {
+  const deny = await checkApiPerm("branches", "delete"); if (deny) return deny;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {

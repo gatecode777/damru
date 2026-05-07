@@ -6,6 +6,7 @@ import { unlink } from "fs/promises";
 import path from "path";
 import { connectDB } from "@/lib/mongodb";
 import MenuItem from "@/models/MenuItem";
+import { getAdminPerms } from "@/lib/adminPermissions";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "menu-items");
 
@@ -24,6 +25,10 @@ async function deleteImageFile(filename?: string) {
 
 // ── Create ────────────────────────────────────────────────────────
 export async function createMenuItem(formData: FormData) {
+  // Check if user has create permission for menu
+  const perms = await getAdminPerms();
+  if (!perms.can("menu", "create")) throw new Error("Forbidden - You don't have permission to create menu items.");
+  
   await connectDB();
 
   const name        = (formData.get("name")        as string)?.trim();
@@ -69,6 +74,10 @@ export async function createMenuItem(formData: FormData) {
 
 // ── Update ────────────────────────────────────────────────────────
 export async function updateMenuItem(id: string, formData: FormData) {
+  // Check if user has edit permission for menu
+  const perms = await getAdminPerms();
+  if (!perms.can("menu", "edit")) throw new Error("Forbidden - You don't have permission to update menu items.");
+  
   await connectDB();
 
   const name        = (formData.get("name")        as string)?.trim();
@@ -116,6 +125,10 @@ export async function updateMenuItem(id: string, formData: FormData) {
 
 // ── Delete ────────────────────────────────────────────────────────
 export async function deleteMenuItem(id: string) {
+  // Check if user has delete permission for menu
+  const perms = await getAdminPerms();
+  if (!perms.can("menu", "delete")) throw new Error("Forbidden - You don't have permission to delete menu items.");
+  
   await connectDB();
   try {
     const item = await MenuItem.findByIdAndDelete(id);
@@ -129,6 +142,10 @@ export async function deleteMenuItem(id: string) {
 
 // ── Toggle active ─────────────────────────────────────────────────
 export async function toggleMenuItemActive(id: string, current: boolean) {
+  // Check if user has edit permission for menu
+  const perms = await getAdminPerms();
+  if (!perms.can("menu", "edit")) throw new Error("Forbidden - You don't have permission to change menu item status.");
+  
   await connectDB();
   await MenuItem.findByIdAndUpdate(id, { isActive: !current });
   revalidatePath("/admin/menu");

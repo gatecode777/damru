@@ -12,7 +12,7 @@ export default function AboutUsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle booking submission
-    console.log({ bookingDate, bookingTime, bookingPerson });
+    // console.log({ bookingDate, bookingTime, bookingPerson });
   };
 
   return (

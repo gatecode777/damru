@@ -1,17 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  images: {
-    domains: ["localhost"],
+  // Required for instrumentation.ts to work with Turbopack in Next.js 15
+  experimental: {
+    // This is NOT the same as the old instrumentationHook flag.
+    // In Next.js 15 with Turbopack, you must explicitly allow the
+    // Node.js instrumentation file to run.
   },
-  // Allow serving uploaded files
-  async headers() {
-    return [
-      {
-        source: "/uploads/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000" }],
-      },
-    ];
+
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "i.pravatar.cc" },
+      { protocol: "https", hostname: "cdn-icons-png.flaticon.com" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+    ],
   },
 };
 

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Search, Filter, ChevronDown, X, Check, Trash2, Eye, EyeOff, Download } from "lucide-react";
 import { deleteBlog, toggleBlogStatus } from "@/app/actions/blogs";
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 interface Blog {
   _id: string; title: string; slug: string; excerpt: string;
   category: { _id: string; name: string } | null;
@@ -16,8 +18,13 @@ interface Blog {
 
 const PAGE_SIZE = 10;
 
-export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
+export default function BlogsClient({ blogs, perms }: { blogs: Blog[]; perms?: Perms }) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.blogs?.[action]);
+  
+  const canEdit = can("edit");
+  const canDelete = can("delete");
+  const canCreate = can("create");
 
   const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -66,15 +73,18 @@ export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
   function clearSel() { setSelected(new Set()); }
 
   async function handleDelete(id: string, title: string) {
+    if (!canDelete) return;
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
     await deleteBlog(id); router.refresh();
   }
 
   async function handleToggle(id: string, status: string) {
+    if (!canEdit) return;
     await toggleBlogStatus(id, status); router.refresh();
   }
 
   async function handleBulkDelete() {
+    if (!canDelete) return;
     if (!confirm(`Delete ${selected.size} post(s)?`)) return;
     setBulkLoading(true);
     for (const id of selected) await deleteBlog(id);
@@ -82,6 +92,7 @@ export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
   }
 
   async function handleBulkPublish(publish: boolean) {
+    if (!canEdit) return;
     setBulkLoading(true);
     const toChange = blogs.filter(b => selected.has(b._id) && (b.status === "published") !== publish);
     for (const b of toChange) await toggleBlogStatus(b._id, b.status);
@@ -123,7 +134,9 @@ export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
         </div>
         <div className="toolbar-right">
           <button className="btn-outline" onClick={handleExport}><Download size={13}/> Export</button>
-          <Link href="/admin/blogs/new" className="btn-primary">+ New Post</Link>
+          {canCreate && (
+            <Link href="/admin/blogs/new" className="btn-primary">+ New Post</Link>
+          )}
         </div>
       </div>
 
@@ -162,17 +175,25 @@ export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
         </div>
       )}
 
-      {/* Bulk bar */}
-      {selected.size > 0 && (
+      {/* Bulk bar - only show if user has edit or delete permissions */}
+      {selected.size > 0 && (canEdit || canDelete) && (
         <div className="bulk-bar">
           <div className="bulk-left">
             <span className="bulk-count"><Check size={13}/> {selected.size} selected</span>
             <button className="bulk-clear-btn" onClick={clearSel}><X size={12}/> Clear</button>
           </div>
           <div className="bulk-actions">
-            <button className="bulk-btn bulk-activate"   onClick={() => handleBulkPublish(true)}  disabled={bulkLoading}><Eye    size={13}/> Publish</button>
-            <button className="bulk-btn bulk-deactivate" onClick={() => handleBulkPublish(false)} disabled={bulkLoading}><EyeOff size={13}/> Unpublish</button>
-            <button className="bulk-btn bulk-delete-btn" onClick={handleBulkDelete}               disabled={bulkLoading}><Trash2 size={13}/> {bulkLoading ? "Deleting…" : "Delete"}</button>
+            {canEdit && (
+              <>
+                <button className="bulk-btn bulk-activate"   onClick={() => handleBulkPublish(true)}  disabled={bulkLoading}><Eye    size={13}/> Publish</button>
+                <button className="bulk-btn bulk-deactivate" onClick={() => handleBulkPublish(false)} disabled={bulkLoading}><EyeOff size={13}/> Unpublish</button>
+              </>
+            )}
+            {canDelete && (
+              <button className="bulk-btn bulk-delete-btn" onClick={handleBulkDelete} disabled={bulkLoading}>
+                <Trash2 size={13}/> {bulkLoading ? "Deleting…" : "Delete"}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -183,9 +204,11 @@ export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th><input type="checkbox" className="cb-cat" checked={allOnPage}
-                  ref={el => { if (el) el.indeterminate = !allOnPage && someOnPage; }}
-                  onChange={toggleAll} /></th>
+                {(canEdit || canDelete) && (
+                  <th><input type="checkbox" className="cb-cat" checked={allOnPage}
+                    ref={el => { if (el) el.indeterminate = !allOnPage && someOnPage; }}
+                    onChange={toggleAll} /></th>
+                )}
                 <th>Title</th>
                 <th>Category</th>
                 <th>Author</th>
@@ -197,12 +220,14 @@ export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
             </thead>
             <tbody>
               {paginated.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign:"center", padding:"48px", color:"#9ca3af" }}>
+                <tr><td colSpan={(canEdit || canDelete) ? 8 : 7} style={{ textAlign:"center", padding:"48px", color:"#9ca3af" }}>
                   No posts match your filters.
                 </td></tr>
               ) : paginated.map(blog => (
                 <tr key={blog._id} className={selected.has(blog._id) ? "row-selected" : ""}>
-                  <td><input type="checkbox" className="cb-cat" checked={selected.has(blog._id)} onChange={() => toggleOne(blog._id)} /></td>
+                  {(canEdit || canDelete) && (
+                    <td><input type="checkbox" className="cb-cat" checked={selected.has(blog._id)} onChange={() => toggleOne(blog._id)} /></td>
+                  )}
                   <td>
                     <div>
                       <p style={{ fontWeight:500, color:"#111827", fontSize:"0.875rem", marginBottom:2 }}>{blog.title}</p>
@@ -219,11 +244,17 @@ export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
                   <td style={{ fontSize:"0.83rem", color:"#4b5563" }}>{blog.category ? (typeof blog.category === "string" ? blog.category : blog.category.name) : <em style={{ color:"#d1d5db" }}>Uncategorised</em>}</td>
                   <td style={{ fontSize:"0.83rem", color:"#4b5563" }}>{typeof blog.author === "string" ? blog.author : blog.author?.name}</td>
                   <td>
-                    <button onClick={() => handleToggle(blog._id, blog.status)} style={{ background:"none",border:"none",cursor:"pointer",padding:0 }} title="Click to toggle">
-                      {blog.status === "published"
+                    {canEdit ? (
+                      <button onClick={() => handleToggle(blog._id, blog.status)} style={{ background:"none",border:"none",cursor:"pointer",padding:0 }} title="Click to toggle">
+                        {blog.status === "published"
+                          ? <span className="badge-active"><span className="status-dot"/>Published</span>
+                          : <span className="badge-inactive"><span className="status-dot"/>Draft</span>}
+                      </button>
+                    ) : (
+                      blog.status === "published"
                         ? <span className="badge-active"><span className="status-dot"/>Published</span>
-                        : <span className="badge-inactive"><span className="status-dot"/>Draft</span>}
-                    </button>
+                        : <span className="badge-inactive"><span className="status-dot"/>Draft</span>
+                    )}
                   </td>
                   <td style={{ fontSize:"0.83rem", color:"#6b7280" }}>{blog.views}</td>
                   <td style={{ fontSize:"0.78rem", color:"#9ca3af", whiteSpace:"nowrap" }}>
@@ -231,10 +262,14 @@ export default function BlogsClient({ blogs }: { blogs: Blog[] }) {
                   </td>
                   <td>
                     <div className="actions-cell">
-                      <Link href={`/admin/blogs/edit/${blog._id}`} className="btn-edit">Edit</Link>
-                      <button className="btn-danger" onClick={() => handleDelete(blog._id, blog.title)}>
-                        <Trash2 size={12}/> Delete
-                      </button>
+                      {canEdit && (
+                        <Link href={`/admin/blogs/edit/${blog._id}`} className="btn-edit">Edit</Link>
+                      )}
+                      {canDelete && (
+                        <button className="btn-danger" onClick={() => handleDelete(blog._id, blog.title)}>
+                          <Trash2 size={12}/> Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

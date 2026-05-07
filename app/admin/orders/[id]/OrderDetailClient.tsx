@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { updateOrderStatus, updatePaymentStatus, cancelOrder } from "@/app/actions/orders";
 
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
 const ORDER_STATUSES = [
   { key: "pending",          label: "Pending",       icon: Clock,        color: "#f59e0b" },
   { key: "confirmed",        label: "Confirmed",     icon: CheckCircle,  color: "#3b82f6" },
@@ -54,8 +56,10 @@ function CardHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-export default function OrderDetailClient({ order: initialOrder }: { order: any }) {
+export default function OrderDetailClient({ order: initialOrder, perms }: { order: any; perms?: Perms }) {
   const router = useRouter();
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.orders?.[action]);
+  
   const [order,      setOrder]      = useState(initialOrder);
   const [isPending,  startTransition] = useTransition();
   const [showStatus, setShowStatus] = useState(false);
@@ -68,6 +72,7 @@ export default function OrderDetailClient({ order: initialOrder }: { order: any 
   function notify(msg: string) { setFeedback(msg); setTimeout(() => setFeedback(""), 3000); }
 
   function handleStatusChange(status: string) {
+    if (!can("edit")) return;
     if (status === order.status) { setShowStatus(false); return; }
     setShowStatus(false);
     startTransition(async () => {
@@ -79,6 +84,7 @@ export default function OrderDetailClient({ order: initialOrder }: { order: any 
   }
 
   function handlePayChange(paymentStatus: string) {
+    if (!can("edit")) return;
     if (paymentStatus === order.paymentStatus) { setShowPay(false); return; }
     setShowPay(false);
     startTransition(async () => {
@@ -90,6 +96,7 @@ export default function OrderDetailClient({ order: initialOrder }: { order: any 
   }
 
   function handleCancel() {
+    if (!can("delete")) return;
     if (!confirm(`Cancel order ${order.orderId}? This cannot be undone.`)) return;
     startTransition(async () => {
       await cancelOrder(order._id);
@@ -120,66 +127,70 @@ export default function OrderDetailClient({ order: initialOrder }: { order: any 
           </div>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {isPending && <Loader2 size={16} style={{ color: "#f97316", animation: "spin 0.8s linear infinite" }} />}
+        {/* Actions - only show if user has edit or delete permissions */}
+        {(can("edit") || can("delete")) && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {isPending && <Loader2 size={16} style={{ color: "#f97316", animation: "spin 0.8s linear infinite" }} />}
 
-          {/* Change Status dropdown */}
-          {!isCancelled && (
-            <div style={{ position: "relative" }}>
-              <button onClick={() => setShowStatus(v => !v)}
-                style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                {currentStatusDef?.label ?? order.status.replace(/_/g," ")}
-                <ChevronDown size={13}/>
-              </button>
-              {showStatus && (
-                <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 999, minWidth: 200, overflow: "hidden" }}>
-                  {ORDER_STATUSES.filter(s => s.key !== "cancelled").map(s => {
-                    const Icon = s.icon;
-                    return (
-                      <button key={s.key} onClick={() => handleStatusChange(s.key)}
-                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: order.status === s.key ? "#fff7ed" : "none", border: "none", cursor: "pointer", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: order.status === s.key ? "#f97316" : "#374151", fontWeight: order.status === s.key ? 600 : 400, textAlign: "left" }}>
-                        <Icon size={14} style={{ color: s.color, flexShrink: 0 }} />
-                        {s.label}
-                        {order.status === s.key && <span style={{ marginLeft: "auto", fontSize: "0.7rem" }}>✓ Current</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Payment status dropdown */}
-          <div style={{ position: "relative" }}>
-            <button onClick={() => setShowPay(v => !v)}
-              style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: PAY_COLORS[order.paymentStatus] ?? "#374151" }}>
-              <CreditCard size={13}/>
-              {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
-              <ChevronDown size={13}/>
-            </button>
-            {showPay && (
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 999, minWidth: 160, overflow: "hidden" }}>
-                {["pending","paid","failed"].map(p => (
-                  <button key={p} onClick={() => handlePayChange(p)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: order.paymentStatus === p ? "#fff7ed" : "none", border: "none", cursor: "pointer", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: order.paymentStatus === p ? "#f97316" : "#374151", fontWeight: order.paymentStatus === p ? 600 : 400, textAlign: "left" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: PAY_COLORS[p], flexShrink: 0 }}/>
-                    {p.charAt(0).toUpperCase() + p.slice(1)}
-                    {order.paymentStatus === p && <span style={{ marginLeft: "auto", fontSize: "0.7rem" }}>✓</span>}
-                  </button>
-                ))}
+            {/* Change Status dropdown - only if can edit */}
+            {!isCancelled && can("edit") && (
+              <div style={{ position: "relative" }}>
+                <button onClick={() => setShowStatus(v => !v)}
+                  style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  {currentStatusDef?.label ?? order.status.replace(/_/g," ")}
+                  <ChevronDown size={13}/>
+                </button>
+                {showStatus && (
+                  <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 999, minWidth: 200, overflow: "hidden" }}>
+                    {ORDER_STATUSES.filter(s => s.key !== "cancelled").map(s => {
+                      const Icon = s.icon;
+                      return (
+                        <button key={s.key} onClick={() => handleStatusChange(s.key)}
+                          style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: order.status === s.key ? "#fff7ed" : "none", border: "none", cursor: "pointer", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: order.status === s.key ? "#f97316" : "#374151", fontWeight: order.status === s.key ? 600 : 400, textAlign: "left" }}>
+                          <Icon size={14} style={{ color: s.color, flexShrink: 0 }} />
+                          {s.label}
+                          {order.status === s.key && <span style={{ marginLeft: "auto", fontSize: "0.7rem" }}>✓ Current</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
-          </div>
 
-          {/* Cancel */}
-          {!isCancelled && !isDelivered && (
-            <button onClick={handleCancel} disabled={isPending}
-              style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>
-              Cancel Order
-            </button>
-          )}
-        </div>
+            {/* Payment status dropdown - only if can edit */}
+            {can("edit") && (
+              <div style={{ position: "relative" }}>
+                <button onClick={() => setShowPay(v => !v)}
+                  style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: PAY_COLORS[order.paymentStatus] ?? "#374151" }}>
+                  <CreditCard size={13}/>
+                  {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                  <ChevronDown size={13}/>
+                </button>
+                {showPay && (
+                  <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 999, minWidth: 160, overflow: "hidden" }}>
+                    {["pending","paid","failed"].map(p => (
+                      <button key={p} onClick={() => handlePayChange(p)}
+                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: order.paymentStatus === p ? "#fff7ed" : "none", border: "none", cursor: "pointer", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: order.paymentStatus === p ? "#f97316" : "#374151", fontWeight: order.paymentStatus === p ? 600 : 400, textAlign: "left" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: PAY_COLORS[p], flexShrink: 0 }}/>
+                        {p.charAt(0).toUpperCase() + p.slice(1)}
+                        {order.paymentStatus === p && <span style={{ marginLeft: "auto", fontSize: "0.7rem" }}>✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Cancel - only if can delete and order not cancelled/delivered */}
+            {!isCancelled && !isDelivered && can("delete") && (
+              <button onClick={handleCancel} disabled={isPending}
+                style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}>
+                Cancel Order
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Feedback toast */}
@@ -189,7 +200,7 @@ export default function OrderDetailClient({ order: initialOrder }: { order: any 
         </div>
       )}
 
-      {/* Progress pipeline */}
+      {/* Progress pipeline - visible even without edit perms */}
       {!isCancelled && (
         <Card>
           <CardHeader title="Order Progress" />

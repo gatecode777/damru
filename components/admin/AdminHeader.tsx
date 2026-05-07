@@ -1,7 +1,29 @@
 "use client";
-import { Bell, Search } from "lucide-react";
+
+import { useSession } from "next-auth/react";
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin:       "Admin",
+  moderator:   "Moderator",
+};
 
 export default function AdminHeader({ title }: { title?: string }) {
+  const { data: session } = useSession();
+
+  const name  = (session?.user as any)?.name  || "Admin";
+  const role  = (session?.user as any)?.role  || "admin";
+  const label = ROLE_LABELS[role] ?? "Admin";
+
+  // Avatar initials — first letter of first + last word
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .map((w: string) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <>
       <header className="hdr">
@@ -9,20 +31,11 @@ export default function AdminHeader({ title }: { title?: string }) {
           {title && <h1 className="hdr-title">{title}</h1>}
         </div>
         <div className="hdr-right">
-          {/* <div className="search">
-            <Search size={14} className="search-ic" />
-            <input placeholder="Search anything…" className="search-in" />
-            <span className="kbd">⌘K</span>
-          </div> */}
-          {/* <button className="notif-btn" aria-label="Notifications">
-            <Bell size={17} />
-            <span className="notif-dot" />
-          </button> */}
           <div className="user-chip">
-            <div className="avatar">A</div>
+            <div className="avatar">{initials}</div>
             <div className="user-text">
-              <span className="uname">Admin</span>
-              <span className="urole">Super Admin</span>
+              <span className="uname">{name}</span>
+              <span className="urole">{label}</span>
             </div>
           </div>
         </div>
@@ -36,23 +49,6 @@ export default function AdminHeader({ title }: { title?: string }) {
         }
         .hdr-title { font-family:'DM Sans',sans-serif; font-size:1.1rem; font-weight:700; color:#111827; }
         .hdr-right { display:flex; align-items:center; gap:10px; }
-        .search {
-          display:flex; align-items:center; gap:8px;
-          background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:9px;
-          padding:7px 12px; width:220px; transition:border-color 0.15s;
-        }
-        .search:focus-within { border-color:#f97316; background:#fff; }
-        .search-ic { color:#9ca3af; flex-shrink:0; }
-        .search-in { flex:1; background:none; border:none; outline:none; font-family:'DM Sans',sans-serif; font-size:0.83rem; color:#374151; }
-        .search-in::placeholder { color:#d1d5db; }
-        .kbd { font-size:0.65rem; color:#9ca3af; background:#f3f4f6; border-radius:4px; padding:1px 5px; font-family:monospace; }
-        .notif-btn {
-          width:36px; height:36px; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:9px;
-          display:flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7280;
-          position:relative; transition:all 0.13s;
-        }
-        .notif-btn:hover { border-color:#f97316; color:#f97316; background:#fff7ed; }
-        .notif-dot { position:absolute; top:8px; right:8px; width:7px; height:7px; background:#f97316; border-radius:50%; border:1.5px solid #fff; }
         .user-chip {
           display:flex; align-items:center; gap:9px; padding:6px 12px 6px 6px;
           background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:10px; cursor:pointer;

@@ -1,3 +1,4 @@
+import { checkApiPerm } from "@/lib/checkApiPerm";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
 
 // PATCH — admin update status / note
 export async function PATCH(req: NextRequest) {
+  const deny = await checkApiPerm("banquetBookings", "edit"); if (deny) return deny;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
@@ -59,6 +61,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE — admin
 export async function DELETE(req: NextRequest) {
+  const deny = await checkApiPerm("banquetBookings", "delete"); if (deny) return deny;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {

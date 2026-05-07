@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/mongodb";
 import Coupon from "@/models/Coupon";
+import { getAdminPerms } from "@/lib/adminPermissions";
 
 function randomCode(len = 8) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -11,6 +12,10 @@ function randomCode(len = 8) {
 
 // ── Create ───────────────────────────────────────────────────
 export async function createCoupon(formData: FormData) {
+  // Check if user has create permission for coupons
+  const perms = await getAdminPerms();
+  if (!perms.can("coupons", "create")) throw new Error("Forbidden - You don't have permission to create coupons.");
+  
   await connectDB();
 
   const type          = formData.get("type") as string;
@@ -46,6 +51,10 @@ export async function createCoupon(formData: FormData) {
 
 // ── Update ───────────────────────────────────────────────────
 export async function updateCoupon(id: string, formData: FormData) {
+  // Check if user has edit permission for coupons
+  const perms = await getAdminPerms();
+  if (!perms.can("coupons", "edit")) throw new Error("Forbidden - You don't have permission to edit coupons.");
+  
   await connectDB();
 
   const type          = formData.get("type") as string;
@@ -76,6 +85,10 @@ export async function updateCoupon(id: string, formData: FormData) {
 
 // ── Delete ───────────────────────────────────────────────────
 export async function deleteCoupon(id: string) {
+  // Check if user has delete permission for coupons
+  const perms = await getAdminPerms();
+  if (!perms.can("coupons", "delete")) throw new Error("Forbidden - You don't have permission to delete coupons.");
+  
   await connectDB();
   try {
     await Coupon.findByIdAndDelete(id);
@@ -88,6 +101,10 @@ export async function deleteCoupon(id: string) {
 
 // ── Toggle active ────────────────────────────────────────────
 export async function toggleCouponActive(id: string, current: boolean) {
+  // Check if user has edit permission for coupons
+  const perms = await getAdminPerms();
+  if (!perms.can("coupons", "edit")) throw new Error("Forbidden - You don't have permission to change coupon status.");
+  
   await connectDB();
   await Coupon.findByIdAndUpdate(id, { isActive: !current });
   revalidatePath("/admin/coupons");
@@ -96,6 +113,10 @@ export async function toggleCouponActive(id: string, current: boolean) {
 
 // ── Generate random code ─────────────────────────────────────
 export async function generateCouponCode(): Promise<string> {
+  // Check if user has create permission for coupons (since generating a code is part of creation)
+  const perms = await getAdminPerms();
+  if (!perms.can("coupons", "create")) throw new Error("Forbidden - You don't have permission to generate coupon codes.");
+  
   await connectDB();
   let code = randomCode();
   // Ensure uniqueness

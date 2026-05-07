@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import Complaint from "@/models/Complaint";
 import ComplaintsClient from "./ComplaintsClient";
@@ -19,6 +20,10 @@ export type ComplaintRow = {
 export default async function ComplaintsPage() {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  // Fetch this admin's permissions
+  const perms = await getAdminPerms();
+  if (!perms.can("complaints", "view")) redirect("/admin/dashboard");
 
   let complaints: ComplaintRow[] = [];
 
@@ -46,6 +51,8 @@ export default async function ComplaintsPage() {
     resolved:    complaints.filter(c => c.status === "resolved").length,
     closed:      complaints.filter(c => c.status === "closed").length,
   };
+
+  const serializedPerms = serializePerms(perms);
 
   return (
     <>
@@ -76,7 +83,7 @@ export default async function ComplaintsPage() {
             ))}
           </div>
 
-          <ComplaintsClient complaints={complaints} />
+          <ComplaintsClient complaints={complaints} perms={serializedPerms} />
 
         </main>
       </div>

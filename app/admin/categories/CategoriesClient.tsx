@@ -15,12 +15,16 @@ interface Category {
   isActive: boolean; createdAt: string;
 }
 
-interface Props { categories: Category[] }
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+
+interface Props { categories: Category[]; perms?: Perms; }
 
 const PAGE_SIZE = 15;
 
-export default function CategoriesClient({ categories }: Props) {
+export default function CategoriesClient({ categories, perms }: Props) {
   const router = useRouter();
+  
+  const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.categories?.[action]);
 
   // ── Filter state ─────────────────────────────────────────────
   const [search,       setSearch]       = useState("");
@@ -66,6 +70,7 @@ export default function CategoriesClient({ categories }: Props) {
 
   // ── Bulk actions ─────────────────────────────────────────────
   async function handleBulkDelete() {
+    if (!can("delete")) return;
     if (!confirm(`Delete ${selected.size} categor${selected.size > 1 ? "ies" : "y"}? This cannot be undone.`)) return;
     setBulkLoading(true);
     for (const id of selected) await deleteCategory(id);
@@ -73,6 +78,7 @@ export default function CategoriesClient({ categories }: Props) {
   }
 
   async function handleBulkToggle(activate: boolean) {
+    if (!can("edit")) return;
     setBulkLoading(true);
     const toChange = categories.filter(c => selected.has(c._id) && c.isActive !== activate);
     for (const c of toChange) await toggleCategoryActive(c._id, c.isActive);
@@ -81,11 +87,13 @@ export default function CategoriesClient({ categories }: Props) {
 
   // ── Single actions ───────────────────────────────────────────
   async function handleDelete(id: string, name: string) {
+    if (!can("delete")) return;
     if (!confirm(`Delete category "${name}"?\nAll menu items in this category will become uncategorised.`)) return;
     await deleteCategory(id); router.refresh();
   }
 
   async function handleToggleActive(id: string, current: boolean) {
+    if (!can("edit")) return;
     await toggleCategoryActive(id, current); router.refresh();
   }
 
@@ -149,9 +157,11 @@ export default function CategoriesClient({ categories }: Props) {
           <button className="btn-outline" onClick={handleExport}>
             <Download size={13} /> Export CSV
           </button>
-          <Link href="/admin/categories/new" className="btn-primary">
-            + Add Category
-          </Link>
+          {can("create") && (
+            <Link href="/admin/categories/new" className="btn-primary">
+              + Add Category
+            </Link>
+          )}
         </div>
       </div>
 
@@ -202,35 +212,41 @@ export default function CategoriesClient({ categories }: Props) {
         </div>
       )}
 
-      {/* ── Bulk bar ── */}
-      {selected.size > 0 && (
+      {/* ── Bulk bar (only show if user has edit or delete permissions) ── */}
+      {selected.size > 0 && (can("edit") || can("delete")) && (
         <div className="bulk-bar">
           <div className="bulk-left">
             <span className="bulk-count"><Check size={13} /> {selected.size} selected</span>
             <button className="bulk-clear-btn" onClick={clearSel}><X size={12} /> Clear</button>
           </div>
           <div className="bulk-actions">
-            <button
-              className="bulk-btn bulk-activate"
-              onClick={() => handleBulkToggle(true)}
-              disabled={bulkLoading}
-            >
-              <Eye size={13} /> Set Active
-            </button>
-            <button
-              className="bulk-btn bulk-deactivate"
-              onClick={() => handleBulkToggle(false)}
-              disabled={bulkLoading}
-            >
-              <EyeOff size={13} /> Set Inactive
-            </button>
-            <button
-              className="bulk-btn bulk-delete-btn"
-              onClick={handleBulkDelete}
-              disabled={bulkLoading}
-            >
-              <Trash2 size={13} /> {bulkLoading ? "Deleting…" : "Delete Selected"}
-            </button>
+            {can("edit") && (
+              <>
+                <button
+                  className="bulk-btn bulk-activate"
+                  onClick={() => handleBulkToggle(true)}
+                  disabled={bulkLoading}
+                >
+                  <Eye size={13} /> Set Active
+                </button>
+                <button
+                  className="bulk-btn bulk-deactivate"
+                  onClick={() => handleBulkToggle(false)}
+                  disabled={bulkLoading}
+                >
+                  <EyeOff size={13} /> Set Inactive
+                </button>
+              </>
+            )}
+            {can("delete") && (
+              <button
+                className="bulk-btn bulk-delete-btn"
+                onClick={handleBulkDelete}
+                disabled={bulkLoading}
+              >
+                <Trash2 size={13} /> {bulkLoading ? "Deleting…" : "Delete Selected"}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -240,10 +256,13 @@ export default function CategoriesClient({ categories }: Props) {
         {filtered.length === 0 && !search && statusFilter === "all" ? (
           <div className="empty-state">
             <Tag size={40} />
-            <p>No categories yet.{" "}
-              <Link href="/admin/categories/new" style={{ color: "#f97316" }}>
-                Add the first one →
-              </Link>
+            <p>
+              No categories yet.
+              {can("create") && (
+                <Link href="/admin/categories/new" style={{ color: "#f97316" }}>
+                  {" "}Add the first one →
+                </Link>
+              )}
             </p>
           </div>
         ) : (
@@ -252,15 +271,17 @@ export default function CategoriesClient({ categories }: Props) {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>
-                      <input
-                        type="checkbox"
-                        className="cb-cat"
-                        checked={allOnPage}
-                        ref={el => { if (el) el.indeterminate = !allOnPage && someOnPage; }}
-                        onChange={toggleAll}
-                      />
-                    </th>
+                    {(can("edit") || can("delete")) && (
+                      <th>
+                        <input
+                          type="checkbox"
+                          className="cb-cat"
+                          checked={allOnPage}
+                          ref={el => { if (el) el.indeterminate = !allOnPage && someOnPage; }}
+                          onChange={toggleAll}
+                        />
+                      </th>
+                    )}
                     <th>Name</th>
                     <th>Slug</th>
                     <th>Description</th>
@@ -273,7 +294,7 @@ export default function CategoriesClient({ categories }: Props) {
                 <tbody>
                   {paginated.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center", padding: "48px 20px", color: "#9ca3af" }}>
+                      <td colSpan={can("edit") || can("delete") ? 8 : 7} style={{ textAlign: "center", padding: "48px 20px", color: "#9ca3af" }}>
                         No categories match your search or filters.
                       </td>
                     </tr>
@@ -282,14 +303,16 @@ export default function CategoriesClient({ categories }: Props) {
                       const isChecked = selected.has(cat._id);
                       return (
                         <tr key={cat._id} className={isChecked ? "row-selected" : ""}>
-                          <td>
-                            <input
-                              type="checkbox"
-                              className="cb-cat"
-                              checked={isChecked}
-                              onChange={() => toggleOne(cat._id)}
-                            />
-                          </td>
+                          {(can("edit") || can("delete")) && (
+                            <td>
+                              <input
+                                type="checkbox"
+                                className="cb-cat"
+                                checked={isChecked}
+                                onChange={() => toggleOne(cat._id)}
+                              />
+                            </td>
+                          )}
                           <td>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                               <div style={{
@@ -318,31 +341,41 @@ export default function CategoriesClient({ categories }: Props) {
                           </td>
                           <td>
                             {/* Inline toggle — click badge to flip status */}
-                            <button
-                              onClick={() => handleToggleActive(cat._id, cat.isActive)}
-                              title="Click to toggle"
-                              style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                            >
-                              {cat.isActive
+                            {can("edit") ? (
+                              <button
+                                onClick={() => handleToggleActive(cat._id, cat.isActive)}
+                                title="Click to toggle"
+                                style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                              >
+                                {cat.isActive
+                                  ? <span className="badge-active"><span className="status-dot" />Active</span>
+                                  : <span className="badge-inactive"><span className="status-dot" />Inactive</span>
+                                }
+                              </button>
+                            ) : (
+                              cat.isActive
                                 ? <span className="badge-active"><span className="status-dot" />Active</span>
                                 : <span className="badge-inactive"><span className="status-dot" />Inactive</span>
-                              }
-                            </button>
+                            )}
                           </td>
                           <td style={{ color: "#9ca3af", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
                             {new Date(cat.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                           </td>
                           <td>
                             <div className="actions-cell">
-                              <Link href={`/admin/categories/edit/${cat._id}`} className="btn-edit">
-                                Edit
-                              </Link>
-                              <button
-                                className="btn-danger"
-                                onClick={() => handleDelete(cat._id, cat.name)}
-                              >
-                                <Trash2 size={12} /> Delete
-                              </button>
+                              {can("edit") && (
+                                <Link href={`/admin/categories/edit/${cat._id}`} className="btn-edit">
+                                  Edit
+                                </Link>
+                              )}
+                              {can("delete") && (
+                                <button
+                                  className="btn-danger"
+                                  onClick={() => handleDelete(cat._id, cat.name)}
+                                >
+                                  <Trash2 size={12} /> Delete
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
