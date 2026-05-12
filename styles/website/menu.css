@@ -956,7 +956,7 @@ body {
 /* Reservation form responsive - only layout, no animation changes */
 @media (max-width: 992px) {
     .reservation-section .res-form-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: 20px;
     }
 

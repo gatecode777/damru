@@ -3,7 +3,7 @@
  * Never imported by middleware.ts or any Edge-runtime file.
  */
 
-import dns from "dns";
+import dns from "node:dns/promises";
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 import { setDefaultResultOrder } from "dns";
@@ -19,7 +19,7 @@ if (!MONGODB_URI) {
 
 declare global {
   var _mongooseCache: {
-    conn:    typeof mongoose | null;
+    conn: typeof mongoose | null;
     promise: Promise<typeof mongoose> | null;
   };
 }
@@ -38,11 +38,11 @@ if (!cache.promise) {
   console.log("🔄 MongoDB: starting connection...");
   cache.promise = mongoose
     .connect(MONGODB_URI, {
-      bufferCommands:           false,
+      bufferCommands: false,
       serverSelectionTimeoutMS: 15000,
-      socketTimeoutMS:          45000,
-      family:                   4,
-      tls:                      true,
+      socketTimeoutMS: 45000,
+      family: 4,
+      tls: true,
       tlsAllowInvalidCertificates: false,
     })
     .then((m) => {

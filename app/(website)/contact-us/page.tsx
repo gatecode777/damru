@@ -60,10 +60,10 @@ export default function ContactUsPage() {
             <div className="info-text-col">
               <p>
                 We can be contacted via email{" "}
-                <a href="mailto:info@damrubynamo.com">info@damrubynamo.com</a>,{" "}
+                <a href="mailto:thedamru72@gmail.com">thedamru72@gmail.com</a>,{" "}
                 <a href="mailto:support@damrubynamo.com">support@damrubynamo.com</a> or
-                telephone on <a href="tel:+911234567893">+91-1234567893</a>,{" "}
-                <a href="tel:+919876543213">+91-9876543213</a>
+                telephone on <a href="tel:+918690987272">+91-8690987272</a>,{" "}
+                {/* <a href="tel:+919876543213">+91-9876543213</a> */}
               </p>
             </div>
           </div>
@@ -73,8 +73,8 @@ export default function ContactUsPage() {
               <img src="/assets/images/contact2.png" alt="Location" className="main-info-img" />
             </div>
             <div className="info-text-col">
-              <h3>We are located in E-96, Lal Bahadur Nagar, Jai Jawan Colony, Aadinath Nagar, JLN Marg, Malviya Nagar, Jaipur</h3>
-              <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="map-btn">View in maps</a>
+              <h3>We are located in Vinayak sarovar, Plot No. A-96, Patrakar Colony Rd, Sheer Sagar Patarkar Colony, Choraha, Mansarovar, Jaipur, Rajasthan 302020</h3>
+              <a href="https://maps.app.goo.gl/tt59VvyxGfycJEMk8" target="_blank" rel="noopener noreferrer" className="map-btn">View in maps</a>
             </div>
           </div>
         </div>

@@ -70,7 +70,7 @@ const OtpBoxes = forwardRef<{ getCode: () => string }, object>(function OtpBoxes
   const [focused, setFocused] = useState(-1);
 
   return (
-    <div style={{ display:"flex", gap:10, justifyContent:"center", margin:"20px 0 10px" }}>
+    <div style={{ display: "flex", gap: 10, justifyContent: "center", margin: "20px 0 10px" }}>
       {digits.map((digit, index) => (
         <input
           key={index}
@@ -85,11 +85,11 @@ const OtpBoxes = forwardRef<{ getCode: () => string }, object>(function OtpBoxes
           onFocus={() => setFocused(index)}
           onBlur={() => setFocused(-1)}
           style={{
-            width:50, height:56, border:`1.5px solid ${focused===index?"#e67e22":"#e0e0e0"}`,
-            borderRadius:10, textAlign:"center", fontSize:"1.4rem", fontWeight:600,
-            color:"#111", outline:"none", background: focused===index?"#fff":"#fafafa",
-            transition:"border-color 0.2s", fontFamily:"Poppins,sans-serif",
-            boxSizing:"border-box",
+            width: 50, height: 56, border: `1.5px solid ${focused === index ? "#e67e22" : "#e0e0e0"}`,
+            borderRadius: 10, textAlign: "center", fontSize: "1.4rem", fontWeight: 600,
+            color: "#111", outline: "none", background: focused === index ? "#fff" : "#fafafa",
+            transition: "border-color 0.2s", fontFamily: "Poppins,sans-serif",
+            boxSizing: "border-box",
           }}
         />
       ))}
@@ -104,45 +104,58 @@ export default function Header() {
   const otpRef = useRef<{ getCode: () => string } | null>(null);
 
   // ── UI state (your original) ──────────────────────────────────
-  const [isMenuOpen,    setIsMenuOpen]    = useState(false);
-  const [isAuthOpen,    setIsAuthOpen]    = useState(false);
-  const [isSearchOpen,  setIsSearchOpen]  = useState(false);
-  const [activeScreen,  setActiveScreen]  = useState<AuthScreen>("login");
-  const [showPassword,  setShowPassword]  = useState({ login: false, register: false, confirm: false });
-  const [countdown,     setCountdown]     = useState(60);
-  const [isOtpSent,     setIsOtpSent]     = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [activeScreen, setActiveScreen] = useState<AuthScreen>("login");
+  const [showPassword, setShowPassword] = useState({ login: false, register: false, confirm: false });
+  const [countdown, setCountdown] = useState(60);
+  const [isOtpSent, setIsOtpSent] = useState(false);
 
   // ── Search state ──────────────────────────────────────────────
-  const [searchQuery,   setSearchQuery]   = useState("");
-  const [searchResults, setSearchResults] = useState<{ _id:string; name:string; desc:string; image:string; price:number; hasVariants:boolean; category:string; catSlug:string }[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{ _id: string; name: string; desc: string; image: string; price: number; hasVariants: boolean; category: string; catSlug: string }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const searchRef       = useRef<HTMLDivElement>(null);
-  const searchInputRef  = useRef<HTMLInputElement>(null);
-  const searchTimer     = useRef<ReturnType<typeof setTimeout>|null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Added: user session + form fields + feedback ──────────────
-  const [user,        setUser]        = useState<UserInfo | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
   const [userLoading, setUserLoading] = useState(true);
-  const [busy,        setBusy]        = useState(false);
-  const [err,         setErr]         = useState("");
-  const [okMsg,       setOkMsg]       = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [okMsg, setOkMsg] = useState("");
 
   // form fields
-  const [loginEmail,  setLoginEmail]  = useState("");
-  const [loginPw,     setLoginPw]     = useState("");
-  const [regName,     setRegName]     = useState("");
-  const [regPhone,    setRegPhone]    = useState("");
-  const [regEmail,    setRegEmail]    = useState("");
-  const [regPw,       setRegPw]       = useState("");
-  const [regConfirm,  setRegConfirm]  = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPw, setLoginPw] = useState("");
+  const [regName, setRegName] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPw, setRegPw] = useState("");
+  const [regConfirm, setRegConfirm] = useState("");
   const [forgotEmail, setForgotEmail] = useState("");
-  const [otpToken,    setOtpToken]    = useState("");
-  const [resetToken,  setResetToken]  = useState("");
-  const [newPw,       setNewPw]       = useState("");
-  const [newPwConf,   setNewPwConf]   = useState("");
-  const [showNewPw,   setShowNewPw]   = useState(false);
+  const [otpToken, setOtpToken] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [newPwConf, setNewPwConf] = useState("");
+  const [showNewPw, setShowNewPw] = useState(false);
   const [showNewConf, setShowNewConf] = useState(false);
+
+  // Detect mobile view
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 767);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // ── Your original useEffects ──────────────────────────────────
   useEffect(() => {
@@ -163,7 +176,7 @@ export default function Header() {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [isOtpSent]); // only depends on isOtpSent — starts once, cleans up properly
+  }, [isOtpSent]);
 
   // ── Added: fetch session on mount ─────────────────────────────
   useEffect(() => {
@@ -175,42 +188,82 @@ export default function Header() {
   }, []);
 
   // ── Search debounce ──────────────────────────────────────────
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+      const data = await res.json();
+      setSearchResults(data.results || []);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     if (!searchQuery.trim() || searchQuery.length < 2) {
-      setSearchResults([]); setSearchLoading(false); return;
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
     }
     setSearchLoading(true);
-    searchTimer.current = setTimeout(async () => {
-      try {
-        const res  = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`);
-        const data = await res.json();
-        setSearchResults(data.results || []);
-      } catch { setSearchResults([]); }
-      finally { setSearchLoading(false); }
+    searchTimer.current = setTimeout(() => {
+      handleSearch(searchQuery);
     }, 300);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-  }, [searchQuery]);
+  }, [searchQuery, handleSearch]);
 
-  // Close search dropdown on outside click
+  // Close search dropdown on outside click (desktop only)
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setSearchFocused(false);
+      if (!isMobile && searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+        setSearchQuery("");
+        setSearchResults([]);
       }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  }, [isMobile]);
 
   // ── Your original handlers ────────────────────────────────────
-  const toggleMenu   = () => setIsMenuOpen(!isMenuOpen);
-  const toggleAuth   = () => {
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleAuth = () => {
     setIsAuthOpen(!isAuthOpen);
     setErr(""); setOkMsg("");
   };
-  const toggleSearch = () => setIsSearchOpen(!isSearchOpen);
 
+  const handleSearchOpen = () => {
+    if (isMobile) {
+      setIsMobileSearchOpen(true);
+      setTimeout(() => {
+        mobileSearchInputRef.current?.focus();
+      }, 100);
+    } else {
+      setIsSearchOpen(!isSearchOpen);
+      if (!isSearchOpen) {
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 80);
+      } else {
+        setSearchQuery("");
+        setSearchResults([]);
+      }
+    }
+  };
+
+  const handleMobileSearchClose = () => {
+    setIsMobileSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
 
   // ── Added: API actions ────────────────────────────────────────
   async function handleLogin() {
@@ -226,8 +279,8 @@ export default function Header() {
 
   async function handleRegister() {
     if (!regName || !regEmail || !regPw) { setErr("Fill all required fields."); return; }
-    if (regPw !== regConfirm)            { setErr("Passwords don't match."); return; }
-    if (regPw.length < 6)                { setErr("Password min 6 characters."); return; }
+    if (regPw !== regConfirm) { setErr("Passwords don't match."); return; }
+    if (regPw.length < 6) { setErr("Password min 6 characters."); return; }
     setBusy(true); setErr("");
     const d = await apiPost("/api/user/register", { name: regName, email: regEmail, phone: regPhone, password: regPw });
     setBusy(false);
@@ -240,15 +293,12 @@ export default function Header() {
   async function handleSendOtp() {
     if (!forgotEmail) { setErr("Enter your email address."); return; }
     setBusy(true); setErr("");
-    // Switch to OTP screen first so user sees it immediately
     setActiveScreen("otp");
-    // isOtpSent stays false here — countdown does NOT start yet
     const d = await apiPost("/api/user/send-otp", { email: forgotEmail });
     setBusy(false);
     if (d.error) { setErr(d.error); setActiveScreen("forgot"); return; }
     setOtpToken(d.otpToken);
     setOkMsg("OTP sent! Check your inbox.");
-    // Only NOW start the countdown — email is confirmed sent
     setIsOtpSent(true);
   }
 
@@ -265,8 +315,8 @@ export default function Header() {
   }
 
   async function handleResetPassword() {
-    if (!newPw)             { setErr("Enter new password."); return; }
-    if (newPw.length < 6)   { setErr("Min 6 characters."); return; }
+    if (!newPw) { setErr("Enter new password."); return; }
+    if (newPw.length < 6) { setErr("Min 6 characters."); return; }
     if (newPw !== newPwConf) { setErr("Passwords don't match."); return; }
     setBusy(true); setErr("");
     const d = await apiPost("/api/user/reset-password", { resetToken, password: newPw });
@@ -278,10 +328,75 @@ export default function Header() {
 
   async function handleLogout() {
     await fetch("/api/user/logout", { method: "POST" });
-    // Hard reload — instantly clears all client state (cart, user, etc.)
-    // router.refresh() is too slow; window.location gives immediate feedback
     window.location.href = "/";
   }
+
+  // Search results component (used in both desktop and mobile)
+  const SearchResultsDropdown = ({ onItemClick, isMobileView = false }: { onItemClick: () => void; isMobileView?: boolean }) => {
+    if (searchQuery.length < 2) return null;
+
+    return (
+      <div style={{
+        position: isMobileView ? "relative" : "fixed",
+        marginTop: isMobileView ? "12px" : "0",
+        width: isMobileView ? "100%" : 380,
+        background: "#fff",
+        borderRadius: 14,
+        boxShadow: isMobileView ? "none" : "0 12px 40px rgba(0,0,0,0.18)",
+        border: isMobileView ? "1px solid #e0e0e0" : "1px solid #f0f0f0",
+        overflow: "hidden",
+        maxHeight: isMobileView ? "calc(100vh - 200px)" : "70vh",
+        overflowY: "auto",
+      }}>
+        {searchLoading ? (
+          <div style={{ padding: "20px", fontFamily: "Poppins,sans-serif", fontSize: "0.85rem", color: "#aaa", textAlign: "center" }}>
+            🔍 Searching…
+          </div>
+        ) : searchResults.length === 0 ? (
+          <div style={{ padding: "20px", fontFamily: "Poppins,sans-serif", fontSize: "0.85rem", color: "#aaa", textAlign: "center" }}>
+            No results for &ldquo;{searchQuery}&rdquo;
+          </div>
+        ) : (
+          <>
+            <div style={{ padding: "10px 16px 8px", fontFamily: "Poppins,sans-serif", fontSize: "0.7rem", fontWeight: 700, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid #f5f5f5" }}>
+              {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} · &ldquo;{searchQuery}&rdquo;
+            </div>
+            {searchResults.map(item => {
+              const href = item.catSlug ? `/menu?category=${encodeURIComponent(item.catSlug)}` : "/menu";
+              return (
+                <a key={item._id} href={href}
+                  onClick={() => { onItemClick(); }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", textDecoration: "none", borderBottom: "1px solid #fafafa" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#fff7ed")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                >
+                  <div style={{ width: 46, height: 46, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {item.image
+                      ? <img src={`/uploads/menu-items/${item.image}`} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <span style={{ fontSize: 22 }}>🍽️</span>
+                    }
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "Poppins,sans-serif", fontWeight: 600, fontSize: "0.9rem", color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                    {item.category && <div style={{ fontFamily: "Poppins,sans-serif", fontSize: "0.72rem", color: "#e67e22", fontWeight: 600 }}>{item.category}</div>}
+                    {item.desc && <div style={{ fontFamily: "Poppins,sans-serif", fontSize: "0.75rem", color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.desc}</div>}
+                  </div>
+                  <div style={{ fontFamily: "Poppins,sans-serif", fontWeight: 700, fontSize: "0.9rem", color: "#e67e22", flexShrink: 0, textAlign: "right" }}>
+                    {item.hasVariants && <div style={{ fontSize: "0.65rem", fontWeight: 400, color: "#aaa" }}>from</div>}
+                    ₹{item.price}
+                  </div>
+                </a>
+              );
+            })}
+            <a href="/menu" onClick={() => { onItemClick(); }}
+              style={{ display: "block", padding: "12px 16px", textAlign: "center", fontFamily: "Poppins,sans-serif", fontSize: "0.84rem", fontWeight: 600, color: "#e67e22", textDecoration: "none", borderTop: "1px solid #f5f5f5", background: "#fffbf5" }}>
+              View All Menu Items →
+            </a>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -299,121 +414,73 @@ export default function Header() {
             </div>
 
             <ul className="nav-links" style={{ display: isMenuOpen ? "flex" : undefined }}>
-              <li><Link href="/"        className={pathname === "/"        ? "active" : ""}>Home</Link></li>
-              <li><Link href="/menu"    className={pathname === "/menu"    ? "active" : ""}>Menu</Link></li>
+              <li><Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link></li>
+              <li><Link href="/menu" className={pathname === "/menu" ? "active" : ""}>Menu</Link></li>
               <li><Link href="/about-us" className={pathname === "/about-us" ? "active" : ""}>About Us</Link></li>
               <li><Link href="/contact-us" className={pathname === "/contact-us" ? "active" : ""}>Contact Us</Link></li>
             </ul>
           </nav>
 
           <div className="header-icons">
-            {/* ── Search — fully self-contained, no dependency on header.css classes ── */}
-            <div ref={searchRef} style={{ position:"relative", display:"flex", alignItems:"center" }}>
+            {/* Search Button */}
+            <div ref={searchRef} style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <button
-                onClick={() => {
-                  setIsSearchOpen(v => !v);
-                  if (!isSearchOpen) setTimeout(() => { searchInputRef.current?.focus(); setSearchFocused(true); }, 80);
-                  else { setSearchFocused(false); setSearchQuery(""); }
-                }}
-                style={{ background:"none", border:"none", cursor:"pointer", fontSize:20, color:"#333", display:"flex", alignItems:"center", padding:"4px 6px" }}
+                onClick={handleSearchOpen}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#333", display: "flex", alignItems: "center", padding: "4px 6px" }}
               >
                 <i className="ri-search-line"></i>
               </button>
 
-              {/* Expandable input — only rendered when open so CSS class state doesn't matter */}
-              {isSearchOpen && (
-                <div style={{ display:"flex", alignItems:"center", background:"#f5f5f5", borderRadius:24, padding:"0 12px", gap:6, minWidth:220, border:"1.5px solid #e0e0e0", transition:"all 0.2s" }}>
-                  <i className="ri-search-line" style={{ color:"#aaa", fontSize:14 }}></i>
+              {/* Desktop Search Bar */}
+              {!isMobile && isSearchOpen && (
+                <div style={{ display: "flex", alignItems: "center", background: "#f5f5f5", borderRadius: 24, padding: "0 12px", gap: 6, minWidth: 220, border: "1.5px solid #e0e0e0", transition: "all 0.2s" }}>
+                  <i className="ri-search-line" style={{ color: "#aaa", fontSize: 14 }}></i>
                   <input
                     ref={searchInputRef}
                     type="text"
                     placeholder="Search menu items..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    onFocus={() => setSearchFocused(true)}
                     onKeyDown={e => {
-                      if (e.key === "Escape") { setSearchFocused(false); setSearchQuery(""); setIsSearchOpen(false); }
+                      if (e.key === "Escape") {
+                        setIsSearchOpen(false);
+                        setSearchQuery("");
+                        setSearchResults([]);
+                      }
                     }}
                     autoComplete="off"
-                    style={{ border:"none", background:"transparent", outline:"none", padding:"8px 0", fontSize:"0.88rem", fontFamily:"Poppins,sans-serif", color:"#111", width:"100%", minWidth:0 }}
+                    style={{ border: "none", background: "transparent", outline: "none", padding: "8px 0", fontSize: "0.88rem", fontFamily: "Poppins,sans-serif", color: "#111", width: "100%", minWidth: 0 }}
                   />
                   {searchQuery && (
                     <button onClick={() => { setSearchQuery(""); setSearchResults([]); searchInputRef.current?.focus(); }}
-                      style={{ background:"none", border:"none", cursor:"pointer", color:"#aaa", fontSize:14, display:"flex", alignItems:"center", padding:0, flexShrink:0 }}>✕</button>
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: 14, display: "flex", alignItems: "center", padding: 0, flexShrink: 0 }}>✕</button>
                   )}
                 </div>
               )}
 
-              {/* Dropdown — position:fixed so it NEVER gets clipped by header overflow */}
-              {isSearchOpen && searchFocused && searchQuery.length >= 2 && (() => {
-                const rect = searchRef.current?.getBoundingClientRect();
-                return (
-                  <div style={{
-                    position:"fixed",
-                    top: rect ? rect.bottom + 8 : 80,
-                    left: rect ? Math.max(8, rect.right - 380) : 8,
-                    width: 380,
-                    background:"#fff",
-                    borderRadius:14,
-                    boxShadow:"0 12px 40px rgba(0,0,0,0.18)",
-                    border:"1px solid #f0f0f0",
-                    zIndex:999999,
-                    overflow:"hidden",
-                    maxHeight:"70vh",
-                    overflowY:"auto",
-                  }}>
-                    {searchLoading ? (
-                      <div style={{ padding:"20px", fontFamily:"Poppins,sans-serif", fontSize:"0.85rem", color:"#aaa", textAlign:"center" }}>
-                        🔍 Searching…
-                      </div>
-                    ) : searchResults.length === 0 ? (
-                      <div style={{ padding:"20px", fontFamily:"Poppins,sans-serif", fontSize:"0.85rem", color:"#aaa", textAlign:"center" }}>
-                        No results for &ldquo;{searchQuery}&rdquo;
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ padding:"10px 16px 8px", fontFamily:"Poppins,sans-serif", fontSize:"0.7rem", fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:"0.08em", borderBottom:"1px solid #f5f5f5" }}>
-                          {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} · &ldquo;{searchQuery}&rdquo;
-                        </div>
-                        {searchResults.map(item => {
-                          // Navigate to menu page with category query param so user lands on the right category
-                          const href = item.catSlug
-                            ? `/menu?category=${encodeURIComponent(item.catSlug)}`
-                            : "/menu";
-                          return (
-                            <a key={item._id} href={href}
-                              onClick={() => { setSearchFocused(false); setSearchQuery(""); setIsSearchOpen(false); }}
-                              style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", textDecoration:"none", borderBottom:"1px solid #fafafa" }}
-                              onMouseEnter={e => (e.currentTarget.style.background="#fff7ed")}
-                              onMouseLeave={e => (e.currentTarget.style.background="transparent")}
-                            >
-                              <div style={{ width:46, height:46, borderRadius:10, overflow:"hidden", flexShrink:0, background:"#f5f5f5", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                                {item.image
-                                  ? <img src={`/uploads/menu-items/${item.image}`} alt={item.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                                  : <span style={{ fontSize:22 }}>🍽️</span>
-                                }
-                              </div>
-                              <div style={{ flex:1, minWidth:0 }}>
-                                <div style={{ fontFamily:"Poppins,sans-serif", fontWeight:600, fontSize:"0.9rem", color:"#111", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.name}</div>
-                                {item.category && <div style={{ fontFamily:"Poppins,sans-serif", fontSize:"0.72rem", color:"#e67e22", fontWeight:600 }}>{item.category}</div>}
-                                {item.desc && <div style={{ fontFamily:"Poppins,sans-serif", fontSize:"0.75rem", color:"#999", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.desc}</div>}
-                              </div>
-                              <div style={{ fontFamily:"Poppins,sans-serif", fontWeight:700, fontSize:"0.9rem", color:"#e67e22", flexShrink:0, textAlign:"right" }}>
-                                {item.hasVariants && <div style={{ fontSize:"0.65rem", fontWeight:400, color:"#aaa" }}>from</div>}
-                                ₹{item.price}
-                              </div>
-                            </a>
-                          );
-                        })}
-                        <a href="/menu" onClick={() => { setSearchFocused(false); setSearchQuery(""); setIsSearchOpen(false); }}
-                          style={{ display:"block", padding:"12px 16px", textAlign:"center", fontFamily:"Poppins,sans-serif", fontSize:"0.84rem", fontWeight:600, color:"#e67e22", textDecoration:"none", borderTop:"1px solid #f5f5f5", background:"#fffbf5" }}>
-                          View All Menu Items →
-                        </a>
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
+              {/* Desktop Search Dropdown */}
+              {!isMobile && isSearchOpen && searchQuery.length >= 2 && (
+                <div style={{
+                  position: "fixed",
+                  top: searchRef.current ? searchRef.current.getBoundingClientRect().bottom + 8 : 80,
+                  left: searchRef.current ? Math.max(8, searchRef.current.getBoundingClientRect().right - 380) : 8,
+                  width: 380,
+                  background: "#fff",
+                  borderRadius: 14,
+                  boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
+                  border: "1px solid #f0f0f0",
+                  zIndex: 999999,
+                  overflow: "hidden",
+                  maxHeight: "70vh",
+                  overflowY: "auto",
+                }}>
+                  <SearchResultsDropdown onItemClick={() => {
+                    setIsSearchOpen(false);
+                    setSearchQuery("");
+                    setSearchResults([]);
+                  }} />
+                </div>
+              )}
             </div>
 
             {/* Cart — only when logged in */}
@@ -421,7 +488,7 @@ export default function Header() {
               <Link href="/cart" className="icon-link" aria-label="Cart" style={{ position: "relative" }}>
                 <i className="ri-shopping-basket-2-line"></i>
                 {totalItems > 0 && (
-                  <span style={{ position:"absolute", top:"-6px", right:"-6px", background:"#e67e22", color:"#fff", borderRadius:"50%", width:"18px", height:"18px", fontSize:"0.65rem", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Poppins,sans-serif" }}>{totalItems > 99 ? "99+" : totalItems}</span>
+                  <span style={{ position: "absolute", top: "-6px", right: "-6px", background: "#e67e22", color: "#fff", borderRadius: "50%", width: "18px", height: "18px", fontSize: "0.65rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Poppins,sans-serif" }}>{totalItems > 99 ? "99+" : totalItems}</span>
                 )}
               </Link>
             )}
@@ -459,6 +526,118 @@ export default function Header() {
         </div>
       </header>
 
+      {/* Mobile Search Modal */}
+      {isMobile && isMobileSearchOpen && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "#fff",
+          zIndex: 10000,
+          display: "flex",
+          flexDirection: "column",
+          animation: "slideUp 0.3s ease-out",
+        }}>
+          {/* Modal Header */}
+          <div style={{
+            padding: "16px",
+            borderBottom: "1px solid #e0e0e0",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            background: "#fff",
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
+          }}>
+            <button
+              onClick={handleMobileSearchClose}
+              style={{
+                background: "none",
+                border: "none",
+                fontSize: "24px",
+                cursor: "pointer",
+                color: "#333",
+                padding: "4px 8px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <i className="ri-arrow-left-line"></i>
+            </button>
+            <div style={{
+              flex: 1,
+              display: "flex",
+              width: "120px",
+              alignItems: "center",
+              background: "#f5f5f5",
+              borderRadius: "24px",
+              padding: "0 16px",
+              gap: "8px",
+              border: "1.5px solid #e0e0e0",
+            }}>
+              <i className="ri-search-line" style={{ color: "#aaa", fontSize: "18px" }}></i>
+              <input
+                ref={mobileSearchInputRef}
+                type="text"
+                placeholder="Search menu items..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                autoComplete="off"
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  padding: "12px 0",
+                  fontSize: "16px",
+                  fontFamily: "Poppins, sans-serif",
+                  color: "#111",
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    mobileSearchInputRef.current?.focus();
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#aaa",
+                    fontSize: "18px",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: 0,
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search Results */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+            {searchQuery.length >= 2 && (
+              <SearchResultsDropdown
+                isMobileView={true}
+                onItemClick={handleMobileSearchClose}
+              />
+            )}
+            {searchQuery.length > 0 && searchQuery.length < 2 && (
+              <div style={{ padding: "20px", textAlign: "center", color: "#999", fontFamily: "Poppins, sans-serif" }}>
+                Type at least 2 characters to search...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Full menu overlay — your original structure */}
       <div className={`full-menu-overlay ${isMenuOpen ? "active" : ""}`} id="fullMenu" style={{ display: isMenuOpen ? "block" : "none" }}>
         <div className="close-menu" id="closeMenu" onClick={toggleMenu}>
@@ -475,7 +654,6 @@ export default function Header() {
               </li>
               <li><span className="dot"></span> <Link href="/offers" onClick={toggleMenu} className={pathname === "/offers" ? "active-menu" : ""}>OFFERS</Link></li>
               <li><span className="dot"></span> <Link href="/branches" onClick={toggleMenu} className={pathname.startsWith("/branches") ? "active-menu" : ""}>BANQUET / EVENT</Link></li>
-              {/* Added: show logout or login inside overlay menu */}
               {user ? (
                 <>
                   <li><span className="dot"></span> <Link href="/my-profile" onClick={toggleMenu}>MY PROFILE</Link></li>
@@ -527,8 +705,7 @@ export default function Header() {
         <div className="auth-modal" id="authModal">
           <button className="auth-close" id="authClose" onClick={toggleAuth}>✕</button>
 
-          {/* Feedback messages */}
-          {err   && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: "0.85rem", fontFamily: "Poppins, sans-serif" }}>⚠ {err}</div>}
+          {err && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: "0.85rem", fontFamily: "Poppins, sans-serif" }}>⚠ {err}</div>}
           {okMsg && <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: "0.85rem", fontFamily: "Poppins, sans-serif" }}>✓ {okMsg}</div>}
 
           {/* LOGIN */}
@@ -660,6 +837,17 @@ export default function Header() {
 
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </>
   );
 }

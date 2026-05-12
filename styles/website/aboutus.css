@@ -583,6 +583,22 @@ body {
   }
 }
 
+@media (max-width: 426px) {
+  .story-container {
+    flex-direction: column;
+  }
+
+  .aboutus .process-row {
+    flex-direction: column;
+
+  }
+
+  .aboutus .process-row.reverse {
+    flex-direction: column;
+
+  }
+}
+
 /* Mobile Large (426px - 767px) */
 @media (max-width: 767px) and (min-width: 426px) {
   .aboutus .hero-section {
