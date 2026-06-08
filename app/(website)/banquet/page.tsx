@@ -1,22 +1,14 @@
-"use client";
-
-import Image from "next/image";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import BanquetForm from "./BanquetForm";
+
+export const metadata: Metadata = {
+  title: "Banquet Hall | Damru By Namo",
+  description: "Book our elegant banquet hall in Mansarovar, Jaipur for birthdays, weddings, anniversaries, and corporate events. Explore facilities, capacities, and event packages.",
+  keywords: ["banquet hall jaipur", "party hall mansarovar", "wedding venue jaipur", "birthday party hall jaipur"],
+};
 
 export default function BanquetPage() {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    mobileNumber: "",
-    email: ""
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    // console.log(formData);
-  };
-
   return (
     <div className="banquet">
       <section className="hero-section"></section>
@@ -145,29 +137,7 @@ export default function BanquetPage() {
         <p>
           Fill in your details and let us make your celebration truly special.
         </p>
-        <form onSubmit={handleSubmit}>
-          <div className="form-container">
-            <input 
-              type="text" 
-              placeholder="Full Name" 
-              value={formData.fullName}
-              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-            />
-            <input 
-              type="text" 
-              placeholder="+91- Mobile Number" 
-              value={formData.mobileNumber}
-              onChange={(e) => setFormData({...formData, mobileNumber: e.target.value})}
-            />
-            <input 
-              type="email" 
-              placeholder="Email Address" 
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-            />
-          </div>
-          <button type="submit" className="final-book-btn">Book Now</button>
-        </form>
+        <BanquetForm />
       </section>
     </div>
   );

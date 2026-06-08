@@ -91,6 +91,7 @@
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: 15px;
+  gap: 15px;
 }
 
 .contact .open-header h2 {

@@ -1,5 +1,5 @@
 /**
- * middleware.ts — Edge Runtime only.
+ * proxy.ts — Edge Runtime only.
  * Handles TWO separate auth flows:
  *   1. Admin routes  → protected, redirect to /admin/login if not authed
  *   2. Website "/"   → always public, never redirected
@@ -9,7 +9,7 @@ import { getToken } from "next-auth/jwt";
 
 const SECRET = process.env.AUTH_SECRET || "damru-secret-key";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // ── Admin routes ─────────────────────────────────────────────

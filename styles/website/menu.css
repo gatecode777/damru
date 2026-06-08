@@ -78,9 +78,31 @@
 
 .filter-container {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
     gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar for categories scroll */
+.filter-container::-webkit-scrollbar {
+    height: 5px;
+}
+
+.filter-container::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 10px;
+}
+
+.filter-container::-webkit-scrollbar-thumb {
+    background: #e67e22;
+    border-radius: 10px;
+}
+
+.filter-container::-webkit-scrollbar-thumb:hover {
+    background: #c95c0a;
 }
 
 .filter-btn {
@@ -92,6 +114,7 @@
     font-size: 14px;
     transition: 0.3s;
     color: #000;
+    flex-shrink: 0;
 }
 
 .filter-btn.active {

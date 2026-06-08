@@ -47,6 +47,7 @@
 }
 
 .menu-toggle {
+  display: none;
   cursor: pointer;
   font-size: 25px;
   color: #000;
@@ -420,11 +421,10 @@
   .logo {
     flex-shrink: 0;
     margin-right: 0;
-
   }
 
   .logo img {
-    max-width: 58px;
+    max-width: 80px;
     display: block;
   }
 
@@ -434,35 +434,19 @@
     align-items: center;
     gap: 4px;
     flex: 1;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-left: 12px;
     min-width: 0;
   }
 
   .menu-toggle {
     display: flex;
-    font-size: 10px;
     cursor: pointer;
     flex-shrink: 0;
   }
 
   .nav-links {
-    display: flex !important;
-    list-style: none;
-    gap: 4px;
-    margin: 0;
-    padding-bottom: 5px;
-    flex-wrap: nowrap;
-    overflow: hidden;
-    min-width: 0;
-  }
-
-  .nav-links li {
-    flex-shrink: 0;
-  }
-
-  .nav-links a {
-    font-size: 8px;
-    white-space: nowrap;
+    display: none !important;
   }
 
   /* Header Icons - compact, no margin-left */
@@ -482,8 +466,10 @@
     justify-content: center;
   }
 
-  .header-icons .icon-link i {
-    font-size: 14px;
+  .menu-toggle,
+  .header-icons .icon-link i,
+  .header-icons button i {
+    font-size: 20px !important;
   }
 }
 
@@ -495,31 +481,21 @@
   }
 
   .logo img {
-    max-width: 60px;
+    max-width: 85px;
   }
 
   .desktop-nav {
     gap: 5px;
   }
 
-  .menu-toggle {
-    font-size: 13px;
-  }
-
-  .nav-links {
-    gap: 5px;
-  }
-
-  .nav-links a {
-    font-size: 9px;
+  .menu-toggle,
+  .header-icons .icon-link i,
+  .header-icons button i {
+    font-size: 22px !important;
   }
 
   .header-icons {
     gap: 5px;
-  }
-
-  .header-icons .icon-link i {
-    font-size: 15px;
   }
 }
 
@@ -531,31 +507,21 @@
   }
 
   .logo img {
-    max-width: 45px;
+    max-width: 90px;
   }
 
   .desktop-nav {
     gap: 6px;
   }
 
-  .menu-toggle {
-    font-size: 18px;
-  }
-
-  .nav-links {
-    gap: 6px;
-  }
-
-  .nav-links a {
-    font-size: 10px;
+  .menu-toggle,
+  .header-icons .icon-link i,
+  .header-icons button i {
+    font-size: 24px !important;
   }
 
   .header-icons {
     gap: 6px;
-  }
-
-  .header-icons .icon-link i {
-    font-size: 16px;
   }
 }
 
@@ -567,31 +533,21 @@
   }
 
   .logo img {
-    max-width: 52px;
+    max-width: 95px;
   }
 
   .desktop-nav {
     gap: 8px;
   }
 
-  .menu-toggle {
-    font-size: 20px;
-  }
-
-  .nav-links {
-    gap: 8px;
-  }
-
-  .nav-links a {
-    font-size: 11px;
+  .menu-toggle,
+  .header-icons .icon-link i,
+  .header-icons button i {
+    font-size: 26px !important;
   }
 
   .header-icons {
     gap: 8px;
-  }
-
-  .header-icons .icon-link i {
-    font-size: 18px;
   }
 }
 

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { connectDB } from "@/lib/mongodb";
 import CategoryModel from "@/models/Category";
 import MenuItemModel from "@/models/MenuItem";
-import MenuItemCard from "./MenuItemCard";
 import ReservationForm from "../ReservationForm";
+import MenuClient from "./MenuClient";
 
 // ── SEO metadata ────────────────────────────────────────────────
 export async function generateMetadata({
@@ -41,6 +40,7 @@ interface IMenuItem {
   variantType: string;
   variants: { label: string; price: number }[];
   isVeg: boolean;
+  category: string;
   sortOrder: number;
 }
 
@@ -55,7 +55,6 @@ export default async function MenuPage({
   // ── Fetch from MongoDB ──────────────────────────────────────
   let categories: ICategory[] = [];
   let items: IMenuItem[] = [];
-  let activeCategory: ICategory | null = null;
 
   try {
     await connectDB();
@@ -67,26 +66,12 @@ export default async function MenuPage({
       .lean();
     categories = JSON.parse(JSON.stringify(rawCats));
 
-    // Determine which category is active
-    if (catSlug) {
-      activeCategory = categories.find(c => c.slug === catSlug) || null;
-    }
-    // Default to first category if none selected
-    if (!activeCategory && categories.length > 0) {
-      activeCategory = categories[0];
-    }
-
-    // Fetch items for the active category
-    if (activeCategory) {
-      const rawItems = await MenuItemModel
-        .find({
-          category: activeCategory._id,
-          isActive: true,
-        })
-        .sort({ sortOrder: 1 })
-        .lean();
-      items = JSON.parse(JSON.stringify(rawItems));
-    }
+    // Fetch all active menu items
+    const rawItems = await MenuItemModel
+      .find({ isActive: true })
+      .sort({ sortOrder: 1 })
+      .lean();
+    items = JSON.parse(JSON.stringify(rawItems));
   } catch (err) {
     console.error("Menu page DB error:", err);
     // Graceful degradation — page renders with empty state
@@ -105,67 +90,12 @@ export default async function MenuPage({
         </div>
       </section>
 
-      {/* ── Category filter bar ── */}
-      <section className="filter-section">
-        <div className="filter-container">
-          {categories.length === 0 ? (
-            <span style={{ fontFamily: "Poppins, sans-serif", fontSize: "0.85rem", color: "#aaa" }}>
-              No categories available yet.
-            </span>
-          ) : (
-            categories.map(cat => (
-              <Link
-                key={cat._id}
-                href={`/menu?category=${cat.slug}`}
-                className={`filter-btn${activeCategory?._id === cat._id ? " active" : ""
-                  }`}
-              >
-                {cat.name}
-              </Link>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* ── Category title & description ── */}
-      {activeCategory && (
-        <div className="page-title-section">
-          <h2 className="category-heading">{activeCategory.name}</h2>
-          {activeCategory.description && (
-            <p>{activeCategory.description}</p>
-          )}
-        </div>
-      )}
-
-      {/* ── Menu items ── */}
-      {items.length === 0 ? (
-        <div className="menu-empty">
-          <p>
-            {activeCategory
-              ? `No items in ${activeCategory.name} yet. Check back soon!`
-              : "No menu items available."}
-          </p>
-        </div>
-      ) : (
-        <section className="menu-parent">
-          <div className="menu-container">
-            {items.map((item, i) => (
-              <MenuItemCard
-                key={item._id}
-                menuItemId={item._id}
-                name={item.name}
-                description={item.description}
-                image={item.image}
-                basePrice={item.basePrice}
-                variantType={item.variantType}
-                variants={item.variants}
-                isVeg={item.isVeg}
-                reverse={i % 2 !== 0}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ── Interactive Client Menu Filter ── */}
+      <MenuClient
+        categories={categories}
+        items={items}
+        initialActiveCategorySlug={catSlug}
+      />
 
       {/* ── Reservation ── */}
       <section className="reservation-section" id="reservation">

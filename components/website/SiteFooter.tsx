@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
+import NewsletterForm from "./NewsletterForm";
 
 const QUICK_LINKS = [
   { label: "Home",            href: "/"         },
@@ -30,17 +28,6 @@ const POLICY_LINKS = [
 ];
 
 export default function SiteFooter() {
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
-
-  function handleSubscribe(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    // TODO: wire to API
-    setSubscribed(true);
-    setEmail("");
-    setTimeout(() => setSubscribed(false), 4000);
-  }
 
   return (
     <>
@@ -104,18 +91,7 @@ export default function SiteFooter() {
 
           {/* Col 5 — Newsletter */}
           <div className="footer-col footer-newsletter">
-            <form className="newsletter-form" onSubmit={handleSubscribe}>
-              <input
-                type="email"
-                placeholder="Your email address"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-              <button type="submit">
-                {subscribed ? "✓ Subscribed!" : "Subscribe"}
-              </button>
-            </form>
+            <NewsletterForm />
             <p className="newsletter-note">
               Join our subscribers and get the best recipes and offers delivered each week!
             </p>

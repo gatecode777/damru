@@ -647,6 +647,10 @@ export default function Header() {
         <div className="overlay-content">
           <div className="overlay-nav">
             <ul>
+              <li><span className="dot"></span> <Link href="/" onClick={toggleMenu} className={pathname === "/" ? "active-menu" : ""}>HOME</Link></li>
+              <li><span className="dot"></span> <Link href="/menu" onClick={toggleMenu} className={pathname === "/menu" ? "active-menu" : ""}>MENU</Link></li>
+              <li><span className="dot"></span> <Link href="/about-us" onClick={toggleMenu} className={pathname === "/about-us" ? "active-menu" : ""}>ABOUT US</Link></li>
+              <li><span className="dot"></span> <Link href="/contact-us" onClick={toggleMenu} className={pathname === "/contact-us" ? "active-menu" : ""}>CONTACT US</Link></li>
               <li><span className="dot"></span> <Link href="/gallery" onClick={toggleMenu} className={pathname === "/gallery" ? "active-menu" : ""}>GALLERY</Link></li>
               <li className="has-submenu">
                 <span className="dot" style={{ background: pathname.startsWith("/blogs") ? "#8da33d" : undefined }}></span>

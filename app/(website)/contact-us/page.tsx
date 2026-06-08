@@ -1,20 +1,13 @@
-"use client";
-
-import { useState } from "react";
 import type { Metadata } from "next";
 import ReservationForm from "../ReservationForm";
 
+export const metadata: Metadata = {
+  title: "Contact Us | Damru By Namo",
+  description: "Get in touch with Damru By Namo. Find our location in Mansarovar, Jaipur, contact numbers, email, opening hours, or make a table reservation.",
+  keywords: ["contact damru", "restaurant location jaipur", "table reservation jaipur", "damru by namo phone"],
+};
+
 export default function ContactUsPage() {
-  const [formData, setFormData] = useState({
-    firstName: "", lastName: "", email: "",
-    phone: "", date: "", time: "6:00 pm", persons: "2 Person",
-  });
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    alert("Reservation request submitted! We will contact you shortly.");
-  }
-
   return (
     <div className="contact">
       <section className="contact-hero">
@@ -24,11 +17,11 @@ export default function ContactUsPage() {
             <h1>Get in Touch</h1>
             <p>The freshest ingredients for you every day</p>
           </div>
-          <div className="hero-right-c">
+          <div className="hero-right">
             <div className="open-time-section">
               <div className="open-header">
-                <h2>Open Time</h2>
-                <span className="days">Sunday - Saturday</span>
+                <h2>Open Time </h2>
+                <span className="days"> Sunday - Saturday</span>
               </div>
               <div className="dotted-divider"></div>
               <div className="time-grid">
@@ -63,7 +56,6 @@ export default function ContactUsPage() {
                 <a href="mailto:thedamru72@gmail.com">thedamru72@gmail.com</a>,{" "}
                 <a href="mailto:support@damrubynamo.com">support@damrubynamo.com</a> or
                 telephone on <a href="tel:+918690987272">+91-8690987272</a>,{" "}
-                {/* <a href="tel:+919876543213">+91-9876543213</a> */}
               </p>
             </div>
           </div>

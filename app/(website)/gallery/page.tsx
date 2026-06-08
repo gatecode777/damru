@@ -1,123 +1,21 @@
-"use client";
+import type { Metadata } from "next";
+import { connectDB } from "@/lib/mongodb";
+import GalleryTab from "@/models/GalleryTab";
+import GalleryClient from "./GalleryClient";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+export const metadata: Metadata = {
+  title: "Gallery | Damru By Namo",
+  description: "View the beautiful gallery of Damru By Namo banquet hall and restaurant in Jaipur.",
+  keywords: ["gallery damru", "banquet hall images jaipur", "damru by namo photos", "wedding venue jaipur pictures"],
+};
 
-const PAGE_SIZE = 10;
+export default async function GalleryPage() {
+  await connectDB();
+  const tabs = await GalleryTab.find({ isActive: true })
+    .sort({ sortOrder: 1 })
+    .lean();
 
-interface GalleryItem {
-  _id: string; image: string; alt: string; title: string;
-  description: string; type: string; overlayClass: string; sortOrder: number;
-}
-interface GalleryTab {
-  _id: string; tabKey: string; label: string;
-  bannerImage: string; bannerAlt: string;
-  isActive: boolean; sortOrder: number;
-  items: GalleryItem[];
-}
+  const serializedTabs = JSON.parse(JSON.stringify(tabs));
 
-export default function GalleryPage() {
-  const [tabs, setTabs] = useState<GalleryTab[]>([]);
-  const [activeKey, setActiveKey] = useState("all");
-  const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  useEffect(() => {
-    fetch("/api/gallery")
-      .then(r => r.json())
-      .then(d => {
-        setTabs(d.tabs || []);
-        if (d.tabs?.length) setActiveKey(d.tabs[0].tabKey);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Reset visible count whenever active tab changes
-  function switchTab(key: string) {
-    setActiveKey(key);
-    setVisibleCount(PAGE_SIZE);
-  }
-
-  const activeTab = tabs.find(t => t.tabKey === activeKey);
-  const sortedItems = activeTab ? [...activeTab.items].sort((a, b) => a.sortOrder - b.sortOrder) : [];
-  const visibleItems = sortedItems.slice(0, visibleCount);
-  const hasMore = sortedItems.length > visibleCount;
-
-  if (loading) {
-    return (
-      <section className="gallery">
-        <div style={{ height: 300, background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa", fontFamily: "Poppins,sans-serif" }}>
-          Loading gallery…
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="gallery">
-      {/* Hero banner — changes per active tab */}
-      <div className="gallery-hero">
-        {activeTab?.bannerImage ? (
-          <img id="hero-main-img" src={`/uploads/gallery/${activeTab.bannerImage}`} alt={activeTab.bannerAlt || activeTab.label} />
-        ) : (
-          <img id="hero-main-img" src="/assets/images/gallery1.png" alt="Gallery Banner" />
-        )}
-      </div>
-
-      <div className="gallery-container">
-        {/* Tabs */}
-        <div className="gallery-tabs">
-          {tabs.map(tab => (
-            <button
-              key={tab.tabKey}
-              className={`tab-link${activeKey === tab.tabKey ? " active" : ""}`}
-              onClick={() => switchTab(tab.tabKey)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Gallery Grid */}
-        <div className="gallery-grid">
-          {visibleItems.length === 0 ? (
-            <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "60px 20px", color: "#aaa", fontFamily: "Poppins,sans-serif" }}>
-              No images in this category yet.
-            </div>
-          ) : (
-            visibleItems.map(item => (
-              <div
-                key={item._id}
-                className={`gallery-item ${item.type === "wide" ? "item-wide" : "item-narrow"}`}
-                data-category={activeKey}
-              >
-                <img src={`/uploads/gallery/${item.image}`} alt={item.alt || item.title} />
-                <div className={`item-overlay${item.overlayClass ? ` ${item.overlayClass}` : ""}`}>
-                  <div className="item-content">
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                  </div>
-                  <Link href="/menu" className="arrow-icon">
-                    →
-                  </Link>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Load More — only shown when there are more items */}
-        <div className="gallery-footer">
-          {hasMore && (
-            <button
-              className="load-more-btn"
-              onClick={() => setVisibleCount(v => v + PAGE_SIZE)}
-            >
-              Load More ({sortedItems.length - visibleCount} remaining)
-            </button>
-          )}
-        </div>
-      </div>
-    </section>
-  );
+  return <GalleryClient initialTabs={serializedTabs} />;
 }

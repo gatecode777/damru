@@ -1,20 +1,14 @@
-"use client";
-
-import Image from "next/image";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import ReservationForm from "../ReservationForm";
+
+export const metadata: Metadata = {
+  title: "About Us | Damru By Namo",
+  description: "Learn about the story of Damru By Namo, founded by Raja Choudhary, with Sandeep Rana as our Executive Chef. Explore our sophisticated food preparation process in Jaipur.",
+  keywords: ["about damru", "raja choudhary damru", "sandeep rana chef", "restaurant history jaipur"],
+};
 
 export default function AboutUsPage() {
-  const [bookingDate, setBookingDate] = useState("");
-  const [bookingTime, setBookingTime] = useState("6:00 pm");
-  const [bookingPerson, setBookingPerson] = useState("2 Person");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle booking submission
-    // console.log({ bookingDate, bookingTime, bookingPerson });
-  };
-
   return (
     <div className="aboutus">
       {/* Hero Section */}
@@ -185,53 +179,14 @@ export default function AboutUsPage() {
       </section>
 
       {/* Make a Reservation Section */}
-      <section className="reservation-section">
+      <section className="reservation-section" id="reservation">
         <div className="res-container">
           <div className="res-header-content">
             <h2 className="res-main-title">Make a Reservation</h2>
             <p className="res-sub-text">Get in touch with restaurant</p>
           </div>
 
-          <form className="res-booking-form" onSubmit={handleSubmit}>
-            <div className="res-form-grid">
-              <div className="res-input-box">
-                <input
-                  type="text"
-                  placeholder="16/03/2026"
-                  onFocus={(e) => (e.target.type = "date")}
-                  onBlur={(e) => {
-                    if (!e.target.value) e.target.type = "text";
-                  }}
-                  onChange={(e) => setBookingDate(e.target.value)}
-                />
-                <span className="res-arrow"></span>
-              </div>
-
-              <div className="res-input-box">
-                <select value={bookingTime} onChange={(e) => setBookingTime(e.target.value)}>
-                  <option value="6:00 pm">6:00 pm</option>
-                  <option value="7:00 pm">7:00 pm</option>
-                  <option value="8:00 pm">8:00 pm</option>
-                </select>
-                <span className="res-arrow"></span>
-              </div>
-
-              <div className="res-input-box">
-                <select value={bookingPerson} onChange={(e) => setBookingPerson(e.target.value)}>
-                  <option value="2 Person">2 Person</option>
-                  <option value="3 Person">3 Person</option>
-                  <option value="4 Person">4 Person</option>
-                </select>
-                <span className="res-arrow"></span>
-              </div>
-            </div>
-
-            <div className="res-btn-wrapper">
-              <button type="submit" className="res-submit-btn">
-                Book Now
-              </button>
-            </div>
-          </form>
+          <ReservationForm />
         </div>
       </section>
     </div>
