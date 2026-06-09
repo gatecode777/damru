@@ -320,7 +320,7 @@ export default async function HomePage() {
           <div className="menu-grid">
             {[
               { img: "IC1", name: "Paneer in Hot Garlic Sauce" },
-              { img: "IC2", name: "Honer Chilli Potato" },
+              { img: "IC2", name: "Honey Chilli Potato" },
               { img: "IC3", name: "EOK Tossed Waterchestnut" },
               { img: "IC4", name: "Mushroom Chilli Dry" },
               { img: "IC5", name: "Spring Roll" },
@@ -374,6 +374,8 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
+
+          <h2 className="menu-title">Our Blogs</h2>
 
           {/* Blog cards — dynamic from DB, fallback to static */}
           <div className="blog-grid-3d">
@@ -477,6 +479,7 @@ export default async function HomePage() {
 
       {/* ── Testimonials ── */}
       <section className="testimonial-section">
+        <h2 className="menu-title">What our client say's</h2>
         <div className="testi-container">
           <div className="testi-content-wrapper">
             <div className="testi-left">
@@ -488,11 +491,11 @@ export default async function HomePage() {
               </p>
               <div className="testi-user">
                 <div className="testi-avatar">
-                  <img src="https://i.pravatar.cc/150?img=32" alt="Divyansh Bhardwaj" id="testi-img" />
+                  <img src="https://i.pravatar.cc/150?img=32" alt="Deepika Bhardwaj" id="testi-img" />
                 </div>
                 <div className="testi-details">
-                  <h4 id="testi-name">Divyansh Bhardwaj</h4>
-                  <p id="testi-role">Front-end Developer</p>
+                  <h4 id="testi-name">Deepika Bhardwaj</h4>
+                  <p id="testi-role">Lawyer</p>
                 </div>
               </div>
             </div>

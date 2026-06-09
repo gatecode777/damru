@@ -115,16 +115,19 @@ export default function AboutUsPage() {
       </section>
 
       <section className="delicious-section">
-        <div className="delicious-overlay"></div>
+        <video
+          className="delicious-video-bg"
+          autoPlay
+          loop
+          muted
+          playsInline
+        >
+          <source src="/assets/videos/Cinematic Food Video.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
         <div className="delicious-content">
           <h2 className="delicious-title">It looks delicious</h2>
           <p className="delicious-subtitle">Experience flavors that look as good as they taste.</p>
-
-          <div className="video-play-btn">
-            <div className="play-icon">
-              <i className="fa-solid fa-play"></i>
-            </div>
-          </div>
         </div>
       </section>
 

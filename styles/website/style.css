@@ -834,7 +834,7 @@
 
 .ms-title {
   font-family: "Playfair Display", serif;
-  font-size: 4.5rem;
+  font-size: 4rem;
   color: #000;
   margin-bottom: 35px;
 }
@@ -917,7 +917,7 @@
 /* Item Text */
 .ms-item-name {
   font-family: "Playfair Display", serif;
-  font-size: 4.4rem;
+  font-size: 3rem;
   margin-bottom: 20px;
   color: #1a1a1a;
 }
@@ -2582,8 +2582,14 @@
   /* Mobile inputs sizing */
   .reservation-section .res-input-box input,
   .reservation-section .res-input-box select {
-    padding: 12px 5px !important;
+    padding: 12px 24px 12px 8px !important;
     font-size: 0.8rem !important;
+  }
+
+  .reservation-section .res-arrow {
+    right: 8px !important;
+    width: 12px !important;
+    height: 12px !important;
   }
 
   .reservation-section .res-submit-btn {
@@ -2795,7 +2801,7 @@
 
 .testi-text {
   font-family: "Playfair Display", serif;
-  font-size: 1.8rem;
+  font-size: 1.3rem;
   line-height: 1.6;
   color: #111;
   margin-bottom: 50px;

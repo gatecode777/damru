@@ -27,6 +27,7 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  gap: 30px;
   padding: 0 0px;
 }
 
@@ -421,10 +422,15 @@
   .logo {
     flex-shrink: 0;
     margin-right: 0;
+    order: 2 !important;
+    flex: 1 !important;
+    margin-left: 10px !important;
+    display: flex !important;
+    justify-content: flex-start !important;
   }
 
   .logo img {
-    max-width: 80px;
+    max-width: 100px;
     display: block;
   }
 
@@ -433,10 +439,11 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    flex: 1;
+    flex: none !important;
     justify-content: flex-start;
-    padding-left: 12px;
+    padding-left: 0 !important;
     min-width: 0;
+    order: 1 !important;
   }
 
   .menu-toggle {
@@ -456,6 +463,7 @@
     gap: 10px;
     flex-shrink: 0;
     margin-left: 0;
+    order: 3 !important;
     /* background-color: #e67e22; */
   }
 
@@ -790,12 +798,12 @@
 
 /* Standardized Hero Container for Desktop/Tablet */
 @media (min-width: 769px) {
-    .hero-container {
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        padding: 60px 0px 30px;
-    }
+  .hero-container {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 60px 0px 30px;
+  }
 }
 
 @media (max-width: 480px) {

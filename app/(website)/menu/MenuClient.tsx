@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import MenuItemCard from "./MenuItemCard";
+import { useCart } from "@/lib/CartContext";
+import Link from "next/link";
 
 interface ICategory {
   _id: string;
@@ -35,6 +37,8 @@ export default function MenuClient({
   items,
   initialActiveCategorySlug,
 }: MenuClientProps) {
+  const { totalItems } = useCart();
+
   // Find active category based on initial slug, fallback to first category
   const getInitialActive = () => {
     if (initialActiveCategorySlug) {
@@ -159,6 +163,14 @@ export default function MenuClient({
             ))}
           </div>
         </section>
+      )}
+
+      {totalItems > 0 && (
+        <Link href="/cart" className="floating-cart-btn" aria-label="Go to cart">
+          <i className="ri-shopping-cart-2-line" />
+          <span className="floating-cart-badge">{totalItems}</span>
+          <span className="floating-cart-tooltip">View Cart</span>
+        </Link>
       )}
     </>
   );

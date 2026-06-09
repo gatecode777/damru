@@ -270,6 +270,10 @@ body {
     gap: 40px;
 }
 
+.checkout-container .payment-grid h3 {
+    margin-bottom: 20px;
+}
+
 /* Summary Card */
 .checkout-container .summary-card {
     background: #fff;

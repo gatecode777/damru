@@ -92,6 +92,7 @@
     ];
 
     let idx = 0;
+    let autoScrollInterval;
 
     function goTo(newIdx) {
       idx = (newIdx + testimonials.length) % testimonials.length;
@@ -122,9 +123,39 @@
       }, 300);
     }
 
+    function startAutoScroll() {
+      clearInterval(autoScrollInterval);
+      autoScrollInterval = setInterval(() => {
+        const textEl = document.getElementById("testi-text");
+        if (!textEl) {
+          clearInterval(autoScrollInterval);
+          return;
+        }
+        goTo(idx + 1);
+      }, 5000); // Auto-scroll every 5 seconds
+    }
+
+    function resetAutoScroll() {
+      clearInterval(autoScrollInterval);
+      startAutoScroll();
+    }
+
+    // Start auto scroll if testimonial elements are present on current page
+    if (document.getElementById("testi-text")) {
+      startAutoScroll();
+    }
+
     document.addEventListener("click", e => {
-      if (e.target.closest(".testi-next")) goTo(idx + 1);
-      if (e.target.closest(".testi-prev")) goTo(idx - 1);
+      const nextBtn = e.target.closest(".testi-next");
+      const prevBtn = e.target.closest(".testi-prev");
+      if (nextBtn) {
+        goTo(idx + 1);
+        resetAutoScroll();
+      }
+      if (prevBtn) {
+        goTo(idx - 1);
+        resetAutoScroll();
+      }
     });
   }
 
