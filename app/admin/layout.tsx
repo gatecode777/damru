@@ -13,6 +13,9 @@ import "@/styles/admin/blog-form.css";
 export const metadata: Metadata = {
   title: { default: "Dashboard", template: "%s | Damru Admin" },
   description: "Damru Admin Panel",
+  icons: {
+    icon: "/assets/images/favicon.png",
+  },
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -178,13 +178,22 @@ export default function Header() {
     return () => clearInterval(interval);
   }, [isOtpSent]);
 
-  // ── Added: fetch session on mount ─────────────────────────────
+  // ── Added: fetch session on mount + listen for updates ────────
   useEffect(() => {
     fetch("/api/user/me")
       .then(r => r.json())
       .then(d => setUser(d.user || null))
       .catch(() => setUser(null))
       .finally(() => setUserLoading(false));
+
+    const handleProfileUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<any>;
+      if (customEvent.detail) {
+        setUser(customEvent.detail);
+      }
+    };
+    window.addEventListener("user-profile-updated", handleProfileUpdate);
+    return () => window.removeEventListener("user-profile-updated", handleProfileUpdate);
   }, []);
 
   // ── Search debounce ──────────────────────────────────────────
@@ -486,7 +495,7 @@ export default function Header() {
             {/* Cart — only when logged in */}
             {!userLoading && user && (
               <Link href="/cart" className="icon-link" aria-label="Cart" style={{ position: "relative" }}>
-                <i className="ri-shopping-basket-2-line"></i>
+                <i className="ri-shopping-cart-2-line"></i>
                 {totalItems > 0 && (
                   <span style={{ position: "absolute", top: "-6px", right: "-6px", background: "#e67e22", color: "#fff", borderRadius: "50%", width: "18px", height: "18px", fontSize: "0.65rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Poppins,sans-serif" }}>{totalItems > 99 ? "99+" : totalItems}</span>
                 )}

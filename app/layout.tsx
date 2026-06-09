@@ -7,6 +7,9 @@ export const metadata: Metadata = {
     template: "%s | Damru By Namo",
   },
   description: "Damru By Namo — Restaurant & Banquet Hall, Jaipur",
+  icons: {
+    icon: "/assets/images/favicon.png",
+  },
 };
 
 // ── This is what makes responsive / media queries work on mobile ──

@@ -512,6 +512,9 @@ export default function MyProfilePage() {
       if(d.error){showToast(d.error);return;}
       setUser(prev=>prev?{...prev,...d.user}:prev);
       setAvatarPreview(avatarFilename?`/uploads/avatars/${avatarFilename}`:"");
+      if (typeof window !== "undefined" && d.user) {
+        window.dispatchEvent(new CustomEvent("user-profile-updated", { detail: d.user }));
+      }
       setShowEditModal(false);setAvatarFile(null);showToast("Profile updated successfully!");
     }finally{setEditSaving(false);}
   }

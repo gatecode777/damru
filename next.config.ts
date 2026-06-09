@@ -14,7 +14,17 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "i.pravatar.cc" },
       { protocol: "https", hostname: "cdn-icons-png.flaticon.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "ik.imagekit.io" },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/offer",
+        destination: "/offers",
+        permanent: true,
+      },
+    ];
   },
 };
 

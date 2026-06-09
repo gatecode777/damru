@@ -264,6 +264,8 @@ function BookingForm({ branchSlug, branchName, ctaTitle, ctaSubtitle }: {
             </select>
             <input type="date" value={form.eventDate} onChange={e => upd("eventDate", e.target.value)}
               min={new Date().toISOString().split("T")[0]}
+              onKeyDown={e => e.preventDefault()}
+              onPaste={e => e.preventDefault()}
               style={{ flex:"1 1 160px", maxWidth:200, padding:"0.85rem 1rem", border:"1.5px solid var(--bp-border)",
                 borderRadius:"var(--radius-sm)", background:"var(--bp-white)", fontFamily:"Jost,sans-serif",
                 fontSize:"0.875rem", color:"var(--bp-dark)", outline:"none" }} />

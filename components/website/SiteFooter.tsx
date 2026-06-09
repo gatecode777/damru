@@ -111,7 +111,7 @@ export default function SiteFooter() {
         {/* Copyright bar */}
         <div className="footer-copyright">
           <p>
-            &copy; {new Date().getFullYear()} Gatecode Technologies Pvt. Ltd. All rights reserved.
+            &copy; {new Date().getFullYear()} <Link href="/" className="footer-copyright-link">damru</Link>. All rights reserved.
           </p>
         </div>
       </footer>

@@ -1,6 +1,7 @@
-// Must be the very first thing — set DNS before any mongoose import resolves
 import dns from "dns";
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder("ipv4first");
+}
 
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";

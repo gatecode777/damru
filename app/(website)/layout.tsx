@@ -38,6 +38,9 @@ export const metadata: Metadata = {
     description: "Authentic Indian cuisine and banquet services in Jaipur.",
     type: "website",
   },
+  icons: {
+    icon: "/assets/images/favicon.png",
+  },
 };
 
 export default async function WebsiteLayout({ children }: { children: React.ReactNode }) {

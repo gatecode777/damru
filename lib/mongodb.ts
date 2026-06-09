@@ -2,12 +2,10 @@
  * lib/mongodb.ts — Node.js runtime ONLY.
  * Never imported by middleware.ts or any Edge-runtime file.
  */
-
-import dns from "node:dns/promises";
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
-
+import { setServers } from "node:dns/promises";
 import { setDefaultResultOrder } from "dns";
 setDefaultResultOrder("ipv4first");
+setServers(['1.1.1.1']);
 
 import mongoose from "mongoose";
 

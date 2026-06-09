@@ -79,7 +79,7 @@ export default async function BlogsPage({
     return new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   }
 
-  const AVATAR_FALLBACK = "https://randomuser.me/api/portraits/women/44.jpg";
+  const AVATAR_FALLBACK = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200";
   const IMG_FALLBACK = "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=500&q=80";
 
   return (

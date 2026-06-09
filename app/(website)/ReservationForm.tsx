@@ -29,6 +29,52 @@ function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
 
+function maxDateStr() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 2); // Limit booking to 2 years in advance
+  return d.toISOString().split("T")[0];
+}
+
+function clampDateString(val: string): string {
+  // Keep only digits and dashes
+  let clean = val.replace(/[^0-9-]/g, "");
+  const parts = clean.split("-");
+  const maxYear = new Date().getFullYear() + 2;
+
+  // Year: max 4 digits, max year limit
+  if (parts[0]) {
+    parts[0] = parts[0].slice(0, 4);
+    const y = parseInt(parts[0], 10);
+    if (parts[0].length === 4 && y > maxYear) {
+      parts[0] = String(maxYear);
+    }
+  }
+
+  // Month: max 2 digits, max 12
+  if (parts[1]) {
+    parts[1] = parts[1].slice(0, 2);
+    const m = parseInt(parts[1], 10);
+    if (parts[1].length === 2 && (m < 1 || m > 12)) {
+      parts[1] = "12";
+    }
+  }
+
+  // Day: max 2 digits, max 31
+  if (parts[2]) {
+    parts[2] = parts[2].slice(0, 2);
+    const d = parseInt(parts[2], 10);
+    if (parts[2].length === 2 && (d < 1 || d > 31)) {
+      parts[2] = "31";
+    }
+  }
+
+  let formatted = parts.join("-");
+  if (formatted.length > 10) {
+    formatted = formatted.slice(0, 10);
+  }
+  return formatted;
+}
+
 export default function ReservationForm() {
   const [user,        setUser]        = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
@@ -58,8 +104,25 @@ export default function ReservationForm() {
       showToast("Please login to make a reservation.", "error");
       return;
     }
-    if (!date) {
-      showToast("Please select a date.", "error");
+    if (!date || date.length < 10) {
+      showToast("Please enter a valid date (YYYY-MM-DD).", "error");
+      return;
+    }
+
+    // Date range validation
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const maxDate = new Date();
+    maxDate.setFullYear(maxDate.getFullYear() + 2);
+
+    if (selectedDate < today) {
+      showToast("Reservations cannot be in the past.", "error");
+      return;
+    }
+    if (selectedDate > maxDate) {
+      showToast("Reservations can only be made up to 2 years in advance.", "error");
       return;
     }
 
@@ -95,9 +158,22 @@ export default function ReservationForm() {
               type="text"
               placeholder="Select Date"
               value={date}
-              onFocus={e => { e.target.type = "date"; e.target.min = todayStr(); }}
-              onBlur={e  => { if (!e.target.value) e.target.type = "text"; }}
-              onChange={e => setDate(e.target.value)}
+              onFocus={e => {
+                e.target.type = "date";
+                e.target.min = todayStr();
+                e.target.max = maxDateStr();
+              }}
+              onBlur={e => {
+                if (!e.target.value || e.target.value.length < 10) {
+                  setDate("");
+                  e.target.type = "text";
+                }
+              }}
+              onChange={e => {
+                setDate(clampDateString(e.target.value));
+              }}
+              onKeyDown={e => e.preventDefault()}
+              onPaste={e => e.preventDefault()}
               required
             />
             <span className="res-arrow" />

@@ -19,33 +19,33 @@ const emptyForm = {
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalPrice, clearCart } = useCart();
-  const [taxRate,        setTaxRate]        = useState(5);
-  const [freeAbove,      setFreeAbove]      = useState(500);
+  const [taxRate, setTaxRate] = useState(5);
+  const [freeAbove, setFreeAbove] = useState(500);
   const [deliveryCharge, setDeliveryCharge] = useState(50);
 
   // ── Step state ────────────────────────────────────────────
-  const [step,            setStep]            = useState(1);
+  const [step, setStep] = useState(1);
 
   // ── Address state ─────────────────────────────────────────
-  const [addresses,       setAddresses]       = useState<Address[]>([]);
-  const [selectedAddr,    setSelectedAddr]    = useState<string | null>(null);
-  const [addrLoading,     setAddrLoading]     = useState(true);
-  const [showAddrModal,   setShowAddrModal]   = useState(false);
-  const [editingAddr,     setEditingAddr]     = useState<Address | null>(null);
-  const [addrForm,        setAddrForm]        = useState({ ...emptyForm });
-  const [addrSaving,      setAddrSaving]      = useState(false);
-  const [addrError,       setAddrError]       = useState("");
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddr, setSelectedAddr] = useState<string | null>(null);
+  const [addrLoading, setAddrLoading] = useState(true);
+  const [showAddrModal, setShowAddrModal] = useState(false);
+  const [editingAddr, setEditingAddr] = useState<Address | null>(null);
+  const [addrForm, setAddrForm] = useState({ ...emptyForm });
+  const [addrSaving, setAddrSaving] = useState(false);
+  const [addrError, setAddrError] = useState("");
 
   // ── Payment state ─────────────────────────────────────────
-  const [payMethod,       setPayMethod]       = useState<"cod" | "upi" | "card">("cod");
-  const [notes,           setNotes]           = useState("");
-  const [placing,         setPlacing]         = useState(false);
-  const [orderError,      setOrderError]      = useState("");
-  const [placedOrder,     setPlacedOrder]     = useState<{ orderId: string; total: number } | null>(null);
+  const [payMethod, setPayMethod] = useState<"cod" | "upi" | "card">("cod");
+  const [notes, setNotes] = useState("");
+  const [placing, setPlacing] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [placedOrder, setPlacedOrder] = useState<{ orderId: string; total: number } | null>(null);
 
   // ── Coupon from cart (passed via sessionStorage) ──────────
-  const [couponCode,      setCouponCode]      = useState("");
-  const [discount,        setDiscount]        = useState(0);
+  const [couponCode, setCouponCode] = useState("");
+  const [discount, setDiscount] = useState(0);
 
   useEffect(() => {
     // Read applied coupon from sessionStorage if cart page set it
@@ -57,7 +57,7 @@ export default function CheckoutPage() {
   async function loadAddresses() {
     setAddrLoading(true);
     try {
-      const res  = await fetch("/api/address");
+      const res = await fetch("/api/address");
       const data = await res.json();
       if (res.status === 401) { router.push("/"); return; }
       setAddresses(data.addresses || []);
@@ -70,8 +70,8 @@ export default function CheckoutPage() {
 
   // ── Totals ────────────────────────────────────────────────
   const subtotalAfterDiscount = Math.max(0, totalPrice - discount);
-  const shipping  = items.length > 0 ? (subtotalAfterDiscount >= freeAbove ? 0 : deliveryCharge) : 0;
-  const tax       = items.length > 0 ? Math.round(subtotalAfterDiscount * taxRate / 100) : 0;
+  const shipping = items.length > 0 ? (subtotalAfterDiscount >= freeAbove ? 0 : deliveryCharge) : 0;
+  const tax = items.length > 0 ? Math.round(subtotalAfterDiscount * taxRate / 100) : 0;
   const grandTotal = subtotalAfterDiscount + tax + shipping;
 
   // ── Address form ──────────────────────────────────────────
@@ -80,15 +80,14 @@ export default function CheckoutPage() {
   function closeModal() { setShowAddrModal(false); setEditingAddr(null); setAddrError(""); }
 
   async function handleSaveAddress() {
-    if (!addrForm.fullName || !addrForm.phone || !addrForm.house || !addrForm.city || !addrForm.state || !addrForm.pincode)
-      { setAddrError("All required fields must be filled."); return; }
+    if (!addrForm.fullName || !addrForm.phone || !addrForm.house || !addrForm.city || !addrForm.state || !addrForm.pincode) { setAddrError("All required fields must be filled."); return; }
 
     setAddrSaving(true); setAddrError("");
     try {
-      const res  = await fetch("/api/address", {
-        method:  editingAddr ? "PATCH" : "POST",
+      const res = await fetch("/api/address", {
+        method: editingAddr ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(editingAddr ? { id: editingAddr._id, ...addrForm } : addrForm),
+        body: JSON.stringify(editingAddr ? { id: editingAddr._id, ...addrForm } : addrForm),
       });
       const data = await res.json();
       if (data.error) { setAddrError(data.error); return; }
@@ -112,10 +111,10 @@ export default function CheckoutPage() {
     if (items.length === 0) { setOrderError("Your cart is empty."); return; }
     setPlacing(true); setOrderError("");
     try {
-      const res  = await fetch("/api/orders", {
-        method:  "POST",
+      const res = await fetch("/api/orders", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ addressId: selectedAddr, paymentMethod: payMethod, couponCode, notes }),
+        body: JSON.stringify({ addressId: selectedAddr, paymentMethod: payMethod, couponCode, notes }),
       });
       const data = await res.json();
       if (data.error) { setOrderError(data.error); return; }
@@ -154,8 +153,8 @@ export default function CheckoutPage() {
       <div className="stepper">
         {[
           { n: 1, icon: "fa-solid fa-location-dot", label: "Address" },
-          { n: 2, icon: "fa-solid fa-truck",         label: "Shipping" },
-          { n: 3, icon: "fa-solid fa-credit-card",   label: "Payment"  },
+          { n: 2, icon: "fa-solid fa-truck", label: "Shipping" },
+          { n: 3, icon: "fa-solid fa-credit-card", label: "Payment" },
         ].map(s => (
           <div key={s.n} className={`step${step >= s.n ? " active" : ""}`} id={`step${s.n}-tab`}>
             <div className="step-icon"><i className={s.icon}></i></div>
@@ -197,7 +196,7 @@ export default function CheckoutPage() {
 
           <div className="add-address-bar" onClick={openAddNew}>
             <div className="plus-icon"><i className="fa-solid fa-plus"></i></div>
-            <br/>
+            <br />
             <span>Add New Address</span>
           </div>
 
@@ -219,7 +218,6 @@ export default function CheckoutPage() {
               <b>Free</b>
               <span style={{ color: "#666", fontSize: 13 }}>Regular shipment</span>
             </div>
-            <b>{"2-3 business days"}</b>
           </div>
           <div className="btn-row">
             <button className="btn btn-back" onClick={() => setStep(1)}>Back</button>
@@ -255,7 +253,7 @@ export default function CheckoutPage() {
                 <>
                   <p style={{ color: "#666", marginTop: 16 }}><strong>Delivery Address:</strong></p>
                   <p style={{ color: "#888", marginBottom: 10, fontSize: 13 }}>
-                    {selectedAddress.fullName} · {selectedAddress.phone}<br/>
+                    {selectedAddress.fullName} · {selectedAddress.phone}<br />
                     {selectedAddress.house}{selectedAddress.area ? `, ${selectedAddress.area}` : ""}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
                   </p>
                 </>
@@ -295,7 +293,7 @@ export default function CheckoutPage() {
             <div>
               <h3>Payment</h3>
               <div className="tab-header">
-                {(["cod","upi","card"] as const).map(m => (
+                {(["cod", "upi", "card"] as const).map(m => (
                   <div key={m} className={`tab-link${payMethod === m ? " active" : ""}`} onClick={() => setPayMethod(m)}>
                     {m === "cod" ? "Cash on Delivery" : m === "upi" ? "UPI" : "Credit Card"}
                   </div>
@@ -325,9 +323,9 @@ export default function CheckoutPage() {
               {payMethod === "upi" && (
                 <div className="payment-method active" id="pay-upi">
                   <div className="upi-options">
-                    <div className="upi-item"><img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay"/>Google Pay</div>
-                    <div className="upi-item"><img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/phonepe-logo-icon.png" alt="PhonePe"/>PhonePe</div>
-                    <div className="upi-item"><img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm"/>Paytm</div>
+                    <div className="upi-item"><img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" />Google Pay</div>
+                    <div className="upi-item"><img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/phonepe-logo-icon.png" alt="PhonePe" />PhonePe</div>
+                    <div className="upi-item"><img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" />Paytm</div>
                     <p><strong>Note:</strong> UPI payment integration coming soon. Please use COD for now.</p>
                   </div>
                   <div className="btn-row">
@@ -344,13 +342,13 @@ export default function CheckoutPage() {
                     <div className="chip"></div>
                     <div className="number">•••• •••• •••• ••••</div>
                     <div className="bottom"><span>Cardholder</span>
-                      <img src="https://img.icons8.com/color/48/000000/mastercard-logo.png" width="35" alt="MC"/>
+                      <img src="https://img.icons8.com/color/48/000000/mastercard-logo.png" width="35" alt="MC" />
                     </div>
                   </div>
-                  <div className="input-group"><input type="text" placeholder="Cardholder Name" style={{ background:"none", border:"1px solid #eee" }}/></div>
-                  <div className="input-group"><input type="text" placeholder="Card Number" style={{ background:"none", border:"1px solid #eee" }}/></div>
-                  <div className="input-group"><input type="text" placeholder="Exp Date" style={{ background:"none", border:"1px solid #eee" }}/></div>
-                  <div className="input-group"><input type="text" placeholder="CVV" style={{ background:"none", border:"1px solid #eee" }}/></div>
+                  <div className="input-group"><input type="text" placeholder="Cardholder Name" style={{ background: "none", border: "1px solid #eee" }} /></div>
+                  <div className="input-group"><input type="text" placeholder="Card Number" style={{ background: "none", border: "1px solid #eee" }} /></div>
+                  <div className="input-group"><input type="text" placeholder="Exp Date" style={{ background: "none", border: "1px solid #eee" }} /></div>
+                  <div className="input-group"><input type="text" placeholder="CVV" style={{ background: "none", border: "1px solid #eee" }} /></div>
                   <p style={{ color: "#aaa", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>Card payment integration coming soon. Please use COD for now.</p>
                   <div className="btn-row">
                     <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>

@@ -34,7 +34,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File too large. Maximum 3 MB." }, { status: 400 });
 
   const subDir = TARGETS[target] ?? "misc";
-  const uploadDir = path.join(process.cwd(), "public", "uploads", subDir);
 
   // Sanitised unique filename
   const ext      = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -45,9 +44,41 @@ export async function POST(req: NextRequest) {
     .slice(0, 40);
   const filename = `${base}-${Date.now()}.${ext}`;
 
-  await mkdir(uploadDir, { recursive: true });
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), buffer);
+  const imageKitPrivateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+  if (imageKitPrivateKey) {
+    try {
+      const imageKitFormData = new FormData();
+      imageKitFormData.append("file", file);
+      imageKitFormData.append("fileName", filename);
+      imageKitFormData.append("folder", `/uploads/${subDir}`);
+      imageKitFormData.append("useUniqueFileName", "false");
+
+      const authHeader = "Basic " + Buffer.from(imageKitPrivateKey + ":").toString("base64");
+
+      const ikRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+        },
+        body: imageKitFormData,
+      });
+
+      if (!ikRes.ok) {
+        const errText = await ikRes.text();
+        console.error("ImageKit upload failure details:", errText);
+        return NextResponse.json({ error: "Failed to upload image to cloud storage." }, { status: 500 });
+      }
+    } catch (err) {
+      console.error("ImageKit upload exception:", err);
+      return NextResponse.json({ error: "ImageKit service unavailable." }, { status: 500 });
+    }
+  } else {
+    // Fallback to local storage (e.g. during local dev without ImageKit set up)
+    const uploadDir = path.join(process.cwd(), "public", "uploads", subDir);
+    await mkdir(uploadDir, { recursive: true });
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await writeFile(path.join(uploadDir, filename), buffer);
+  }
 
   return NextResponse.json({
     filename,
