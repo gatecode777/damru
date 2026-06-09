@@ -8,7 +8,7 @@
 
   // ── 1. HERO WHEEL ANIMATION ─────────────────────────────
   function initHeroAnimation() {
-    const wheel  = document.getElementById("wheel");
+    const wheel = document.getElementById("wheel");
     const plates = document.querySelectorAll(".plate-item");
     const thumbs = document.querySelectorAll(".thumb");
     if (!wheel || thumbs.length === 0) return;
@@ -18,7 +18,7 @@
 
     function rotateTo(index) {
       currentIndex = index;
-      const angle  = index * 90;
+      const angle = index * 90;
       wheel.style.transform = `rotate(-${angle}deg)`;
       plates.forEach((plate, i) => {
         plate.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
@@ -86,7 +86,7 @@
   // ── 4. TESTIMONIAL SLIDER ───────────────────────────────
   function initTestimonials() {
     const testimonials = [
-      { text: "One of the best dining experiences I've had recently. The food quality is top-notch, and the taste is consistent in every bite. The service is fast, and the team ensures you feel comfortable throughout your visit. I will definitely visit again!", name: "Divyansh Bhardwaj", role: "Front-end Developer", img: "https://i.pravatar.cc/150?img=32" },
+      { text: "One of the best dining experiences I've had recently. The food quality is top-notch, and the taste is consistent in every bite. The service is fast, and the team ensures you feel comfortable throughout your visit. I will definitely visit again!", name: "Deepika Bhardwaj", role: "Lawyer", img: "https://i.pravatar.cc/150?img=32" },
       { text: "Damru Restaurant has truly raised the bar for dining in Jaipur. The ambiance is warm, the staff is welcoming, and every dish we ordered was absolutely delicious. A must-visit for food lovers!", name: "Priya Sharma", role: "Food Blogger", img: "https://i.pravatar.cc/150?img=47" },
       { text: "We booked the banquet hall for our family function and it was a fantastic experience. The team was professional, the food was outstanding, and our guests couldn't stop complimenting the arrangements!", name: "Rahul Mehta", role: "Business Owner", img: "https://i.pravatar.cc/150?img=11" },
     ];
@@ -101,23 +101,23 @@
         text: document.getElementById("testi-text"),
         name: document.getElementById("testi-name"),
         role: document.getElementById("testi-role"),
-        img:  document.getElementById("testi-img"),
+        img: document.getElementById("testi-img"),
         curr: document.getElementById("current-index"),
-        tot:  document.getElementById("total-slides"),
+        tot: document.getElementById("total-slides"),
       };
       if (!els.text) return;
 
       // Fade out
-      ["text","name","role","img"].forEach(k => { if (els[k]) els[k].style.opacity = "0"; });
+      ["text", "name", "role", "img"].forEach(k => { if (els[k]) els[k].style.opacity = "0"; });
 
       setTimeout(() => {
         if (els.text) els.text.textContent = t.text;
         if (els.name) els.name.textContent = t.name;
         if (els.role) els.role.textContent = t.role;
-        if (els.img)  { els.img.src = t.img; els.img.alt = t.name; }
+        if (els.img) { els.img.src = t.img; els.img.alt = t.name; }
         if (els.curr) els.curr.textContent = idx + 1;
-        if (els.tot)  els.tot.textContent  = testimonials.length;
-        ["text","name","role","img"].forEach(k => {
+        if (els.tot) els.tot.textContent = testimonials.length;
+        ["text", "name", "role", "img"].forEach(k => {
           if (els[k]) { els[k].style.transition = "opacity 0.4s"; els[k].style.opacity = "1"; }
         });
       }, 300);
@@ -174,8 +174,8 @@
       const spans = group.querySelectorAll("span");
       if (spans.length < 3) return;
       const [minus, qty, plus] = spans;
-      plus.addEventListener("click",  () => { qty.textContent = (parseInt(qty.textContent)||0) + 1; });
-      minus.addEventListener("click", () => { const v = parseInt(qty.textContent)||0; if (v > 0) qty.textContent = v - 1; });
+      plus.addEventListener("click", () => { qty.textContent = (parseInt(qty.textContent) || 0) + 1; });
+      minus.addEventListener("click", () => { const v = parseInt(qty.textContent) || 0; if (v > 0) qty.textContent = v - 1; });
     });
   }
 
@@ -202,7 +202,7 @@
   }
   // Patch history.pushState to detect Next.js soft navigation
   const _origPush = history.pushState.bind(history);
-  history.pushState = function(...args) {
+  history.pushState = function (...args) {
     _origPush(...args);
     checkRouteChange();
   };

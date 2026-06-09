@@ -166,7 +166,7 @@ body {
    TEAM SECTION
    ============================================================ */
 .aboutus .team-section {
-  padding: 80px 20px;
+  padding: 50px 20px;
   background-color: #fdf8f4;
   width: 100%;
   overflow: hidden;
@@ -453,7 +453,7 @@ body {
    ============================================================ */
 .reservation-section {
   background-color: #fff9f4 !important;
-  padding: 80px 20px !important;
+  padding: 30px 20px !important;
   display: block !important;
   width: 100% !important;
   box-sizing: border-box;
@@ -655,7 +655,7 @@ body {
   }
 
   .aboutus .team-section {
-    padding: 50px 16px;
+    padding: 30px 16px;
   }
 
   .aboutus .member-row,

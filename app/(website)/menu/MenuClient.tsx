@@ -37,7 +37,7 @@ export default function MenuClient({
   items,
   initialActiveCategorySlug,
 }: MenuClientProps) {
-  const { totalItems } = useCart();
+  const { totalItems, isLoggedIn } = useCart();
 
   // Find active category based on initial slug, fallback to first category
   const getInitialActive = () => {
@@ -165,7 +165,7 @@ export default function MenuClient({
         </section>
       )}
 
-      {totalItems > 0 && (
+      {isLoggedIn && totalItems > 0 && (
         <Link href="/cart" className="floating-cart-btn" aria-label="Go to cart">
           <i className="ri-shopping-cart-2-line" />
           <span className="floating-cart-badge">{totalItems}</span>

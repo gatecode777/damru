@@ -192,8 +192,19 @@ export default function Header() {
         setUser(customEvent.detail);
       }
     };
+
+    const handleOpenAuthModal = () => {
+      setActiveScreen("login");
+      setIsAuthOpen(true);
+    };
+
     window.addEventListener("user-profile-updated", handleProfileUpdate);
-    return () => window.removeEventListener("user-profile-updated", handleProfileUpdate);
+    window.addEventListener("open-auth-modal", handleOpenAuthModal);
+
+    return () => {
+      window.removeEventListener("user-profile-updated", handleProfileUpdate);
+      window.removeEventListener("open-auth-modal", handleOpenAuthModal);
+    };
   }, []);
 
   // ── Search debounce ──────────────────────────────────────────

@@ -1439,7 +1439,7 @@
 /* 3 card section  */
 
 .branches-section-3d {
-  padding: 100px 5%;
+  padding: 60px 5%;
   background: #ffffff;
   perspective: 1500px;
   overflow: hidden;
@@ -2599,7 +2599,7 @@
 
 /* The Lens Section  */
 .lens-section {
-  padding: 100px 5%;
+  padding: 50px 5%;
   background-color: #fff;
   font-family: "Inter", sans-serif;
   overflow: hidden;

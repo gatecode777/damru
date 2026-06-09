@@ -22,7 +22,7 @@ export default function MenuItemCard({
   menuItemId, name, description, image, basePrice,
   variantType, variants, isVeg, reverse = false,
 }: Props) {
-  const { addItem } = useCart();
+  const { addItem, isLoggedIn } = useCart();
 
   // qty is only used for fixed-price items (added directly)
   const [qty, setQty] = useState(1);
@@ -61,6 +61,10 @@ export default function MenuItemCard({
   // Add fixed-price item directly to cart
   function handleAddToCart(e: React.MouseEvent) {
     e.stopPropagation();
+    if (!isLoggedIn) {
+      window.dispatchEvent(new CustomEvent("open-auth-modal"));
+      return;
+    }
     if (variantType === "none") {
       addItem({ id: `${menuItemId}-plain`, menuItemId, name, custom: "", price: basePrice, image, variantType: "none" }, qty);
       setAdded(true);
@@ -72,6 +76,10 @@ export default function MenuItemCard({
 
   function handleOrderNow(e: React.MouseEvent) {
     e.stopPropagation();
+    if (!isLoggedIn) {
+      window.dispatchEvent(new CustomEvent("open-auth-modal"));
+      return;
+    }
     if (variantType === "none") {
       handleAddToCart(e);
     } else {
@@ -81,6 +89,11 @@ export default function MenuItemCard({
 
   // Add variant/addon item from modal
   function handleModalAdd() {
+    if (!isLoggedIn) {
+      closeModal();
+      window.dispatchEvent(new CustomEvent("open-auth-modal"));
+      return;
+    }
     let custom = "";
     let price  = basePrice;
     let id     = name;

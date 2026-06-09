@@ -27,11 +27,11 @@ export default function ContactUsPage() {
               <div className="time-grid">
                 <div className="time-item">
                   <label>Brunch</label>
-                  <span className="time-val">11:00-12:00</span>
+                  <span className="time-val">11:00-13:00</span>
                 </div>
                 <div className="time-item">
                   <label>Lunch</label>
-                  <span className="time-val">13:00-17:00</span>
+                  <span className="time-val">13:00-18:00</span>
                 </div>
                 <div className="time-item">
                   <label>Dinner</label>
