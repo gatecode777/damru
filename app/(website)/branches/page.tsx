@@ -40,7 +40,7 @@ export default async function BranchesListPage() {
   const items = branches.length > 0 ? branches : STATIC_FALLBACK;
 
   return (
-    <section className="banquet" style={{ paddingTop: 120 }}>
+    <section className="banquet">
       <div className="banquet__header">
         <h2 className="banquet__title">Our Branches</h2>
         <p className="banquet__subtitle">

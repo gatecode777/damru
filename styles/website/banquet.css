@@ -1,248 +1,296 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --banquet-cream: #faf8f5;
+  --banquet-dark: #1a1714;
+  --banquet-accent: #c8a96e;
+  --banquet-muted: #6b6560;
+  --banquet-border: #e3ddd6;
+  --banquet-card-bg: #ffffff;
+  --banquet-dot: #c8a96e;
+}
 
-    :root {
-      --banquet-cream:     #faf8f5;
-      --banquet-dark:      #1a1714;
-      --banquet-accent:    #c8a96e;
-      --banquet-muted:     #6b6560;
-      --banquet-border:    #e3ddd6;
-      --banquet-card-bg:   #ffffff;
-      --banquet-dot:       #c8a96e;
-    }
+body {
+  font-family: 'Jost', sans-serif;
+  background: var(--banquet-cream);
+  /* color: var(--banquet-dark); */
+  background-color: #ffffff;
+  min-height: 100vh;
+}
 
-    body {
-      font-family: 'Jost', sans-serif;
-      background: var(--banquet-cream);
-      /* color: var(--banquet-dark); */
-      background-color: #ffffff;
-      min-height: 100vh;
-    }
+/* ── Section wrapper ── */
+.banquet {
+  padding: clamp(9rem, 12vw, 12rem) clamp(1rem, 5vw, 4rem);
+  padding-top: 150px;
+  max-width: 1280px;
+  margin: 0 auto;
+  /* padding-top: 20px; */
+}
 
-    /* ── Section wrapper ── */
-    .banquet {
-      padding: clamp(9rem, 12vw, 12rem) clamp(1rem, 5vw, 4rem);
-      max-width: 1280px;
-      margin: 0 auto;
-      /* padding-top: 20px; */
-    }
+/* ── Header ── */
+.banquet__header {
+  text-align: center;
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
 
-    /* ── Header ── */
-    .banquet__header {
-      text-align: center;
-      margin-bottom: clamp(2.5rem, 5vw, 4rem);
-    }
+.banquet__title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--banquet-dark);
+  line-height: 1.15;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.7s ease forwards 0.1s;
+}
 
-    .banquet__title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(2rem, 5vw, 3.5rem);
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      color: var(--banquet-dark);
-      line-height: 1.15;
-      opacity: 0;
-      transform: translateY(20px);
-      animation: fadeUp 0.7s ease forwards 0.1s;
-    }
+.banquet__subtitle {
+  margin-top: 0.75rem;
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  font-weight: 300;
+  color: var(--banquet-dark);
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translateY(16px);
+  animation: fadeUp 0.7s ease forwards 0.25s;
+}
 
-    .banquet__subtitle {
-      margin-top: 0.75rem;
-      font-size: clamp(0.875rem, 2vw, 1rem);
-      font-weight: 300;
-      color: var(--banquet-dark);
-      letter-spacing: 0.02em;
-      opacity: 0;
-      transform: translateY(16px);
-      animation: fadeUp 0.7s ease forwards 0.25s;
-    }
+/* ── Card grid ── */
+.banquet__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: clamp(1.25rem, 3vw, 2rem);
+}
 
-    /* ── Card grid ── */
-    .banquet__grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-      gap: clamp(1.25rem, 3vw, 2rem);
-    }
+/* ── Individual card ── */
+.banquet__card {
+  background: var(--banquet-card-bg);
+  border: 1px solid var(--banquet-border);
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease,
+    opacity 0.55s ease;
+  will-change: transform, opacity;
+}
 
-    /* ── Individual card ── */
-    .banquet__card {
-      background: var(--banquet-card-bg);
-      border: 1px solid var(--banquet-border);
-      border-radius: 2px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      opacity: 0;
-      transform: translateY(40px);
-      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-                  box-shadow 0.35s ease,
-                  opacity 0.55s ease;
-      will-change: transform, opacity;
-    }
+/* staggered reveal via JS – adds .visible class */
+.banquet__card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 
-    /* staggered reveal via JS – adds .visible class */
-    .banquet__card.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
+.banquet__card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.09);
+}
 
-    .banquet__card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.09);
-    }
+/* ── Card image ── */
+.banquet__card-img-wrap {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+}
 
-    /* ── Card image ── */
-    .banquet__card-img-wrap {
-      position: relative;
-      overflow: hidden;
-      aspect-ratio: 4 / 3;
-    }
+.banquet__card-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
 
-    .banquet__card-img-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-    }
+.banquet__card:hover .banquet__card-img-wrap img {
+  transform: scale(1.06);
+}
 
-    .banquet__card:hover .banquet__card-img-wrap img {
-      transform: scale(1.06);
-    }
+/* overlay shimmer on hover */
+.banquet__card-img-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.18));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
 
-    /* overlay shimmer on hover */
-    .banquet__card-img-wrap::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.18));
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
+.banquet__card:hover .banquet__card-img-wrap::after {
+  opacity: 1;
+}
 
-    .banquet__card:hover .banquet__card-img-wrap::after {
-      opacity: 1;
-    }
+/* ── Card body ── */
+.banquet__card-body {
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.75rem;
+}
 
-    /* ── Card body ── */
-    .banquet__card-body {
-      padding: clamp(1rem, 2.5vw, 1.5rem);
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      gap: 0.75rem;
-    }
+.banquet__card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--banquet-dark);
+}
 
-    .banquet__card-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-      font-weight: 600;
-      line-height: 1.25;
-      color: var(--banquet-dark);
-    }
+/* dotted divider */
+.banquet__card-divider {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
 
-    /* dotted divider */
-    .banquet__card-divider {
-      display: flex;
-      align-items: center;
-      gap: 3px;
-    }
+.banquet__card-divider span {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--banquet-dot);
+  opacity: 0.6;
+  animation: dotPulse 2.4s ease-in-out infinite;
+}
 
-    .banquet__card-divider span {
-      display: inline-block;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--banquet-dot);
-      opacity: 0.6;
-      animation: dotPulse 2.4s ease-in-out infinite;
-    }
+.banquet__card-divider span:nth-child(2) {
+  animation-delay: 0.2s;
+}
 
-    .banquet__card-divider span:nth-child(2) { animation-delay: 0.2s; }
-    .banquet__card-divider span:nth-child(3) { animation-delay: 0.4s; }
-    .banquet__card-divider span:nth-child(4) { animation-delay: 0.6s; }
-    .banquet__card-divider span:nth-child(5) { animation-delay: 0.8s; }
-    .banquet__card-divider span:nth-child(6) { animation-delay: 1.0s; }
-    .banquet__card-divider span:nth-child(7) { animation-delay: 1.2s; }
-    .banquet__card-divider span:nth-child(8) { animation-delay: 1.4s; }
-    .banquet__card-divider span:nth-child(9) { animation-delay: 1.6s; }
-    .banquet__card-divider span:nth-child(10){ animation-delay: 1.8s; }
+.banquet__card-divider span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
-    @keyframes dotPulse {
-      0%, 100% { opacity: 0.35; transform: scale(1); }
-      50%       { opacity: 0.9;  transform: scale(1.35); }
-    }
+.banquet__card-divider span:nth-child(4) {
+  animation-delay: 0.6s;
+}
 
-    .banquet__card-desc {
-      font-size: clamp(0.8rem, 1.6vw, 0.875rem);
-      line-height: 1.7;
-      color: var(--banquet-muted);
-      font-weight: 300;
-      flex: 1;
-    }
+.banquet__card-divider span:nth-child(5) {
+  animation-delay: 0.8s;
+}
 
-    /* contact & timing */
-    .banquet__card-meta {
-      font-size: 0.78rem;
-      color: var(--banquet-dark);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
+.banquet__card-divider span:nth-child(6) {
+  animation-delay: 1.0s;
+}
 
-    .banquet__card-meta span {
-      display: flex;
-      gap: 6px;
-    }
+.banquet__card-divider span:nth-child(7) {
+  animation-delay: 1.2s;
+}
 
-    .banquet__card-meta strong {
-      font-weight: 500;
-      white-space: nowrap;
-    }
+.banquet__card-divider span:nth-child(8) {
+  animation-delay: 1.4s;
+}
 
-    /* ── Read More link ── */
-    .banquet__read-more {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 0.25rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--banquet-dark);
-      text-decoration: none;
-      letter-spacing: 0.04em;
-      position: relative;
-      width: fit-content;
-    }
+.banquet__card-divider span:nth-child(9) {
+  animation-delay: 1.6s;
+}
 
-    .banquet__read-more::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 0;
-      width: 0;
-      height: 1px;
-      background: var(--banquet-accent);
-      transition: width 0.35s ease;
-    }
+.banquet__card-divider span:nth-child(10) {
+  animation-delay: 1.8s;
+}
 
-    .banquet__read-more:hover::after { width: 100%; }
+@keyframes dotPulse {
 
-    .banquet__read-more svg {
-      transition: transform 0.3s ease;
-    }
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
 
-    .banquet__read-more:hover svg { transform: translateX(5px); }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.35);
+  }
+}
 
-    /* ── Animations ── */
-    @keyframes fadeUp {
-      to { opacity: 1; transform: translateY(0); }
-    }
+.banquet__card-desc {
+  font-size: clamp(0.8rem, 1.6vw, 0.875rem);
+  line-height: 1.7;
+  color: var(--banquet-muted);
+  font-weight: 300;
+  flex: 1;
+}
 
-    /* ── Responsive tweaks ── */
-    @media (max-width: 480px) {
-      .banquet {
-        padding-left: 1rem;
-        padding-right: 1rem;
-      }
-    }
- 
+/* contact & timing */
+.banquet__card-meta {
+  font-size: 0.78rem;
+  color: var(--banquet-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.banquet__card-meta span {
+  display: flex;
+  gap: 6px;
+}
+
+.banquet__card-meta strong {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Read More link ── */
+.banquet__read-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--banquet-dark);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  position: relative;
+  width: fit-content;
+}
+
+.banquet__read-more::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--banquet-accent);
+  transition: width 0.35s ease;
+}
+
+.banquet__read-more:hover::after {
+  width: 100%;
+}
+
+.banquet__read-more svg {
+  transition: transform 0.3s ease;
+}
+
+.banquet__read-more:hover svg {
+  transform: translateX(5px);
+}
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Responsive tweaks ── */
+@media (max-width: 480px) {
+  .banquet {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 20px;
+  }
+}

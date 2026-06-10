@@ -2721,6 +2721,11 @@ SMALL MOBILE (up to 480px) - TIGHTER SPACING
     .profile__step-line {
         width: 10px;
     }
+
+    .profile__faq-still-help {
+        flex-direction: column;
+        gap: 10px;
+    }
 }
 
 /* ============================================================

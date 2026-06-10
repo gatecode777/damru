@@ -492,6 +492,9 @@ export default function MyProfilePage() {
     setSection(s);setViewOrder(null);
     if(s==="orders")loadOrders();
     if(s==="coupons")loadCoupons();
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   async function handleLogout(){await fetch("/api/user/logout",{method:"POST"});window.location.href="/";}

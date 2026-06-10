@@ -3,12 +3,13 @@
    ============================================================ */
 
 /* Force fix for white space */
-html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
+html,
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
 }
 
 .blog-section-wrapper,
@@ -21,7 +22,7 @@ html, body {
 .blog-section-wrapper {
   font-family: "Poppins", sans-serif;
   background-color: #ffffff;
-  padding: 180px 16px 100px;
+  padding: 50px 16px 100px;
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -38,7 +39,7 @@ html, body {
   word-break: break-word;
 }
 
-.blog-section-wrapper .blog-breadcrumb a{
+.blog-section-wrapper .blog-breadcrumb a {
   color: #888;
 }
 
@@ -196,16 +197,16 @@ html, body {
   .blog-section-wrapper {
     padding: 160px 20px 80px;
   }
-  
+
   .blog-section-wrapper .blog-container {
     grid-template-columns: repeat(2, 1fr);
     gap: 25px;
   }
-  
+
   .blog-section-wrapper .blog-img-box {
     height: 250px;
   }
-  
+
   .blog-section-wrapper .blog-title {
     font-size: 20px;
   }
@@ -216,25 +217,25 @@ html, body {
   .blog-section-wrapper {
     padding: 140px 16px 60px;
   }
-  
+
   .blog-section-wrapper .blog-container {
     grid-template-columns: 1fr;
     gap: 25px;
   }
-  
+
   .blog-section-wrapper .blog-img-box {
     height: 260px;
   }
-  
+
   .blog-section-wrapper .blog-title {
     font-size: 20px;
   }
-  
+
   .blog-section-wrapper .blog-breadcrumb {
     font-size: 16px;
     margin-bottom: 35px;
   }
-  
+
   .blog-section-wrapper .blog-content {
     padding: 18px;
   }
@@ -245,37 +246,37 @@ html, body {
   .blog-section-wrapper {
     padding: 130px 14px 50px;
   }
-  
+
   .blog-section-wrapper .blog-container {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .blog-section-wrapper .blog-img-box {
     height: 240px;
   }
-  
+
   .blog-section-wrapper .blog-title {
     font-size: 18px;
   }
-  
+
   .blog-section-wrapper .blog-meta p {
     font-size: 10px;
   }
-  
+
   .blog-section-wrapper .blog-excerpt {
     font-size: 12px;
   }
-  
+
   .blog-section-wrapper .blog-breadcrumb {
     font-size: 14px;
     margin-bottom: 30px;
   }
-  
+
   .blog-section-wrapper .blog-content {
     padding: 16px;
   }
-  
+
   .blog-section-wrapper .pag-btn,
   .blog-section-wrapper .pag-num {
     padding: 6px 14px;
@@ -286,50 +287,50 @@ html, body {
 /* Mobile Small (320px - 375px) */
 @media (max-width: 375px) and (min-width: 320px) {
   .blog-section-wrapper {
-    padding: 120px 12px 40px;
+    padding: 10px 12px 40px;
   }
-  
+
   .blog-section-wrapper .blog-container {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .blog-section-wrapper .blog-img-box {
     height: 220px;
   }
-  
+
   .blog-section-wrapper .blog-title {
     font-size: 18px;
   }
-  
+
   .blog-section-wrapper .blog-meta {
     gap: 8px;
   }
-  
+
   .blog-section-wrapper .blog-meta p {
     font-size: 9px;
   }
-  
+
   .blog-section-wrapper .blog-excerpt {
     font-size: 12px;
   }
-  
+
   .blog-section-wrapper .blog-breadcrumb {
     font-size: 13px;
     margin-bottom: 25px;
   }
-  
+
   .blog-section-wrapper .blog-content {
     padding: 14px;
   }
-  
+
   .blog-section-wrapper .category-badge {
     top: 12px;
     right: 12px;
     padding: 4px 12px;
     font-size: 10px;
   }
-  
+
   .blog-section-wrapper .pag-btn,
   .blog-section-wrapper .pag-num {
     padding: 5px 12px;
@@ -342,41 +343,41 @@ html, body {
   .blog-section-wrapper {
     padding: 110px 10px 30px;
   }
-  
+
   .blog-section-wrapper .blog-container {
     grid-template-columns: 1fr;
     gap: 15px;
   }
-  
+
   .blog-section-wrapper .blog-img-box {
     height: 200px;
   }
-  
+
   .blog-section-wrapper .blog-title {
     font-size: 16px;
   }
-  
+
   .blog-section-wrapper .blog-meta p {
     font-size: 8px;
   }
-  
+
   .blog-section-wrapper .blog-excerpt {
     font-size: 11px;
   }
-  
+
   .blog-section-wrapper .blog-breadcrumb {
     font-size: 12px;
     margin-bottom: 20px;
   }
-  
+
   .blog-section-wrapper .blog-content {
     padding: 12px;
   }
-  
+
   .blog-section-wrapper .read-more {
     font-size: 12px;
   }
-  
+
   .blog-section-wrapper .pag-btn,
   .blog-section-wrapper .pag-num {
     padding: 4px 10px;
@@ -391,7 +392,7 @@ html, body {
     padding: 180px 20px 100px;
     margin: 0 auto;
   }
-  
+
   .blog-section-wrapper .blog-container {
     grid-template-columns: repeat(3, 1fr);
   }
