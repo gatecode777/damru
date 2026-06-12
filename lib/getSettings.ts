@@ -9,55 +9,55 @@ import { connectDB } from "@/lib/mongodb";
 import SiteSettings from "@/models/SiteSettings";
 
 export type AppSettings = {
-  siteName:          string;
-  siteUrl:           string;
-  supportEmail:      string;
-  tagline:           string;
-  phone:             string;
-  address:           string;
-  currency:          string;
-  timezone:          string;
-  smtpHost:          string;
-  smtpPort:          number;
-  smtpUser:          string;
-  smtpPass:          string;
-  smtpSecure:        boolean;
-  smtpFromName:      string;
-  notifyNewUser:     boolean;
-  notifyNewOrder:    boolean;
+  siteName: string;
+  siteUrl: string;
+  supportEmail: string;
+  tagline: string;
+  phone: string;
+  address: string;
+  currency: string;
+  timezone: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  smtpSecure: boolean;
+  smtpFromName: string;
+  notifyNewUser: boolean;
+  notifyNewOrder: boolean;
   notifyReservation: boolean;
-  notifyComplaint:   boolean;
-  taxRate:           number;
+  notifyComplaint: boolean;
+  taxRate: number;
   freeDeliveryAbove: number;
-  deliveryCharge:    number;
-  maintenanceMode:   boolean;
-  maintenanceMsg:    string;
+  deliveryCharge: number;
+  maintenanceMode: boolean;
+  maintenanceMsg: string;
 };
 
 const DEFAULTS: AppSettings = {
-  siteName:          "Damru By Namo",
-  siteUrl:           "https://damrubynamo.com",
-  supportEmail:      "support@damrubynamo.com",
-  tagline:           "Banquet | Restaurant",
-  phone:             "",
-  address:           "",
-  currency:          "INR",
-  timezone:          "Asia/Kolkata",
-  smtpHost:          "smtp.gmail.com",
-  smtpPort:          587,
-  smtpUser:          "",
-  smtpPass:          "",
-  smtpSecure:        false,
-  smtpFromName:      "Damru By Namo",
-  notifyNewUser:     true,
-  notifyNewOrder:    true,
+  siteName: "Damru By Namo",
+  siteUrl: "https://damrurestro.com",
+  supportEmail: "info@damrurestro.com",
+  tagline: "Banquet | Restaurant",
+  phone: "",
+  address: "",
+  currency: "INR",
+  timezone: "Asia/Kolkata",
+  smtpHost: "smtp.gmail.com",
+  smtpPort: 587,
+  smtpUser: "",
+  smtpPass: "",
+  smtpSecure: false,
+  smtpFromName: "Damru By Namo",
+  notifyNewUser: true,
+  notifyNewOrder: true,
   notifyReservation: true,
-  notifyComplaint:   true,
-  taxRate:           5,
+  notifyComplaint: true,
+  taxRate: 5,
   freeDeliveryAbove: 500,
-  deliveryCharge:    50,
-  maintenanceMode:   false,
-  maintenanceMsg:    "We'll be back soon!",
+  deliveryCharge: 50,
+  maintenanceMode: false,
+  maintenanceMsg: "We'll be back soon!",
 };
 
 import { cache } from "react";

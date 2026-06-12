@@ -5,8 +5,8 @@ import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 
 export default function AdminLogin() {
   const [showPw, setShowPw] = useState(false);
-  const [error, setError]   = useState<string | null>(null);
-  const [isPending, start]  = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, start] = useTransition();
 
   async function handle(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(null);
@@ -24,17 +24,17 @@ export default function AdminLogin() {
         <div className="lp-inner">
           <div className="lp-logo">
             <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
-              <ellipse cx="16" cy="9"  rx="6" ry="8" stroke="#fff" strokeWidth="2.2"/>
-              <ellipse cx="16" cy="23" rx="6" ry="8" stroke="#fff" strokeWidth="2.2"/>
-              <line x1="10" y1="16" x2="22" y2="16" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
-              <circle cx="16" cy="16" r="2.5" fill="#fff"/>
+              <ellipse cx="16" cy="9" rx="6" ry="8" stroke="#fff" strokeWidth="2.2" />
+              <ellipse cx="16" cy="23" rx="6" ry="8" stroke="#fff" strokeWidth="2.2" />
+              <line x1="10" y1="16" x2="22" y2="16" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="16" cy="16" r="2.5" fill="#fff" />
             </svg>
             <span className="lp-brand">DAMRU</span>
           </div>
-          <h2 className="lp-headline">Manage everything<br/>from one place.</h2>
+          <h2 className="lp-headline">Manage everything<br />from one place.</h2>
           <p className="lp-sub">Your all-in-one admin console for users, products, analytics and more.</p>
           <div className="lp-pills">
-            {["Real-time Analytics","User Management","Order Tracking","Secure & Fast"].map(t => (
+            {["Real-time Analytics", "User Management", "Order Tracking", "Secure & Fast"].map(t => (
               <span key={t} className="lp-pill">✓ {t}</span>
             ))}
           </div>
@@ -63,26 +63,22 @@ export default function AdminLogin() {
                 <input id="password" name="password" type={showPw ? "text" : "password"}
                   required autoComplete="current-password" placeholder="••••••••" className="inp inp-pw" />
                 <button type="button" className="eye" onClick={() => setShowPw(v => !v)}>
-                  {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
 
             {error && (
               <div className="err-box">
-                <span className="err-dot"/>
+                <span className="err-dot" />
                 {error}
               </div>
             )}
 
             <button type="submit" disabled={isPending} className="submit">
-              {isPending ? <><Loader2 size={16} className="spin"/> Verifying…</> : "Sign In to Dashboard →"}
+              {isPending ? <><Loader2 size={16} className="spin" /> Verifying…</> : "Sign In to Dashboard →"}
             </button>
           </form>
-
-          <p className="hint">
-            Demo credentials: <code>admin@damru.com</code> / <code>admin@123</code>
-          </p>
         </div>
       </div>
 

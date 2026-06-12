@@ -15,29 +15,29 @@ type Settings = {
 };
 
 const DEFAULT: Settings = {
-  siteName:"Damru By Namo", siteUrl:"https://damrubynamo.com",
-  supportEmail:"support@damrubynamo.com", tagline:"Banquet | Restaurant",
-  phone:"", address:"", currency:"INR", timezone:"Asia/Kolkata",
-  smtpHost:"smtp.gmail.com", smtpPort:587, smtpUser:"", smtpPass:"",
-  smtpSecure:false, smtpFromName:"Damru By Namo",
-  notifyNewUser:true, notifyNewOrder:true, notifyReservation:true, notifyComplaint:true,
-  taxRate:5, freeDeliveryAbove:500, deliveryCharge:50,
-  maintenanceMode:false, maintenanceMsg:"We'll be back soon!",
+  siteName: "Damru By Namo", siteUrl: "https://damrurestro.com",
+  supportEmail: "info@damrurestro.com", tagline: "Banquet | Restaurant",
+  phone: "", address: "", currency: "INR", timezone: "Asia/Kolkata",
+  smtpHost: "smtp.gmail.com", smtpPort: 587, smtpUser: "", smtpPass: "",
+  smtpSecure: false, smtpFromName: "Damru By Namo",
+  notifyNewUser: true, notifyNewOrder: true, notifyReservation: true, notifyComplaint: true,
+  taxRate: 5, freeDeliveryAbove: 500, deliveryCharge: 50,
+  maintenanceMode: false, maintenanceMsg: "We'll be back soon!",
 };
 
 const TABS = [
-  { id:"general",       label:"General",       icon:Globe },
-  { id:"email",         label:"Email / SMTP",  icon:Mail },
+  { id: "general", label: "General", icon: Globe },
+  { id: "email", label: "Email / SMTP", icon: Mail },
   // { id:"notifications", label:"Notifications", icon:Bell },
-  { id:"orders",        label:"Orders",        icon:ShoppingBag },
-  { id:"maintenance",   label:"Maintenance",   icon:Wrench },
+  { id: "orders", label: "Orders", icon: ShoppingBag },
+  { id: "maintenance", label: "Maintenance", icon: Wrench },
 ];
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!value)}
-      style={{ width:42, height:22, background:value?"#f97316":"#e5e7eb", border:"none", borderRadius:11, cursor:"pointer", position:"relative", transition:"background 0.2s", flexShrink:0 }}>
-      <span style={{ position:"absolute", top:2, left:value?22:2, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.15)" }} />
+      style={{ width: 42, height: 22, background: value ? "#f97316" : "#e5e7eb", border: "none", borderRadius: 11, cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+      <span style={{ position: "absolute", top: 2, left: value ? 22 : 2, width: 18, height: 18, background: "#fff", borderRadius: "50%", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }} />
     </button>
   );
 }
@@ -60,23 +60,23 @@ function Sec({ title, children }: { title: string; children: React.ReactNode }) 
   );
 }
 
-function Inp({ value, onChange, type="text", placeholder }: { value: string|number; onChange: (v: string) => void; type?: string; placeholder?: string }) {
+function Inp({ value, onChange, type = "text", placeholder }: { value: string | number; onChange: (v: string) => void; type?: string; placeholder?: string }) {
   return <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} className="sf-inp" />;
 }
 
 export default function SettingsClient() {
-  const [active,   setActive]   = useState("general");
+  const [active, setActive] = useState("general");
   const [settings, setSettings] = useState<Settings>(DEFAULT);
-  const [loading,  setLoading]  = useState(true);
-  const [saving,   setSaving]   = useState(false);
-  const [saved,    setSaved]    = useState(false);
-  const [error,    setError]    = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/settings")
       .then(r => r.json())
       .then(d => { if (d.settings) setSettings({ ...DEFAULT, ...d.settings }); })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -88,7 +88,7 @@ export default function SettingsClient() {
   async function handleSave() {
     setSaving(true); setError(""); setSaved(false);
     try {
-      const res  = await fetch("/api/admin/settings", { method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(settings) });
+      const res = await fetch("/api/admin/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings) });
       const data = await res.json();
       if (data.error) { setError(data.error); return; }
       setSaved(true);
@@ -98,8 +98,8 @@ export default function SettingsClient() {
   }
 
   if (loading) return (
-    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"60vh", gap:10, fontFamily:"DM Sans,sans-serif", color:"#aaa" }}>
-      <Loader2 size={18} style={{ animation:"spin 0.8s linear infinite" }} /> Loading settings…
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", gap: 10, fontFamily: "DM Sans,sans-serif", color: "#aaa" }}>
+      <Loader2 size={18} style={{ animation: "spin 0.8s linear infinite" }} /> Loading settings…
     </div>
   );
 
@@ -110,8 +110,8 @@ export default function SettingsClient() {
       <Sec title="Restaurant Info">
         <Field label="Restaurant Name" hint="Shown in emails, receipts and browser tabs."><Inp value={s.siteName} onChange={v => set("siteName", v)} placeholder="Damru By Namo" /></Field>
         <Field label="Tagline"><Inp value={s.tagline} onChange={v => set("tagline", v)} placeholder="Banquet | Restaurant" /></Field>
-        <Field label="Site URL"><Inp value={s.siteUrl} onChange={v => set("siteUrl", v)} placeholder="https://damrubynamo.com" /></Field>
-        <Field label="Support Email"><Inp value={s.supportEmail} onChange={v => set("supportEmail", v)} type="email" placeholder="support@damrubynamo.com" /></Field>
+        <Field label="Site URL"><Inp value={s.siteUrl} onChange={v => set("siteUrl", v)} placeholder="https://damrurestro.com" /></Field>
+        <Field label="Support Email"><Inp value={s.supportEmail} onChange={v => set("supportEmail", v)} type="email" placeholder="info@damrurestro.com" /></Field>
         <Field label="Phone" hint="Shown on contact pages and footers."><Inp value={s.phone} onChange={v => set("phone", v)} placeholder="+91 XXXXX XXXXX" /></Field>
         <Field label="Address"><Inp value={s.address} onChange={v => set("address", v)} placeholder="35A Mansarovar, Jaipur, Rajasthan 302020" /></Field>
       </Sec>
@@ -133,7 +133,7 @@ export default function SettingsClient() {
 
     email: (
       <Sec title="SMTP Configuration">
-        <div style={{ padding:"10px 16px 8px", fontSize:"0.78rem", color:"#92400e", fontFamily:"DM Sans,sans-serif", background:"#fffbeb", borderBottom:"1px solid #fde68a" }}>
+        <div style={{ padding: "10px 16px 8px", fontSize: "0.78rem", color: "#92400e", fontFamily: "DM Sans,sans-serif", background: "#fffbeb", borderBottom: "1px solid #fde68a" }}>
           ⚠️ These settings control OTP and notification emails. Changes take effect immediately.
         </div>
         <Field label="SMTP Host"><Inp value={s.smtpHost} onChange={v => set("smtpHost", v)} placeholder="smtp.gmail.com" /></Field>
@@ -171,8 +171,8 @@ export default function SettingsClient() {
           <Inp value={s.maintenanceMsg} onChange={v => set("maintenanceMsg", v)} placeholder="We'll be back soon!" />
         </Field>
         {s.maintenanceMode && (
-          <div style={{ padding:"10px 16px", background:"#fef2f2", borderTop:"1px solid #fecaca" }}>
-            <p style={{ fontFamily:"DM Sans,sans-serif", fontSize:"0.8rem", color:"#b91c1c", fontWeight:500 }}>
+          <div style={{ padding: "10px 16px", background: "#fef2f2", borderTop: "1px solid #fecaca" }}>
+            <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.8rem", color: "#b91c1c", fontWeight: 500 }}>
               ⚠️ Maintenance mode is ON — your website is currently inaccessible to visitors.
             </p>
           </div>
@@ -185,25 +185,25 @@ export default function SettingsClient() {
     <>
       <div className="sf-wrap">
         <aside className="sf-sidebar">
-          {TABS.map(({ id, label, icon:Icon }) => (
-            <button key={id} className={`sf-tab${active===id?" sf-tab-a":""}`} onClick={() => setActive(id)}>
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button key={id} className={`sf-tab${active === id ? " sf-tab-a" : ""}`} onClick={() => setActive(id)}>
               <Icon size={15} />{label}
             </button>
           ))}
         </aside>
         <div className="sf-content">
           <div className="sf-inner">
-            {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", color:"#b91c1c", padding:"10px 14px", borderRadius:9, fontSize:"0.84rem", fontFamily:"DM Sans,sans-serif" }}>⚠ {error}</div>}
+            {error && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", padding: "10px 14px", borderRadius: 9, fontSize: "0.84rem", fontFamily: "DM Sans,sans-serif" }}>⚠ {error}</div>}
             {tabContent[active]}
           </div>
           <div className="sf-savebar">
             <p className="sf-save-hint">
               {saved
-                ? <span style={{ color:"#16a34a", display:"flex", alignItems:"center", gap:5 }}><CheckCircle2 size={13}/> Saved successfully!</span>
+                ? <span style={{ color: "#16a34a", display: "flex", alignItems: "center", gap: 5 }}><CheckCircle2 size={13} /> Saved successfully!</span>
                 : "Unsaved changes are lost on navigation."}
             </p>
             <button className="sf-save-btn" onClick={handleSave} disabled={saving}>
-              {saving ? <><Loader2 size={13} style={{ animation:"spin 0.8s linear infinite" }}/> Saving…</> : <><Save size={13}/> Save Changes</>}
+              {saving ? <><Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> Saving…</> : <><Save size={13} /> Save Changes</>}
             </button>
           </div>
         </div>

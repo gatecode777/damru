@@ -54,7 +54,7 @@ export default function ContactUsPage() {
               <p>
                 We can be contacted via email{" "}
                 <a href="mailto:thedamru72@gmail.com">thedamru72@gmail.com</a>,{" "}
-                <a href="mailto:support@damrubynamo.com">support@damrubynamo.com</a> or
+                <a href="mailto:info@damrurestro.com">info@damrurestro.com</a> or
                 telephone on <a href="tel:+918690987272">+91-8690987272</a>,{" "}
               </p>
             </div>
