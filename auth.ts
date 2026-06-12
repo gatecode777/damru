@@ -15,6 +15,8 @@ import AdminUser from "@/models/Admin";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
+  trustHost: true,
+  session: { strategy: "jwt" },
 
   // Tell NextAuth where our custom login form lives.
   // This stops it from falling back to /api/auth/signin (the ugly built-in form).
