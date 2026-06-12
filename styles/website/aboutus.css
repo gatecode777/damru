@@ -109,7 +109,7 @@ body {
    STORY SECTION
    ============================================================ */
 .aboutus .story-section {
-  padding: 30px 20px;
+  padding: 80px 20px;
   background-color: #ffffff;
   width: 100%;
   display: flex;
@@ -123,7 +123,7 @@ body {
   max-width: 1200px;
   display: flex;
   align-items: center;
-  gap: 60px;
+  gap: 30px;
   flex-wrap: wrap;
 }
 
@@ -166,7 +166,7 @@ body {
    TEAM SECTION
    ============================================================ */
 .aboutus .team-section {
-  padding: 30px 20px;
+  padding: 60px 20px;
   background-color: #fdf8f4;
   width: 100%;
   overflow: hidden;
@@ -183,7 +183,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 50px;
-  margin-bottom: 60px;
+  margin-bottom: 30px;
   flex-wrap: wrap;
 }
 
@@ -380,7 +380,7 @@ body {
 
 .aboutus .section-main-title {
   font-family: "Playfair Display", serif;
-  font-size: clamp(40px, 8vw, 75px);
+  font-size: clamp(40px, 8vw, 55px);
   color: #000;
   text-align: center;
   margin-bottom: 50px;
@@ -416,7 +416,7 @@ body {
 
 .aboutus .process-text h3 {
   font-family: "Playfair Display", serif;
-  font-size: clamp(28px, 6vw, 60px);
+  font-size: clamp(28px, 4vw, 40px);
   color: #000;
   margin-bottom: 20px;
   font-weight: 600;
@@ -615,7 +615,7 @@ body {
 }
 
 /* Mobile Large (426px - 767px) */
-@media (max-width: 767px) and (min-width: 426px) {
+@media (max-width: 768px) and (min-width: 320px) {
   .aboutus .hero-section {
     min-height: 450px;
     justify-content: center;
