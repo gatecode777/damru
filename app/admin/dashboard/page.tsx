@@ -120,9 +120,15 @@ function fmt(n: number) {
   return `₹${n.toLocaleString("en-IN")}`;
 }
 
+import { cookies } from "next/headers";
+
 export default async function DashboardPage() {
   const session = await auth();
-  if (!session) redirect("/admin/login");
+  if (!session) {
+    const cookieStore = await cookies();
+    const cookieNames = cookieStore.getAll().map(c => c.name).join(",");
+    redirect(`/admin/login?debug_session_null=true&cookies=${encodeURIComponent(cookieNames)}`);
+  }
 
   const d = await getDashboardData();
   const maxRev = Math.max(...d.revenueByMonth, 1);
