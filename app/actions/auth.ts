@@ -2,6 +2,7 @@
 
 import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 export async function loginAction(formData: FormData) {
   try {
@@ -11,15 +12,7 @@ export async function loginAction(formData: FormData) {
       redirectTo: "/admin/dashboard",
     });
   } catch (error: any) {
-    // In Next.js, redirects are thrown as intentional errors. We must re-throw them so Next.js can redirect.
-    if (
-      error &&
-      (error.message === "NEXT_REDIRECT" ||
-        (typeof error === "object" &&
-          "digest" in error &&
-          typeof error.digest === "string" &&
-          error.digest.startsWith("NEXT_REDIRECT")))
-    ) {
+    if (isRedirectError(error)) {
       throw error;
     }
 

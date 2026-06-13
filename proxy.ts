@@ -16,8 +16,16 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/admin")) {
     const isLoginPage = pathname === "/admin/login";
 
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieName = isProd ? "__Secure-authjs.session-token" : "authjs.session-token";
+
     // Decode JWT from cookie — Edge-safe, no DB call
-    const token = await getToken({ req, secret: SECRET });
+    const token = await getToken({
+      req,
+      secret: SECRET,
+      secureCookie: isProd,
+      cookieName,
+    });
     const isLoggedIn = !!token;
 
     // Not logged in + not on login page → send to admin login
