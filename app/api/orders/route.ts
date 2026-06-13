@@ -30,30 +30,64 @@ export async function GET(req: NextRequest) {
 }
 
 // ── POST /api/orders — place a new order ─────────────────────
-// Body: { addressId, paymentMethod, couponCode?, notes? }
-// addressId is used to build deliveryAddress snapshot
+// Body: { addressId?, paymentMethod, couponCode?, notes?, tableToken?, items? }
 export async function POST(req: NextRequest) {
   const user = getUserFromCookie(req);
-  if (!user) return NextResponse.json({ error: "Login required to place an order." }, { status: 401 });
 
   try {
-    const { addressId, paymentMethod = "cod", couponCode, notes = "" } = await req.json();
-    if (!addressId) return NextResponse.json({ error: "Delivery address is required." }, { status: 400 });
+    const { addressId, paymentMethod = "cod", couponCode, notes = "", tableToken, items: bodyItems } = await req.json();
+
+    // Check if we are doing a dine-in table order
+    let isDineIn = false;
+    let tableId: string | undefined;
+    let tableNumber: string | undefined;
+
+    if (tableToken) {
+      const { verifyTableToken } = await import("@/lib/tableAuth");
+      const validatedTable = await verifyTableToken(tableToken);
+      if (!validatedTable) {
+        return NextResponse.json({ error: "Invalid or expired table session. Please re-scan the table QR code." }, { status: 400 });
+      }
+      isDineIn = true;
+      tableId = validatedTable.tableId;
+      tableNumber = validatedTable.tableNumber;
+    }
+
+    if (!user && !isDineIn) {
+      return NextResponse.json({ error: "Login required to place an order." }, { status: 401 });
+    }
+
+    if (!isDineIn && !addressId) {
+      return NextResponse.json({ error: "Delivery address is required." }, { status: 400 });
+    }
 
     await connectDB();
 
-    // ── Fetch cart ────────────────────────────────────────────
-    console.log("Placing order for user:", user.id, "with addressId:", addressId, "and couponCode:", couponCode);
-    const cart = await Cart.findOne({ userId: user.id });
-    if (!cart || cart.items.length === 0)
-      return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
+    // ── Fetch order items ──────────────────────────────────────
+    let orderItems: any[] = [];
+    if (user) {
+      const cart = await Cart.findOne({ userId: user.id });
+      if (!cart || cart.items.length === 0) {
+        return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
+      }
+      orderItems = cart.items;
+    } else {
+      // Guest ordering at a table
+      if (!bodyItems || bodyItems.length === 0) {
+        return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
+      }
+      orderItems = bodyItems;
+    }
 
-    // ── Fetch address ─────────────────────────────────────────
-    const address = await Address.findOne({ _id: addressId, userId: user.id });
-    if (!address) return NextResponse.json({ error: "Address not found." }, { status: 404 });
+    // ── Fetch address if not dine-in ───────────────────────────
+    let address = null;
+    if (!isDineIn && addressId) {
+      address = await Address.findOne({ _id: addressId, userId: user?.id });
+      if (!address) return NextResponse.json({ error: "Address not found." }, { status: 404 });
+    }
 
     // ── Calculate totals ──────────────────────────────────────
-    const subtotal = cart.items.reduce((sum: number, i: { price: number; qty: number }) => sum + i.price * i.qty, 0);
+    const subtotal = orderItems.reduce((sum: number, i: { price: number; qty: number }) => sum + i.price * i.qty, 0);
 
     // ── Validate coupon if provided ───────────────────────────
     let discount   = 0;
@@ -85,7 +119,9 @@ export async function POST(req: NextRequest) {
     const freeAbove     = siteSettings.freeDeliveryAbove || 500;
     const flatCharge    = siteSettings.deliveryCharge || 50;
     const subtotalAfterDiscount = Math.max(0, subtotal - discount);
-    const shipping = subtotalAfterDiscount >= freeAbove ? 0 : flatCharge;
+    
+    // Shipping charge is 0 for dine-in orders
+    const shipping = isDineIn ? 0 : (subtotalAfterDiscount >= freeAbove ? 0 : flatCharge);
     const tax      = Math.round(subtotalAfterDiscount * taxRate / 100);
     const total    = subtotalAfterDiscount + tax + shipping;
 
@@ -94,13 +130,12 @@ export async function POST(req: NextRequest) {
     // Ensure unique orderId
     while (await Order.findOne({ orderId })) { orderId = generateOrderId(); }
 
-    const order = await Order.create({
+    const orderData: any = {
       orderId,
-      userId:    user.id,
-      userName:  user.name,
-      userEmail: user.email,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      items: cart.items.map((i: any) => ({
+      userId:    user ? user.id : undefined,
+      userName:  user ? user.name : `Guest (Table ${tableNumber})`,
+      userEmail: user ? user.email : undefined,
+      items: orderItems.map((i: any) => ({
         menuItemId:  i.menuItemId,
         name:        i.name,
         image:       i.image,
@@ -109,7 +144,19 @@ export async function POST(req: NextRequest) {
         price:       i.price,
         qty:         i.qty,
       })),
-      deliveryAddress: {
+      subtotal, discount, couponCode: couponUsed,
+      tax, shipping, total,
+      paymentMethod,
+      paymentStatus: paymentMethod === "cod" ? "pending" : "pending",
+      status:        "confirmed",
+      notes,
+    };
+
+    if (isDineIn) {
+      orderData.tableId = tableId;
+      orderData.tableNumber = tableNumber;
+    } else if (address) {
+      orderData.deliveryAddress = {
         label:    address.label,
         fullName: address.fullName,
         phone:    address.phone,
@@ -118,17 +165,15 @@ export async function POST(req: NextRequest) {
         city:     address.city,
         state:    address.state,
         pincode:  address.pincode,
-      },
-      subtotal, discount, couponCode: couponUsed,
-      tax, shipping, total,
-      paymentMethod,
-      paymentStatus: paymentMethod === "cod" ? "pending" : "pending",
-      status:        "confirmed",
-      notes,
-    });
+      };
+    }
 
-    // ── Clear cart after order placed ─────────────────────────
-    await Cart.findOneAndUpdate({ userId: user.id }, { items: [] });
+    const order = await Order.create(orderData);
+
+    // ── Clear cart for logged-in user ─────────────────────────
+    if (user) {
+      await Cart.findOneAndUpdate({ userId: user.id }, { items: [] });
+    }
 
     return NextResponse.json({
       success: true,

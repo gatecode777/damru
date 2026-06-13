@@ -145,6 +145,11 @@ export default function OrdersClient({ orders: initialOrders, perms }: { orders:
                       <div style={{ fontFamily: "DM Sans,sans-serif" }}>
                         <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827", margin: 0 }}>{order.userName}</p>
                         <p style={{ fontSize: "0.75rem", color: "#9ca3af", margin: 0 }}>{order.userEmail}</p>
+                        {order.tableNumber && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 4, background: "#fff7ed", border: "1px solid #fed7aa", color: "#ea580c", padding: "1px 6px", borderRadius: 4, fontSize: "0.68rem", fontWeight: 700 }}>
+                            Table: {order.tableNumber}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td>

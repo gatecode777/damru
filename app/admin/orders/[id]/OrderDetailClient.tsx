@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Loader2, ChevronDown, MapPin,
+  ArrowLeft, Loader2, ChevronDown, MapPin, QrCode,
   ShoppingBag, CreditCard, Package, CheckCircle, Truck, XCircle, Clock,
 } from "lucide-react";
 import { updateOrderStatus, updatePaymentStatus, cancelOrder } from "@/app/actions/orders";
@@ -329,19 +329,31 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
             </div>
           </Card>
 
-          {/* Delivery address */}
+          {/* Delivery address OR Dine-In Table */}
           <Card>
-            <CardHeader title="Delivery Address" />
+            <CardHeader title={order.tableNumber ? "Dine-in Table" : "Delivery Address"} />
             <div style={{ padding: "14px 20px" }}>
-              <div style={{ display: "flex", gap: 10 }}>
-                <MapPin size={16} style={{ color: "#f97316", flexShrink: 0, marginTop: 2 }} />
-                <div style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: "#374151", lineHeight: 1.7 }}>
-                  <p style={{ fontWeight: 700, margin: 0 }}>{order.deliveryAddress?.fullName}</p>
-                  <p style={{ margin: 0 }}>{order.deliveryAddress?.house}{order.deliveryAddress?.area ? `, ${order.deliveryAddress.area}` : ""}</p>
-                  <p style={{ margin: 0 }}>{order.deliveryAddress?.city}, {order.deliveryAddress?.state} {order.deliveryAddress?.pincode}</p>
-                  <p style={{ margin: "4px 0 0", color: "#6b7280" }}>{order.deliveryAddress?.phone}</p>
+              {order.tableNumber ? (
+                <div style={{ display: "flex", gap: 10 }}>
+                  <QrCode size={16} style={{ color: "#f97316", flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: "#374151", lineHeight: 1.7 }}>
+                    <p style={{ fontWeight: 700, margin: 0 }}>Dine-in Order</p>
+                    <p style={{ margin: 0 }}>Table Number: <strong>{order.tableNumber}</strong></p>
+                    {order.tableName && <p style={{ margin: 0 }}>Table Label: {order.tableName}</p>}
+                    <p style={{ margin: "4px 0 0", color: "#6b7280" }}>Type: QR Code Scan Ordering</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{ display: "flex", gap: 10 }}>
+                  <MapPin size={16} style={{ color: "#f97316", flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: "#374151", lineHeight: 1.7 }}>
+                    <p style={{ fontWeight: 700, margin: 0 }}>{order.deliveryAddress?.fullName}</p>
+                    <p style={{ margin: 0 }}>{order.deliveryAddress?.house}{order.deliveryAddress?.area ? `, ${order.deliveryAddress.area}` : ""}</p>
+                    <p style={{ margin: 0 }}>{order.deliveryAddress?.city}, {order.deliveryAddress?.state} {order.deliveryAddress?.pincode}</p>
+                    <p style={{ margin: "4px 0 0", color: "#6b7280" }}>{order.deliveryAddress?.phone}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 

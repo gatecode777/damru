@@ -18,10 +18,14 @@ const emptyForm = {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, totalPrice, clearCart } = useCart();
+  const { items, totalPrice, clearCart, isLoggedIn } = useCart();
   const [taxRate, setTaxRate] = useState(5);
   const [freeAbove, setFreeAbove] = useState(500);
   const [deliveryCharge, setDeliveryCharge] = useState(50);
+
+  // ── Dine-in state ─────────────────────────────────────────
+  const [isDineIn, setIsDineIn] = useState(false);
+  const [tableInfo, setTableInfo] = useState<{ tableId: string; tableNumber: string; tableName?: string; token: string } | null>(null);
 
   // ── Step state ────────────────────────────────────────────
   const [step, setStep] = useState(1);
@@ -48,18 +52,37 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0);
 
   useEffect(() => {
+    // Check for dine-in table session
+    const tblSaved = sessionStorage.getItem("dinein_table");
+    let isDineInOrder = false;
+    if (tblSaved) {
+      const tblObj = JSON.parse(tblSaved);
+      setIsDineIn(true);
+      setTableInfo(tblObj);
+      setStep(3); // Start directly at Step 3 (Payment & Summary)
+      isDineInOrder = true;
+    }
+
     // Read applied coupon from sessionStorage if cart page set it
     const saved = sessionStorage.getItem("appliedCoupon");
     if (saved) { const c = JSON.parse(saved); setCouponCode(c.code); setDiscount(c.discount); }
-    loadAddresses();
+    loadAddresses(isDineInOrder);
   }, []);
 
-  async function loadAddresses() {
+  async function loadAddresses(isDineInOrder: boolean = false) {
     setAddrLoading(true);
     try {
       const res = await fetch("/api/address");
       const data = await res.json();
-      if (res.status === 401) { router.push("/"); return; }
+      if (res.status === 401) {
+        if (isDineInOrder) {
+          // Ignore redirection if guest is ordering directly at a table
+          setAddresses([]);
+          return;
+        }
+        router.push("/");
+        return;
+      }
       setAddresses(data.addresses || []);
       const def = (data.addresses || []).find((a: Address) => a.isDefault);
       if (def) setSelectedAddr(def._id);
@@ -68,11 +91,7 @@ export default function CheckoutPage() {
     finally { setAddrLoading(false); }
   }
 
-  // ── Totals ────────────────────────────────────────────────
-  const subtotalAfterDiscount = Math.max(0, totalPrice - discount);
-  const shipping = items.length > 0 ? (subtotalAfterDiscount >= freeAbove ? 0 : deliveryCharge) : 0;
-  const tax = items.length > 0 ? Math.round(subtotalAfterDiscount * taxRate / 100) : 0;
-  const grandTotal = subtotalAfterDiscount + tax + shipping;
+
 
   // ── Address form ──────────────────────────────────────────
   function openAddNew() { setEditingAddr(null); setAddrForm({ ...emptyForm }); setAddrError(""); setShowAddrModal(true); }
@@ -107,18 +126,44 @@ export default function CheckoutPage() {
 
   // ── Place order ───────────────────────────────────────────
   async function handlePlaceOrder() {
-    if (!selectedAddr) { setOrderError("Please select a delivery address."); return; }
+    if (!isDineIn && !selectedAddr) { setOrderError("Please select a delivery address."); return; }
     if (items.length === 0) { setOrderError("Your cart is empty."); return; }
     setPlacing(true); setOrderError("");
     try {
+      const body: any = {
+        paymentMethod: payMethod,
+        couponCode,
+        notes,
+      };
+
+      if (isDineIn && tableInfo) {
+        body.tableToken = tableInfo.token;
+        if (!isLoggedIn) {
+          body.items = items.map(i => ({
+            menuItemId: i.menuItemId,
+            name: i.name,
+            image: i.image,
+            variantType: i.variantType,
+            custom: i.custom,
+            price: i.price,
+            qty: i.qty
+          }));
+        }
+      } else {
+        body.addressId = selectedAddr;
+      }
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ addressId: selectedAddr, paymentMethod: payMethod, couponCode, notes }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.error) { setOrderError(data.error); return; }
+      
       sessionStorage.removeItem("appliedCoupon");
+      sessionStorage.removeItem("dinein_table");
+
       setPlacedOrder({ orderId: data.order.orderId, total: data.order.total });
       await clearCart();
     } catch { setOrderError("Something went wrong. Please try again."); }
@@ -132,17 +177,27 @@ export default function CheckoutPage() {
         <div style={{ textAlign: "center", padding: "60px 20px", fontFamily: "Poppins, sans-serif" }}>
           <div style={{ fontSize: "4rem", marginBottom: 16 }}>🎉</div>
           <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "1.8rem", color: "#111", marginBottom: 8 }}>Order Placed!</h2>
-          <p style={{ color: "#666", marginBottom: 4 }}>Your order has been confirmed.</p>
+          <p style={{ color: "#666", marginBottom: 4 }}>
+            {isDineIn && tableInfo 
+              ? `Your order has been sent directly to Table ${tableInfo.tableNumber}.`
+              : "Your order has been confirmed."}
+          </p>
           <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "#e67e22", marginBottom: 4 }}>Order ID: {placedOrder.orderId}</p>
-          <p style={{ color: "#666", marginBottom: 32 }}>Total: ₹{placedOrder.total} · Payment: Cash on Delivery</p>
+          <p style={{ color: "#666", marginBottom: 32 }}>Total: ₹{placedOrder.total} · Payment: {payMethod === "cod" ? (isDineIn ? "Pay at Counter / Cash" : "Cash on Delivery") : payMethod.toUpperCase()}</p>
           <button onClick={() => router.push("/menu")}
             style={{ background: "#e67e22", color: "#fff", border: "none", borderRadius: 10, padding: "12px 32px", fontFamily: "Poppins,sans-serif", fontSize: "1rem", fontWeight: 600, cursor: "pointer" }}>
-            Continue Shopping
+            Order More Items
           </button>
         </div>
       </div>
     );
   }
+
+  // ── Totals ────────────────────────────────────────────────
+  const subtotalAfterDiscount = Math.max(0, totalPrice - discount);
+  const shipping = isDineIn ? 0 : (items.length > 0 ? (subtotalAfterDiscount >= freeAbove ? 0 : deliveryCharge) : 0);
+  const tax = items.length > 0 ? Math.round(subtotalAfterDiscount * taxRate / 100) : 0;
+  const grandTotal = subtotalAfterDiscount + tax + shipping;
 
   const selectedAddress = addresses.find(a => a._id === selectedAddr);
 
@@ -151,14 +206,16 @@ export default function CheckoutPage() {
 
       {/* ── STEPPER ── */}
       <div className="stepper">
-        {[
+        {(isDineIn ? [
+          { n: 3, icon: "fa-solid fa-utensils", label: "Dine-in Order" },
+        ] : [
           { n: 1, icon: "fa-solid fa-location-dot", label: "Address" },
           { n: 2, icon: "fa-solid fa-truck", label: "Shipping" },
           { n: 3, icon: "fa-solid fa-credit-card", label: "Payment" },
-        ].map(s => (
+        ]).map(s => (
           <div key={s.n} className={`step${step >= s.n ? " active" : ""}`} id={`step${s.n}-tab`}>
             <div className="step-icon"><i className={s.icon}></i></div>
-            <div className="step-text"><b>Step {s.n}</b><span>{s.label}</span></div>
+            <div className="step-text"><b>{isDineIn ? "Dine-in Mode" : `Step ${s.n}`}</b><span>{s.label}</span></div>
           </div>
         ))}
       </div>
@@ -249,7 +306,14 @@ export default function CheckoutPage() {
                 </div>
               ))}
 
-              {selectedAddress && (
+              {isDineIn && tableInfo ? (
+                <>
+                  <p style={{ color: "#666", marginTop: 16 }}><strong>Dine-in Table:</strong></p>
+                  <p style={{ color: "#e67e22", marginBottom: 10, fontSize: 14, fontWeight: 700 }}>
+                    Table {tableInfo.tableNumber} {tableInfo.tableName ? `(${tableInfo.tableName})` : ""}
+                  </p>
+                </>
+              ) : selectedAddress ? (
                 <>
                   <p style={{ color: "#666", marginTop: 16 }}><strong>Delivery Address:</strong></p>
                   <p style={{ color: "#888", marginBottom: 10, fontSize: 13 }}>
@@ -257,7 +321,7 @@ export default function CheckoutPage() {
                     {selectedAddress.house}{selectedAddress.area ? `, ${selectedAddress.area}` : ""}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
                   </p>
                 </>
-              )}
+              ) : null}
 
               <div style={{ marginTop: 16, fontSize: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -311,7 +375,7 @@ export default function CheckoutPage() {
                   <p>Please keep exact change ready if possible.</p>
                   {orderError && <p style={{ color: "#dc2626", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>⚠ {orderError}</p>}
                   <div className="btn-row">
-                    <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>
+                    {!isDineIn && <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>}
                     <button className="btn btn-next" onClick={handlePlaceOrder} disabled={placing}>
                       {placing ? "Placing…" : "Place Order"}
                     </button>
@@ -329,7 +393,7 @@ export default function CheckoutPage() {
                     <p><strong>Note:</strong> UPI payment integration coming soon. Please use COD for now.</p>
                   </div>
                   <div className="btn-row">
-                    <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>
+                    {!isDineIn && <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>}
                     <button className="btn btn-next" disabled>Pay via UPI</button>
                   </div>
                 </div>
@@ -351,7 +415,7 @@ export default function CheckoutPage() {
                   <div className="input-group"><input type="text" placeholder="CVV" style={{ background: "none", border: "1px solid #eee" }} /></div>
                   <p style={{ color: "#aaa", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>Card payment integration coming soon. Please use COD for now.</p>
                   <div className="btn-row">
-                    <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>
+                    {!isDineIn && <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>}
                     <button className="btn btn-next" disabled>Pay</button>
                   </div>
                 </div>

@@ -165,7 +165,7 @@ export default function MenuClient({
         </section>
       )}
 
-      {isLoggedIn && totalItems > 0 && (
+      {totalItems > 0 && (
         <Link href="/cart" className="floating-cart-btn" aria-label="Go to cart">
           <i className="ri-shopping-cart-2-line" />
           <span className="floating-cart-badge">{totalItems}</span>

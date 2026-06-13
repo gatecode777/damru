@@ -27,12 +27,14 @@ export interface IDeliveryAddress {
 
 export interface IOrder extends Document {
   orderId:         string;           // human-readable: DMR-20260427-XXXX
-  userId:          mongoose.Types.ObjectId;
+  userId?:         mongoose.Types.ObjectId;
   userName:        string;
-  userEmail:       string;
+  userEmail?:      string;
   userPhone:       string;
+  tableId?:        mongoose.Types.ObjectId;
+  tableNumber?:    string;
   items:           IOrderItem[];
-  deliveryAddress: IDeliveryAddress;
+  deliveryAddress?: IDeliveryAddress;
   subtotal:        number;
   discount:        number;
   couponCode:      string;
@@ -77,12 +79,14 @@ const DeliveryAddressSchema = new Schema<IDeliveryAddress>(
 const OrderSchema = new Schema<IOrder>(
   {
     orderId:         { type: String, required: true, unique: true },
-    userId:          { type: Schema.Types.ObjectId, ref: "User", required: true },
+    userId:          { type: Schema.Types.ObjectId, ref: "User" },
     userName:        { type: String, required: true },
-    userEmail:       { type: String, required: true },
+    userEmail:       { type: String },
     userPhone:       { type: String, default: "" },
+    tableId:         { type: Schema.Types.ObjectId, ref: "Table" },
+    tableNumber:     { type: String },
     items:           { type: [OrderItemSchema], required: true },
-    deliveryAddress: { type: DeliveryAddressSchema, required: true },
+    deliveryAddress: { type: DeliveryAddressSchema },
     subtotal:        { type: Number, required: true },
     discount:        { type: Number, default: 0 },
     couponCode:      { type: String, default: "" },

@@ -16,6 +16,8 @@ export type OrderRow = {
   paymentMethod: string; paymentStatus: string; status: string;
   couponCode: string; discount: number;
   createdAt: string;
+  tableNumber?: string | null;
+  tableId?: string | null;
 };
 
 export default async function OrdersPage() {
@@ -32,7 +34,7 @@ export default async function OrdersPage() {
     await connectDB();
     const raw = await Order.find()
       .sort({ createdAt: -1 })
-      .select("orderId userName userEmail userPhone items total paymentMethod paymentStatus status couponCode discount createdAt")
+      .select("orderId userName userEmail userPhone items total paymentMethod paymentStatus status couponCode discount createdAt tableNumber tableId")
       .lean();
 
     orders = raw.map((o: any) => ({
@@ -49,6 +51,8 @@ export default async function OrdersPage() {
       couponCode:    o.couponCode || "",
       discount:      o.discount || 0,
       createdAt:     String(o.createdAt),
+      tableNumber:   o.tableNumber || null,
+      tableId:       o.tableId ? String(o.tableId) : null,
     }));
   } catch { /* empty on first run */ }
 

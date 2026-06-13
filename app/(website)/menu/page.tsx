@@ -4,12 +4,13 @@ import CategoryModel from "@/models/Category";
 import MenuItemModel from "@/models/MenuItem";
 import ReservationForm from "../ReservationForm";
 import MenuClient from "./MenuClient";
+import { verifyTableToken } from "@/lib/tableAuth";
 
 // ── SEO metadata ────────────────────────────────────────────────
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; t?: string }>;
 }): Promise<Metadata> {
   const { category } = await searchParams;
   const catName = category
@@ -48,9 +49,22 @@ interface IMenuItem {
 export default async function MenuPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; t?: string }>;
 }) {
-  const { category: catSlug } = await searchParams;
+  const { category: catSlug, t: tableToken } = await searchParams;
+
+  // Verify table token if present
+  let tableDetails = null;
+  let isTableTokenInvalid = false;
+
+  if (tableToken) {
+    const verified = await verifyTableToken(tableToken);
+    if (verified) {
+      tableDetails = { ...verified, token: tableToken };
+    } else {
+      isTableTokenInvalid = true;
+    }
+  }
 
   // ── Fetch from MongoDB ──────────────────────────────────────
   let categories: ICategory[] = [];
@@ -74,7 +88,23 @@ export default async function MenuPage({
     items = JSON.parse(JSON.stringify(rawItems));
   } catch (err) {
     console.error("Menu page DB error:", err);
-    // Graceful degradation — page renders with empty state
+  }
+
+  if (isTableTokenInvalid) {
+    return (
+      <main style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#faf9f6", padding: "40px 20px" }}>
+        <div style={{ maxWidth: 460, width: "100%", background: "#fff", border: "1.5px solid #fed7aa", padding: 40, borderRadius: 24, textAlign: "center", boxShadow: "0 10px 30px rgba(234, 88, 12, 0.05)" }}>
+          <div style={{ fontSize: 64, marginBottom: 15 }}>⚠️</div>
+          <h2 style={{ fontFamily: "Syne, sans-serif", fontSize: "1.6rem", fontWeight: 800, color: "#111827", marginBottom: 10 }}>Invalid QR Code</h2>
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.95rem", color: "#4b5563", lineHeight: 1.6, marginBottom: 25 }}>
+            This table QR code link is expired, regenerated, or invalid. Please ask our restaurant staff/waiter for assistance.
+          </p>
+          <a href="/menu" style={{ display: "inline-block", background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", textDecoration: "none", padding: "12px 28px", borderRadius: 30, fontSize: "0.9rem", fontWeight: 600, boxShadow: "0 4px 15px rgba(249, 115, 22, 0.25)" }}>
+            Browse Menu Anyway
+          </a>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -84,8 +114,17 @@ export default async function MenuPage({
       <section className="menusoup-hero">
         <div className="souphero-overlay" />
         <div className="herosoup-content">
-          <h1 className="reveal-text">Our Delicious Menu</h1>
-          <p className="fade-in-text">Explore a variety of flavors crafted with passion, freshness, and perfection.</p>
+          {tableDetails ? (
+            <>
+              <h1 className="reveal-text">Welcome to Table {tableDetails.tableNumber}</h1>
+              <p className="fade-in-text">Scan successful. Select your dishes and complete checkout to place orders directly to your table.</p>
+            </>
+          ) : (
+            <>
+              <h1 className="reveal-text">Our Delicious Menu</h1>
+              <p className="fade-in-text">Explore a variety of flavors crafted with passion, freshness, and perfection.</p>
+            </>
+          )}
           <a href="#reservation" className="btn-booksoup floating">Book Your Seat</a>
         </div>
       </section>
@@ -108,6 +147,22 @@ export default async function MenuPage({
         </div>
       </section>
 
+      {/* Embedded Table Session Hydrator in Client */}
+      {tableDetails && (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var tbl = ${JSON.stringify(tableDetails)};
+                  sessionStorage.setItem('dinein_table', JSON.stringify(tbl));
+                  window.dispatchEvent(new Event('dinein-session-updated'));
+                } catch(e) { console.error(e); }
+              })();
+            `
+          }}
+        />
+      )}
     </main>
   );
 }

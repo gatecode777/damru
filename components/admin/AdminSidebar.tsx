@@ -10,7 +10,7 @@ import {
   LogOut, ChevronLeft, ChevronRight, FileText, BookOpen, Images, Ticket,
   ShoppingBag,
   CalendarDays,
-  MessageSquareWarning, MapPin, CalendarCheck, UserCog,
+  MessageSquareWarning, MapPin, CalendarCheck, UserCog, QrCode,
 } from "lucide-react";
 
 interface Perms {
@@ -53,6 +53,7 @@ const navGroups = [
     items: [
       { icon: Tag,             label: "Categories",   href: "/admin/categories",  permission: "categories" },
       { icon: UtensilsCrossed, label: "Menu Items",   href: "/admin/menu",        permission: "menu" },
+      { icon: QrCode,          label: "Tables & QR",   href: "/admin/tables",      permission: "settings" },
       { icon: Images,          label: "Gallery",      href: "/admin/gallery",     permission: "gallery" },
       { icon: MapPin,          label: "Branches",     href: "/admin/branches",    permission: "branches" },
       { icon: CalendarCheck,   label: "Banquet Bookings", href: "/admin/banquet-bookings", permission: "banquetBookings" },

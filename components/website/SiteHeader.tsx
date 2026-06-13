@@ -144,6 +144,7 @@ export default function Header() {
   const [newPwConf, setNewPwConf] = useState("");
   const [showNewPw, setShowNewPw] = useState(false);
   const [showNewConf, setShowNewConf] = useState(false);
+  const [hasTableSession, setHasTableSession] = useState(false);
 
   // Detect mobile view
   const [isMobile, setIsMobile] = useState(false);
@@ -186,6 +187,16 @@ export default function Header() {
       .catch(() => setUser(null))
       .finally(() => setUserLoading(false));
 
+    // Check table session in sessionStorage
+    const checkTableSession = () => {
+      const tbl = sessionStorage.getItem("dinein_table");
+      setHasTableSession(!!tbl);
+    };
+    checkTableSession();
+
+    window.addEventListener("storage", checkTableSession);
+    window.addEventListener("dinein-session-updated", checkTableSession);
+
     const handleProfileUpdate = (e: Event) => {
       const customEvent = e as CustomEvent<any>;
       if (customEvent.detail) {
@@ -202,6 +213,8 @@ export default function Header() {
     window.addEventListener("open-auth-modal", handleOpenAuthModal);
 
     return () => {
+      window.removeEventListener("storage", checkTableSession);
+      window.removeEventListener("dinein-session-updated", checkTableSession);
       window.removeEventListener("user-profile-updated", handleProfileUpdate);
       window.removeEventListener("open-auth-modal", handleOpenAuthModal);
     };
@@ -503,8 +516,8 @@ export default function Header() {
               )}
             </div>
 
-            {/* Cart — only when logged in */}
-            {!userLoading && user && (
+            {/* Cart — only when logged in or has active table session */}
+            {!userLoading && (user || hasTableSession) && (
               <Link href="/cart" className="icon-link" aria-label="Cart" style={{ position: "relative" }}>
                 <i className="ri-shopping-cart-2-line"></i>
                 {totalItems > 0 && (

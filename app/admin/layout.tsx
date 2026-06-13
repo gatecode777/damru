@@ -9,6 +9,7 @@ import "@/styles/admin/users.css";
 import "@/styles/admin/menu.css";
 import "@/styles/admin/menu-form.css";
 import "@/styles/admin/blog-form.css";
+import "@/styles/admin/tables.css";
 
 export const metadata: Metadata = {
   title: { default: "Dashboard", template: "%s | Damru Admin" },
