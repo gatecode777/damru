@@ -468,6 +468,30 @@ export default function CheckoutPage() {
                   onChange={e => setAddrForm(p => ({ ...p, area: e.target.value }))} />
               </div>
               <div className="input-group">
+                <label>Pincode *</label>
+                <input type="text" placeholder="302034" value={addrForm.pincode}
+                  maxLength={6}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setAddrForm(p => ({ ...p, pincode: val }));
+                    if (val.length === 6) {
+                      fetch(`https://api.postalpincode.in/pincode/${val}`)
+                        .then(r => r.json())
+                        .then(res => {
+                          if (res && res[0] && res[0].Status === "Success" && res[0].PostOffice && res[0].PostOffice.length > 0) {
+                            const po = res[0].PostOffice[0];
+                            setAddrForm(p => ({
+                              ...p,
+                              city: po.District || po.Block || p.city,
+                              state: po.State || p.state
+                            }));
+                          }
+                        })
+                        .catch(() => {});
+                    }
+                  }} />
+              </div>
+              <div className="input-group">
                 <label>City *</label>
                 <input type="text" placeholder="Jaipur" value={addrForm.city}
                   onChange={e => setAddrForm(p => ({ ...p, city: e.target.value }))} />
@@ -476,11 +500,6 @@ export default function CheckoutPage() {
                 <label>State *</label>
                 <input type="text" placeholder="Rajasthan" value={addrForm.state}
                   onChange={e => setAddrForm(p => ({ ...p, state: e.target.value }))} />
-              </div>
-              <div className="input-group">
-                <label>Pincode *</label>
-                <input type="text" placeholder="302034" value={addrForm.pincode}
-                  onChange={e => setAddrForm(p => ({ ...p, pincode: e.target.value }))} />
               </div>
             </div>
 

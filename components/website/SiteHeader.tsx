@@ -308,6 +308,9 @@ export default function Header() {
     if (d.error) { setErr(d.error); return; }
     setUser(d.user);
     setIsAuthOpen(false);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("auth-state-changed", { detail: d.user }));
+    }
     router.refresh();
   }
 
@@ -323,6 +326,9 @@ export default function Header() {
     if (d.error) { setErr(d.error); return; }
     setUser(d.user);
     setIsAuthOpen(false);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("auth-state-changed", { detail: d.user }));
+    }
     router.refresh();
   }
 
@@ -520,8 +526,8 @@ export default function Header() {
               )}
             </div>
 
-            {/* Cart — only when logged in or has active table session */}
-            {!userLoading && (user || hasTableSession) && (
+            {/* Cart — only when logged in */}
+            {!userLoading && user && (
               <Link href="/cart" className="icon-link" aria-label="Cart" style={{ position: "relative" }}>
                 <i className="ri-shopping-cart-2-line"></i>
                 {totalItems > 0 && (
@@ -725,7 +731,7 @@ export default function Header() {
           <div className="overlay-contact">
             <h3>Contact</h3>
             <div className="dotted-divider"></div>
-            <p className="contact-detail">+86 852 346 000</p>
+            <p className="contact-detail">+91 8690987272</p>
             <p className="contact-detail">info@damrubynamo.com</p>
             <br /><br />
             <p className="contact-address">

@@ -29,7 +29,7 @@ export default async function AdminGalleryPage() {
 
   try {
     await connectDB();
-    const raw = await GalleryTab.find().sort({ sortOrder: 1 });
+    const raw = await GalleryTab.find({ tabKey: { $ne: "all" } }).sort({ sortOrder: 1 });
     tabs = JSON.parse(JSON.stringify(raw));
   } catch { /* show empty */ }
 

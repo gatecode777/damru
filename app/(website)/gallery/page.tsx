@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function GalleryPage() {
   await connectDB();
-  const tabs = await GalleryTab.find({ isActive: true })
+  const tabs = await GalleryTab.find({ isActive: true, tabKey: { $ne: "all" } })
     .sort({ sortOrder: 1 })
     .lean();
 

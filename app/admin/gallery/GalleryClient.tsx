@@ -280,6 +280,10 @@ function AddTabForm({ existingCount, onTabCreated, onClose, canCreate }: {
   async function handleCreate() {
     if (!label.trim()) { setError("Tab label is required."); return; }
     if (!tabKey.trim()) { setError("Tab key is required."); return; }
+    if (tabKey.trim().toLowerCase() === "all" || label.trim().toLowerCase() === "all") {
+      setError("The name 'All' is reserved for the system tab.");
+      return;
+    }
     setSaving(true); setError("");
     const fd = new FormData();
     fd.append("tabKey",      tabKey.trim());
@@ -421,6 +425,10 @@ export default function GalleryClient({ tabs: initialTabs, perms }: { tabs: Gall
   async function handleSaveTab() {
     if (!canEdit) return;
     if (!tab) return;
+    if (label.trim().toLowerCase() === "all") {
+      alert("The name 'All' is reserved for the system tab.");
+      return;
+    }
     setSavingTab(true);
     const fd = new FormData();
     fd.append("tabKey",      tab.tabKey);

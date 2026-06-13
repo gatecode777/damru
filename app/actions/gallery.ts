@@ -27,6 +27,9 @@ export async function upsertGalleryTab(formData: FormData) {
   const isActive    = formData.get("isActive") === "true";
 
   if (!tabKey || !label) return { error: "Tab key and label are required." };
+  if (tabKey === "all" || label.toLowerCase() === "all") {
+    return { error: "The tab key or label 'all' is reserved." };
+  }
 
   try {
     await GalleryTab.findOneAndUpdate(

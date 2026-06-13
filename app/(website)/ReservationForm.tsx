@@ -78,7 +78,7 @@ function clampDateString(val: string): string {
 export default function ReservationForm() {
   const [user,        setUser]        = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
-  const [date,        setDate]        = useState("");
+  const [date,        setDate]        = useState(todayStr);
   const [time,        setTime]        = useState("7:00 pm");
   const [persons,     setPersons]     = useState("2 Persons");
   const [submitting,  setSubmitting]  = useState(false);
@@ -138,7 +138,7 @@ export default function ReservationForm() {
         showToast(data.error, "error");
       } else {
         showToast(`Reservation confirmed for ${new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "long" })} at ${time} for ${persons}. We'll see you soon! 🎉`, "success");
-        setDate("");
+        setDate(todayStr());
       }
     } catch {
       showToast("Something went wrong. Please try again.", "error");
@@ -155,20 +155,10 @@ export default function ReservationForm() {
           {/* Date */}
           <div className="res-input-box">
             <input
-              type="text"
-              placeholder="Select Date"
+              type="date"
+              min={todayStr()}
+              max={maxDateStr()}
               value={date}
-              onFocus={e => {
-                e.target.type = "date";
-                e.target.min = todayStr();
-                e.target.max = maxDateStr();
-              }}
-              onBlur={e => {
-                if (!e.target.value || e.target.value.length < 10) {
-                  setDate("");
-                  e.target.type = "text";
-                }
-              }}
               onChange={e => {
                 setDate(clampDateString(e.target.value));
               }}

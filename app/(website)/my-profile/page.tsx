@@ -8,7 +8,7 @@ import Link from "next/link";
 interface UserInfo { id?: string; name: string; email: string; phone: string; city: string; avatar: string; createdAt?: string }
 interface Address { _id: string; label: string; fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string; isDefault: boolean }
 interface OrderItem { name: string; custom: string; price: number; qty: number; image?: string }
-interface Order { _id: string; orderId: string; status: string; paymentMethod: string; total: number; subtotal: number; discount: number; couponCode: string; tax: number; shipping: number; items: OrderItem[]; deliveryAddress: { fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string }; createdAt: string }
+interface Order { _id: string; orderId: string; status: string; paymentMethod: string; total: number; subtotal: number; discount: number; couponCode: string; tax: number; shipping: number; items: OrderItem[]; deliveryAddress: { fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string }; createdAt: string; tableNumber?: string; tableName?: string }
 interface Coupon { _id: string; code: string; description: string; type: string; value: number; maxDiscount: number | null; minOrderValue: number; expiryDate: string | null; usageLimit: number | null; usedCount: number }
 type Section = "overview" | "address" | "orders" | "payment" | "coupons" | "settings" | "help";
 
@@ -561,7 +561,48 @@ export default function MyProfilePage() {
     navigator.clipboard.writeText(code).then(()=>{setCopiedCode(code);setTimeout(()=>setCopiedCode(""),2000);showToast(`"${code}" copied to clipboard!`);});
   }
 
-  if(loading) return <div className="profile" style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"60vh"}}><p style={{fontFamily:"Poppins,sans-serif",color:"#aaa"}}>Loading profile…</p></div>;
+  if (loading) {
+    return (
+      <div 
+        className="profile" 
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "70vh",
+          paddingTop: "160px",
+          paddingBottom: "80px",
+          width: "100%",
+        }}
+      >
+        <div style={{
+          width: 50,
+          height: 50,
+          borderRadius: "50%",
+          border: "3px solid rgba(230, 126, 34, 0.1)",
+          borderTopColor: "#e67e22",
+          animation: "damru-spin 1s linear infinite",
+          marginBottom: 20
+        }} />
+        <p style={{
+          fontFamily: "Poppins, sans-serif",
+          color: "#764208",
+          fontSize: "1.05rem",
+          fontWeight: 500,
+          letterSpacing: "0.5px",
+          margin: 0
+        }}>
+          Loading your profile...
+        </p>
+        <style>{`
+          @keyframes damru-spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
   if(!user) return null;
 
   const initials=user.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
@@ -682,7 +723,7 @@ export default function MyProfilePage() {
                   <div key={o._id} className="profile__order-card">
                     <div className="profile__order-header">
                       <div><div className="profile__order-card-id">{o.orderId}</div><div className="profile__order-card-date">{fmtDate(o.createdAt)}</div></div>
-                      <span className="profile__status-badge" style={{background:ss.bg,color:ss.color}}><i className={ss.icon}></i> {o.status.replace(/_/g," ").replace(/\w/g,c=>c.toUpperCase())}</span>
+                      <span className="profile__status-badge" style={{background:ss.bg,color:ss.color}}><i className={ss.icon}></i> {o.status === "delivered" && o.tableNumber ? "Served" : o.status === "out_for_delivery" ? "Out for Delivery" : o.status.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())}</span>
                     </div>
                     <div className="profile__order-card-items">{o.items.map(i=>`${i.qty}x ${i.name}`).join(", ")}</div>
                     <div className="profile__order-card-footer">
@@ -712,8 +753,16 @@ export default function MyProfilePage() {
                   { key:"preparing",        label:"Preparing",     icon:"fa-solid fa-utensils" },
                   { key:"out_for_delivery", label:"Out for Delivery", icon:"fa-solid fa-truck" },
                   { key:"delivered",        label:"Delivered",     icon:"fa-solid fa-house-circle-check" },
-                ];
-                const ORDER = ["pending","confirmed","preparing","out_for_delivery","delivered"];
+                ].filter(s => {
+                  if (viewOrder.tableNumber && s.key === "out_for_delivery") return false;
+                  return true;
+                }).map(s => {
+                  if (s.key === "delivered" && viewOrder.tableNumber) {
+                    return { ...s, label: "Served", icon: "fa-regular fa-circle-check" };
+                  }
+                  return s;
+                });
+                const ORDER = STEPS.map(s => s.key);
                 const isCancelled = viewOrder.status === "cancelled";
                 const currentIdx  = isCancelled ? -1 : ORDER.indexOf(viewOrder.status);
                 return (
@@ -783,6 +832,13 @@ export default function MyProfilePage() {
                   <strong>Delivery Address:</strong><br/>
                   {viewOrder.deliveryAddress.fullName} · {viewOrder.deliveryAddress.phone}<br/>
                   {viewOrder.deliveryAddress.house}{viewOrder.deliveryAddress.area?`, ${viewOrder.deliveryAddress.area}`:""}, {viewOrder.deliveryAddress.city}, {viewOrder.deliveryAddress.state} {viewOrder.deliveryAddress.pincode}
+                </div>
+              )}
+              {viewOrder.tableNumber&&(
+                <div style={{marginTop:12,padding:"12px 14px",background:"#fafafa",borderRadius:10,fontSize:13,fontFamily:"Poppins,sans-serif",color:"#555"}}>
+                  <strong>Dine-in Order:</strong><br/>
+                  Table Number: <strong>{viewOrder.tableNumber}</strong>{viewOrder.tableName ? ` (${viewOrder.tableName})` : ""}<br/>
+                  Type: QR Code Scan Ordering
                 </div>
               )}
             </div>
@@ -927,20 +983,48 @@ export default function MyProfilePage() {
                 <option>Home</option><option>Office</option><option>Other</option>
               </select>
             </div>
-            {[["Full Name *","fullName","Your full name"],["Phone *","phone","e.g. 9876543210"],["House / Flat / Street *","house","208, Shiv Vihar, MG Road"],["Area / Landmark","area","Near City Mall (optional)"],["City *","city","Jaipur"],["State *","state","Rajasthan"],["Pincode *","pincode","302034"]].map(([label,key,placeholder])=>(
+            {[
+              ["Full Name *","fullName","Your full name"],
+              ["Phone *","phone","e.g. 9876543210"],
+              ["House / Flat / Street *","house","208, Shiv Vihar, MG Road"],
+              ["Area / Landmark","area","Near City Mall (optional)"],
+              ["Pincode *","pincode","302034"],
+              ["City *","city","Jaipur"],
+              ["State *","state","Rajasthan"]
+            ].map(([label,key,placeholder])=>(
               <div key={key} className="profile__modal-field">
                 <label className="profile__modal-label">{label}</label>
                 <input 
                   className="profile__modal-input" 
                   placeholder={placeholder} 
-                  maxLength={key === "phone" ? 10 : undefined}
+                  maxLength={key === "phone" ? 10 : (key === "pincode" ? 6 : undefined)}
                   value={addrForm[key as keyof typeof addrForm] as string} 
                   onChange={e=>{
                     let val = e.target.value;
                     if(key === "phone"){
                       val = val.replace(/\D/g, "").slice(0, 10);
+                      setAddrForm(p=>({...p,[key]:val}));
+                    } else if(key === "pincode"){
+                      val = val.replace(/\D/g, "").slice(0, 6);
+                      setAddrForm(p=>({...p,[key]:val}));
+                      if (val.length === 6) {
+                        fetch(`https://api.postalpincode.in/pincode/${val}`)
+                          .then(r => r.json())
+                          .then(res => {
+                            if (res && res[0] && res[0].Status === "Success" && res[0].PostOffice && res[0].PostOffice.length > 0) {
+                              const po = res[0].PostOffice[0];
+                              setAddrForm(p => ({
+                                ...p,
+                                city: po.District || po.Block || p.city,
+                                state: po.State || p.state
+                              }));
+                            }
+                          })
+                          .catch(() => {});
+                      }
+                    } else {
+                      setAddrForm(p=>({...p,[key]:val}));
                     }
-                    setAddrForm(p=>({...p,[key]:val}));
                   }}
                 />
               </div>

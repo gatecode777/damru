@@ -34,56 +34,65 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading,    setLoading]    = useState(true);
 
-  // ── On mount: check login + load cart ──────────────────────
-  useEffect(() => {
-    async function init() {
-      try {
-        // Check if user is logged in
-        const meRes = await fetch("/api/user/me");
-        const meData = await meRes.json();
-        const loggedIn = !!meData.user;
-        setIsLoggedIn(loggedIn);
+  // ── Refresh cart status & login status ──────────────────────
+  const refreshCartState = useCallback(async () => {
+    try {
+      // Check if user is logged in
+      const meRes = await fetch("/api/user/me");
+      const meData = await meRes.json();
+      const loggedIn = !!meData.user;
+      setIsLoggedIn(loggedIn);
 
-        if (loggedIn) {
-          // Load cart from DB
-          const cartRes = await fetch("/api/cart");
-          if (cartRes.ok) {
-            const cartData = await cartRes.json();
-            // Map DB items to CartItem shape
-            const mapped: CartItem[] = (cartData.items || []).map((i: {
-              menuItemId: string; name: string; custom: string;
-              price: number; qty: number; image?: string; variantType: string;
-            }) => ({
-              id:          `${i.menuItemId}-${i.custom || "plain"}`,
-              menuItemId:  i.menuItemId,
-              name:        i.name,
-              custom:      i.custom,
-              price:       i.price,
-              qty:         i.qty,
-              image:       i.image,
-              variantType: i.variantType,
-            }));
-            setItems(mapped);
-          }
-        } else {
-          // Guest: load from localStorage
-          try {
-            const saved = localStorage.getItem("damru_cart");
-            if (saved) setItems(JSON.parse(saved));
-          } catch { /* ignore */ }
+      if (loggedIn) {
+        // Load cart from DB
+        const cartRes = await fetch("/api/cart");
+        if (cartRes.ok) {
+          const cartData = await cartRes.json();
+          // Map DB items to CartItem shape
+          const mapped: CartItem[] = (cartData.items || []).map((i: {
+            menuItemId: string; name: string; custom: string;
+            price: number; qty: number; image?: string; variantType: string;
+          }) => ({
+            id:          `${i.menuItemId}-${i.custom || "plain"}`,
+            menuItemId:  i.menuItemId,
+            name:        i.name,
+            custom:      i.custom,
+            price:       i.price,
+            qty:         i.qty,
+            image:       i.image,
+            variantType: i.variantType,
+          }));
+          setItems(mapped);
         }
-      } catch {
-        // Fallback to localStorage
+      } else {
+        // Guest: load from localStorage
         try {
           const saved = localStorage.getItem("damru_cart");
           if (saved) setItems(JSON.parse(saved));
         } catch { /* ignore */ }
-      } finally {
-        setLoading(false);
       }
+    } catch {
+      // Fallback to localStorage
+      try {
+        const saved = localStorage.getItem("damru_cart");
+        if (saved) setItems(JSON.parse(saved));
+      } catch { /* ignore */ }
+    } finally {
+      setLoading(false);
     }
-    init();
   }, []);
+
+  useEffect(() => {
+    refreshCartState();
+
+    window.addEventListener("user-profile-updated", refreshCartState);
+    window.addEventListener("auth-state-changed", refreshCartState);
+
+    return () => {
+      window.removeEventListener("user-profile-updated", refreshCartState);
+      window.removeEventListener("auth-state-changed", refreshCartState);
+    };
+  }, [refreshCartState]);
 
   // ── Guest: persist to localStorage ─────────────────────────
   useEffect(() => {

@@ -54,10 +54,16 @@ export function BranchesClient({ items }: { items: any[] }) {
             ref={(el) => { cardsRef.current[i] = el; }}
           >
             <div className="banquet__card-img-wrap">
-              <img src={imgSrc} alt={b.name} loading="lazy" />
+              <Link href={href} style={{ display: "block", width: "100%", height: "100%" }}>
+                <img src={imgSrc} alt={b.name} loading="lazy" />
+              </Link>
             </div>
             <div className="banquet__card-body">
-              <h3 className="banquet__card-title">{b.name}</h3>
+              <h3 className="banquet__card-title">
+                <Link href={href} style={{ textDecoration: "none", color: "inherit" }}>
+                  {b.name}
+                </Link>
+              </h3>
               <div className="banquet__card-divider">
                 {Array.from({ length: 10 }).map((_, j) => <span key={j} />)}
               </div>

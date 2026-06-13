@@ -21,10 +21,32 @@ interface GalleryClientProps {
 }
 
 export default function GalleryClient({ initialTabs }: GalleryClientProps) {
-  const [tabs] = useState<GalleryTab[]>(initialTabs);
-  const [activeKey, setActiveKey] = useState(() => {
-    return initialTabs.length ? initialTabs[0].tabKey : "all";
+  // Gather all items from other tabs for the "all" tab
+  const allItems: GalleryItem[] = [];
+  const seenIds = new Set<string>();
+  initialTabs.forEach(t => {
+    t.items.forEach(item => {
+      if (!seenIds.has(item._id)) {
+        seenIds.add(item._id);
+        allItems.push(item);
+      }
+    });
   });
+  allItems.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const allTab: GalleryTab = {
+    _id: "all-virtual-tab",
+    tabKey: "all",
+    label: "All",
+    bannerImage: "",
+    bannerAlt: "All Gallery Images",
+    isActive: true,
+    sortOrder: -1,
+    items: allItems,
+  };
+
+  const [tabs] = useState<GalleryTab[]>([allTab, ...initialTabs]);
+  const [activeKey, setActiveKey] = useState("all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Reset visible count whenever active tab changes

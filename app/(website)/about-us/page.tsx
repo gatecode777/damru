@@ -5,7 +5,7 @@ import ReservationForm from "../ReservationForm";
 export const metadata: Metadata = {
   title: "About Us | Damru By Namo",
   description: "Learn about the story of Damru By Namo, founded by Raja Choudhary, with Sandeep Rana as our Executive Chef. Explore our sophisticated food preparation process in Jaipur.",
-  keywords: ["about damru", "raja choudhary damru", "sandeep rana chef", "restaurant history jaipur"],
+  keywords: ["about damru", "raja choudhary damru", "Sandeep rana chef", "restaurant history jaipur"],
 };
 
 export default function AboutUsPage() {
@@ -57,7 +57,7 @@ export default function AboutUsPage() {
             </div>
             <div className="member-text-col">
               <p>
-                Raj Chaudhary is the heart and vision behind our restaurant—a passionate entrepreneur who
+                Raja Chaudhary is the heart and vision behind our restaurant—a passionate entrepreneur who
                 believes that food is more than just a meal; it is an experience that connects people,
                 emotions, and memories. His journey began with a simple yet powerful idea: to create a space
                 where guests can enjoy not only great food but also warmth, comfort, and a sense of
@@ -91,7 +91,7 @@ export default function AboutUsPage() {
             </div>
             <div className="member-text-col">
               <p>
-                Chef Sandeep Kumar is the creative soul of our kitchen, bringing passion, artistry, and years
+                Chef Sandeep Rana is the creative soul of our kitchen, bringing passion, artistry, and years
                 of culinary expertise to every dish he creates. For him, cooking is not just a profession—it
                 is a form of expression where flavors, textures, and presentation come together to tell a
                 story on every plate.
