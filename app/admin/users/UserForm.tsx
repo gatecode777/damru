@@ -87,6 +87,18 @@ export default function UserForm({ user }: Props) {
     fd.set("avatar",    avatarFilename);
     if (isEdit) fd.set("oldAvatar", user.avatar || "");
 
+    const email = fd.get("email")?.toString().trim() || "";
+    const phone = fd.get("phone")?.toString().trim() || "";
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (phone && !/^[6-9]\d{9}$/.test(phone)) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
     startTransition(async () => {
       const res = isEdit
         ? await updateUser(user._id, fd)
@@ -217,7 +229,12 @@ export default function UserForm({ user }: Props) {
               <div className="field-row">
                 <div className="field">
                   <label className="field-label">Phone Number</label>
-                  <input name="phone" defaultValue={user?.phone} placeholder="+91 98765 43210" className="inp" />
+                  <input name="phone" defaultValue={user?.phone} placeholder="e.g. 9876543210" className="inp"
+                    maxLength={10}
+                    onInput={e => {
+                      const tgt = e.currentTarget;
+                      tgt.value = tgt.value.replace(/\D/g, "").slice(0, 10);
+                    }} />
                 </div>
               </div>
             </div>

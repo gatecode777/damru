@@ -15,7 +15,7 @@ export default async function AdminTablesPage() {
 
   // Fetch this admin's permissions
   const perms = await getAdminPerms();
-  if (!perms.can("settings", "view")) redirect("/admin/dashboard");
+  if (!perms.can("tables", "view")) redirect("/admin/dashboard");
 
   let tables: any[] = [];
   try {

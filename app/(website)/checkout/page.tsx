@@ -100,6 +100,7 @@ export default function CheckoutPage() {
 
   async function handleSaveAddress() {
     if (!addrForm.fullName || !addrForm.phone || !addrForm.house || !addrForm.city || !addrForm.state || !addrForm.pincode) { setAddrError("All required fields must be filled."); return; }
+    if (!/^[6-9]\d{9}$/.test(addrForm.phone.trim())) { setAddrError("Please enter a valid 10-digit phone number."); return; }
 
     setAddrSaving(true); setAddrError("");
     try {
@@ -452,8 +453,9 @@ export default function CheckoutPage() {
               </div>
               <div className="input-group">
                 <label>Phone *</label>
-                <input type="text" placeholder="+91-xxxxxxxxxx" value={addrForm.phone}
-                  onChange={e => setAddrForm(p => ({ ...p, phone: e.target.value }))} />
+                <input type="text" placeholder="e.g. 9876543210" value={addrForm.phone}
+                  maxLength={10}
+                  onChange={e => setAddrForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))} />
               </div>
               <div className="input-group full-width">
                 <label>House / Flat / Street *</label>

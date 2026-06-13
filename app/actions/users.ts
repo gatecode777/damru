@@ -37,6 +37,8 @@ export async function createUser(formData: FormData) {
 
   if (!name)     return { error: "Name is required." };
   if (!email)    return { error: "Email is required." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Please enter a valid email address." };
+  if (phone && !/^[6-9]\d{9}$/.test(phone)) return { error: "Please enter a valid 10-digit phone number." };
   if (!password) return { error: "Password is required." };
   if (password.length < 6) return { error: "Password must be at least 6 characters." };
 
@@ -72,6 +74,8 @@ export async function updateUser(id: string, formData: FormData) {
 
   if (!name)  return { error: "Name is required." };
   if (!email) return { error: "Email is required." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Please enter a valid email address." };
+  if (phone && !/^[6-9]\d{9}$/.test(phone)) return { error: "Please enter a valid 10-digit phone number." };
 
   // Check duplicate email for OTHER users
   const dup = await User.findOne({ email, _id: { $ne: id } });

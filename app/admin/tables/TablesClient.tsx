@@ -31,9 +31,9 @@ interface TablesClientProps {
 export default function TablesClient({ initialTables, perms }: TablesClientProps) {
   const router = useRouter();
 
-  const canEdit = perms.isSuperAdmin || Boolean(perms.permissions?.settings?.edit);
-  const canCreate = perms.isSuperAdmin || Boolean(perms.permissions?.settings?.create);
-  const canDelete = perms.isSuperAdmin || Boolean(perms.permissions?.settings?.delete);
+  const canEdit = perms.isSuperAdmin || Boolean(perms.permissions?.tables?.edit);
+  const canCreate = perms.isSuperAdmin || Boolean(perms.permissions?.tables?.create);
+  const canDelete = perms.isSuperAdmin || Boolean(perms.permissions?.tables?.delete);
 
   // States
   const [tables, setTables] = useState<TableData[]>(initialTables);

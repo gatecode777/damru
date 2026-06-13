@@ -49,7 +49,12 @@ export async function PATCH(req: NextRequest) {
       if (!name?.trim()) return NextResponse.json({ error: "Name is required." }, { status: 400 });
 
       const updates: Record<string, string> = { name: name.trim() };
-      if (phone !== undefined) updates.phone = phone.trim();
+      if (phone !== undefined) {
+        if (phone.trim() && !/^[6-9]\d{9}$/.test(phone.trim())) {
+          return NextResponse.json({ error: "Please enter a valid 10-digit phone number." }, { status: 400 });
+        }
+        updates.phone = phone.trim();
+      }
       if (city  !== undefined) updates.city  = city.trim();
       if (avatar !== undefined) updates.avatar = avatar;
 

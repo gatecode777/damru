@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const deny = await checkApiPerm("settings", "view");
+  const deny = await checkApiPerm("tables", "view");
   if (deny) return deny;
 
   try {
@@ -29,7 +29,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const deny = await checkApiPerm("settings", "edit");
+  const deny = await checkApiPerm("tables", "edit");
   if (deny) return deny;
 
   try {
@@ -77,7 +77,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const deny = await checkApiPerm("settings", "delete");
+  const deny = await checkApiPerm("tables", "delete");
   if (deny) return deny;
 
   try {

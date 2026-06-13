@@ -19,6 +19,7 @@ const MODULES = [
   { key:"branches",       label:"Branches",         group:"Restaurant" },
   { key:"banquetBookings",label:"Banquet Bookings", group:"Restaurant" },
   { key:"coupons",        label:"Coupons",          group:"Restaurant" },
+  { key:"tables",         label:"Tables & QR",      group:"Restaurant" },
   { key:"analytics",      label:"Analytics",        group:"System" },
   // { key:"settings",       label:"Settings",         group:"System" },
 ];
@@ -192,6 +193,7 @@ export default function ManagerForm({ initial }: Props) {
 
   async function handleSave() {
     if (!form.name.trim() || !form.email.trim()) { setError("Name and email are required."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { setError("Please enter a valid email address."); return; }
     if (!isEdit && form.password.length < 8)      { setError("Password must be at least 8 characters."); return; }
     if (isEdit && form.password && form.password.length < 8) { setError("Password must be at least 8 characters."); return; }
 

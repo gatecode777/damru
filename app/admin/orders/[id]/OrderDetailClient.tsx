@@ -66,8 +66,18 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
   const [showPay,    setShowPay]    = useState(false);
   const [feedback,   setFeedback]   = useState("");
 
+  const statusesToUse = ORDER_STATUSES.filter(s => {
+    if (order.tableNumber && s.key === "out_for_delivery") return false;
+    return true;
+  }).map(s => {
+    if (s.key === "delivered" && order.tableNumber) {
+      return { ...s, label: "Served" };
+    }
+    return s;
+  });
+
   const sc = STATUS_COLORS[order.status] ?? STATUS_COLORS.pending;
-  const currentStatusDef = ORDER_STATUSES.find(s => s.key === order.status);
+  const currentStatusDef = statusesToUse.find(s => s.key === order.status);
 
   function notify(msg: string) { setFeedback(msg); setTimeout(() => setFeedback(""), 3000); }
 
@@ -106,7 +116,7 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
     });
   }
 
-  const progressIdx   = ORDER_STATUSES.findIndex(s => s.key === order.status);
+  const progressIdx   = statusesToUse.findIndex(s => s.key === order.status);
   const isCancelled   = order.status === "cancelled";
   const isDelivered   = order.status === "delivered";
 
@@ -142,7 +152,7 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
                 </button>
                 {showStatus && (
                   <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 999, minWidth: 200, overflow: "hidden" }}>
-                    {ORDER_STATUSES.filter(s => s.key !== "cancelled").map(s => {
+                    {statusesToUse.filter(s => s.key !== "cancelled").map(s => {
                       const Icon = s.icon;
                       return (
                         <button key={s.key} onClick={() => handleStatusChange(s.key)}
@@ -205,7 +215,7 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
         <Card>
           <CardHeader title="Order Progress" />
           <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 0, overflowX: "auto" }}>
-            {ORDER_STATUSES.filter(s => s.key !== "cancelled").map((s, i, arr) => {
+            {statusesToUse.filter(s => s.key !== "cancelled").map((s, i, arr) => {
               const active  = progressIdx >= i;
               const current = order.status === s.key;
               const Icon    = s.icon;

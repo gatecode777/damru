@@ -71,6 +71,12 @@ export default function BanquetBookingForm({ branchSlug, branchName, ctaTitle, c
     if (!form.fullName.trim() || !form.phone.trim() || !form.email.trim()) {
       setErr("Please fill in your name, phone and email."); return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setErr("Please enter a valid email address."); return;
+    }
+    if (!/^[6-9]\d{9}$/.test(form.phone.trim())) {
+      setErr("Please enter a valid 10-digit phone number."); return;
+    }
 
     if (form.eventDate) {
       if (form.eventDate.length < 10) {
@@ -151,8 +157,9 @@ export default function BanquetBookingForm({ branchSlug, branchName, ctaTitle, c
           <div className="banqplace__form-row">
             <input type="text" placeholder="Full Name *" value={form.fullName}
               onChange={e => upd("fullName", e.target.value)} required />
-            <input type="tel" placeholder="Phone *" value={form.phone}
-              onChange={e => upd("phone", e.target.value)} required />
+            <input type="tel" placeholder="Phone (10 digits) *" value={form.phone}
+              maxLength={10}
+              onChange={e => upd("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} required />
             <input type="email" placeholder="Email Address *" value={form.email}
               onChange={e => upd("email", e.target.value)} required />
           </div>

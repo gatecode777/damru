@@ -301,6 +301,7 @@ export default function Header() {
   // ── Added: API actions ────────────────────────────────────────
   async function handleLogin() {
     if (!loginEmail || !loginPw) { setErr("Please fill all fields."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail.trim())) { setErr("Please enter a valid email address."); return; }
     setBusy(true); setErr("");
     const d = await apiPost("/api/user/login", { email: loginEmail, password: loginPw });
     setBusy(false);
@@ -312,6 +313,8 @@ export default function Header() {
 
   async function handleRegister() {
     if (!regName || !regEmail || !regPw) { setErr("Fill all required fields."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail.trim())) { setErr("Please enter a valid email address."); return; }
+    if (regPhone && !/^[6-9]\d{9}$/.test(regPhone.trim())) { setErr("Please enter a valid 10-digit phone number."); return; }
     if (regPw !== regConfirm) { setErr("Passwords don't match."); return; }
     if (regPw.length < 6) { setErr("Password min 6 characters."); return; }
     setBusy(true); setErr("");
@@ -325,6 +328,7 @@ export default function Header() {
 
   async function handleSendOtp() {
     if (!forgotEmail) { setErr("Enter your email address."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail.trim())) { setErr("Please enter a valid email address."); return; }
     setBusy(true); setErr("");
     setActiveScreen("otp");
     const d = await apiPost("/api/user/send-otp", { email: forgotEmail });
@@ -783,7 +787,9 @@ export default function Header() {
             </div>
             <div className="auth-field">
               <span className="auth-field-icon"><i className="ri-phone-line"></i></span>
-              <input type="tel" placeholder="Contact Number" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
+              <input type="tel" placeholder="Contact Number (10 digits)" value={regPhone}
+                maxLength={10}
+                onChange={e => setRegPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} />
             </div>
             <div className="auth-field">
               <span className="auth-field-icon"><i className="ri-mail-line"></i></span>

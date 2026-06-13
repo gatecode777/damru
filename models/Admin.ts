@@ -23,6 +23,7 @@ export interface IAdminPermissions {
   coupons:        IPermissionModule;
   analytics:      IPermissionModule;
   settings:       IPermissionModule;
+  tables:         IPermissionModule;
 }
 
 export interface IAdmin extends Document {
@@ -69,6 +70,7 @@ const AdminSchema = new Schema<IAdmin>(
       banquetBookings:{ type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       coupons:        { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       analytics:      { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
+      tables:         { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       // settings:       { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
     },
     createdBy: { type: Schema.Types.ObjectId, ref: "AdminUser", default: null },
@@ -77,8 +79,7 @@ const AdminSchema = new Schema<IAdmin>(
   { timestamps: true }
 );
 
-const Admin: Model<IAdmin> =
-  mongoose.models.Admin ||
-  mongoose.model<IAdmin>("Admin", AdminSchema);
+if (mongoose.models.Admin) { delete (mongoose.models as Record<string, unknown>).Admin; }
+const Admin: Model<IAdmin> = mongoose.model<IAdmin>("Admin", AdminSchema);
 
 export default Admin;

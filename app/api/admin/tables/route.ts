@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 const SECRET = process.env.AUTH_SECRET || "damru-secret-key";
 
 export async function GET() {
-  const deny = await checkApiPerm("settings", "view");
+  const deny = await checkApiPerm("tables", "view");
   if (deny) return deny;
 
   try {
@@ -20,7 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const deny = await checkApiPerm("settings", "create");
+  const deny = await checkApiPerm("tables", "create");
   if (deny) return deny;
 
   try {

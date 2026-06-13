@@ -10,6 +10,10 @@ export async function POST(req: NextRequest) {
     const { fullName, phone, email, branchSlug, branchName, eventType, eventDate, guestCount, message } = await req.json();
     if (!fullName?.trim() || !phone?.trim() || !email?.trim())
       return NextResponse.json({ error: "Name, phone and email are required." }, { status: 400 });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    if (!/^[6-9]\d{9}$/.test(phone.trim()))
+      return NextResponse.json({ error: "Please enter a valid 10-digit phone number." }, { status: 400 });
 
     await connectDB();
     const booking = await BanquetBooking.create({

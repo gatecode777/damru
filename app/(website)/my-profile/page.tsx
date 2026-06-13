@@ -501,6 +501,7 @@ export default function MyProfilePage() {
 
   async function handleSaveProfile(){
     if(!editForm.name.trim()){showToast("Name is required.");return;}
+    if(editForm.phone && !/^[6-9]\d{9}$/.test(editForm.phone.trim())){showToast("Please enter a valid 10-digit phone number.");return;}
     setEditSaving(true);
     try{
       let avatarFilename=user?.avatar||"";
@@ -540,6 +541,7 @@ export default function MyProfilePage() {
 
   async function handleSaveAddress(){
     if(!addrForm.fullName||!addrForm.phone||!addrForm.house||!addrForm.city||!addrForm.state||!addrForm.pincode){showToast("Fill all required fields.");return;}
+    if(!/^[6-9]\d{9}$/.test(addrForm.phone.trim())){showToast("Please enter a valid 10-digit phone number.");return;}
     setAddrSaving(true);
     const r=await fetch("/api/address",{method:editingAddr?"PATCH":"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify(editingAddr?{id:editingAddr._id,...addrForm}:addrForm)});
@@ -886,10 +888,23 @@ export default function MyProfilePage() {
               </button>
               <input ref={avatarRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f){setAvatarFile(f);setAvatarPreview(URL.createObjectURL(f));}}}/>
             </div>
-            {[["Full Name *","name","text","Your full name"],["Phone","phone","tel","+91-xxxxxxxxxx"],["City","city","text","e.g. Jaipur"]].map(([label,key,type,placeholder])=>(
+            {[["Full Name *","name","text","Your full name"],["Phone","phone","tel","e.g. 9876543210"],["City","city","text","e.g. Jaipur"]].map(([label,key,type,placeholder])=>(
               <div key={key} className="profile__modal-field">
                 <label className="profile__modal-label">{label}</label>
-                <input className="profile__modal-input" type={type} placeholder={placeholder} value={editForm[key as keyof typeof editForm]} onChange={e=>setEditForm(p=>({...p,[key]:e.target.value}))}/>
+                <input 
+                  className="profile__modal-input" 
+                  type={type} 
+                  placeholder={placeholder} 
+                  maxLength={key === "phone" ? 10 : undefined}
+                  value={editForm[key as keyof typeof editForm]} 
+                  onChange={e=>{
+                    let val = e.target.value;
+                    if(key === "phone"){
+                      val = val.replace(/\D/g, "").slice(0, 10);
+                    }
+                    setEditForm(p=>({...p,[key]:val}));
+                  }}
+                />
               </div>
             ))}
             <div style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#aaa",marginBottom:12}}>Email cannot be changed.</div>
@@ -912,10 +927,22 @@ export default function MyProfilePage() {
                 <option>Home</option><option>Office</option><option>Other</option>
               </select>
             </div>
-            {[["Full Name *","fullName","Your full name"],["Phone *","phone","+91-xxxxxxxxxx"],["House / Flat / Street *","house","208, Shiv Vihar, MG Road"],["Area / Landmark","area","Near City Mall (optional)"],["City *","city","Jaipur"],["State *","state","Rajasthan"],["Pincode *","pincode","302034"]].map(([label,key,placeholder])=>(
+            {[["Full Name *","fullName","Your full name"],["Phone *","phone","e.g. 9876543210"],["House / Flat / Street *","house","208, Shiv Vihar, MG Road"],["Area / Landmark","area","Near City Mall (optional)"],["City *","city","Jaipur"],["State *","state","Rajasthan"],["Pincode *","pincode","302034"]].map(([label,key,placeholder])=>(
               <div key={key} className="profile__modal-field">
                 <label className="profile__modal-label">{label}</label>
-                <input className="profile__modal-input" placeholder={placeholder} value={addrForm[key as keyof typeof addrForm] as string} onChange={e=>setAddrForm(p=>({...p,[key]:e.target.value}))}/>
+                <input 
+                  className="profile__modal-input" 
+                  placeholder={placeholder} 
+                  maxLength={key === "phone" ? 10 : undefined}
+                  value={addrForm[key as keyof typeof addrForm] as string} 
+                  onChange={e=>{
+                    let val = e.target.value;
+                    if(key === "phone"){
+                      val = val.replace(/\D/g, "").slice(0, 10);
+                    }
+                    setAddrForm(p=>({...p,[key]:val}));
+                  }}
+                />
               </div>
             ))}
             <div style={{marginBottom:14,fontFamily:"Poppins,sans-serif",fontSize:13}}>

@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
     const { label, fullName, phone, house, area, city, state, pincode, isDefault } = await req.json();
     if (!fullName || !phone || !house || !city || !state || !pincode)
       return NextResponse.json({ error: "All required fields must be filled." }, { status: 400 });
+    if (!/^[6-9]\d{9}$/.test(phone.trim()))
+      return NextResponse.json({ error: "Please enter a valid 10-digit phone number." }, { status: 400 });
 
     await connectDB();
 
@@ -56,6 +58,8 @@ export async function PATCH(req: NextRequest) {
   try {
     const { id, label, fullName, phone, house, area, city, state, pincode, isDefault } = await req.json();
     if (!id) return NextResponse.json({ error: "Address ID required." }, { status: 400 });
+    if (phone && !/^[6-9]\d{9}$/.test(phone.trim()))
+      return NextResponse.json({ error: "Please enter a valid 10-digit phone number." }, { status: 400 });
 
     await connectDB();
 

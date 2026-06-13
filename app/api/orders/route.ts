@@ -170,6 +170,12 @@ export async function POST(req: NextRequest) {
 
     const order = await Order.create(orderData);
 
+    // If it is a dine-in table order, set the table status to occupied
+    if (isDineIn && tableId) {
+      const Table = (await import("@/models/Table")).default;
+      await Table.findByIdAndUpdate(tableId, { status: "occupied" });
+    }
+
     // ── Clear cart for logged-in user ─────────────────────────
     if (user) {
       await Cart.findOneAndUpdate({ userId: user.id }, { items: [] });
