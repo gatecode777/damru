@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       const imageKitFormData = new FormData();
       imageKitFormData.append("file", file);
       imageKitFormData.append("fileName", filename);
-      imageKitFormData.append("folder", `/uploads/${subDir}`);
+      imageKitFormData.append("folder", `/DAMRU/${subDir}`);
       imageKitFormData.append("useUniqueFileName", "false");
 
       const authHeader = "Basic " + Buffer.from(imageKitPrivateKey + ":").toString("base64");

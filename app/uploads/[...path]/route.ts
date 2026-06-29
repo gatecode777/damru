@@ -9,7 +9,7 @@ export async function GET(
 
   // Reconstruct the file path (e.g., blogs/image-name.jpg)
   const filePath = pathSegments.join("/");
-  const imageKitUrl = `${urlEndpoint}/uploads/${filePath}`;
+  const imageKitUrl = `${urlEndpoint}/DAMRU/${filePath}`;
 
   try {
     const res = await fetch(imageKitUrl);

@@ -203,7 +203,7 @@
 /* Parent Container */
 .menu-parent {
     width: 100%;
-    padding: 60px 10%;
+    padding: 80px 10%;
     background-color: #fff;
     overflow-x: hidden;
 }
@@ -348,7 +348,7 @@
 /* Container Styling */
 .menu-parent {
     width: 100%;
-    padding: 100px 10%;
+    padding: 80px 10%;
     background-color: #fff;
 }
 
@@ -516,11 +516,11 @@
 /* Mobile View (Phones) */
 @media (max-width: 768px) {
     .menu-parent {
-        padding: 20px 12px;
+        padding: 40px 16px;
     }
 
     .menu-container {
-        gap: 16px !important;
+        gap: 32px !important;
     }
 
     .menu-parent .menu-card-m,
@@ -746,7 +746,7 @@
 
 .reservation-section {
     background-color: #fff9f4 !important;
-    padding: 100px 5% !important;
+    padding: 85px 5% !important;
     display: block !important;
     width: 100% !important;
     box-sizing: border-box;
@@ -1088,7 +1088,7 @@ body {
 
 
     .reservation-section {
-        padding: 60px 20px !important;
+        padding: 55px 20px !important;
     }
 
     .reservation-section .res-main-title {

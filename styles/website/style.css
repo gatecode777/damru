@@ -675,7 +675,7 @@
 
 @media (max-width: 991px) {
   .diet-interactive-section {
-    padding: 20px 25px;
+    padding: 50px 20px;
     text-align: center;
   }
 
@@ -1439,10 +1439,21 @@
 /* 3 card section  */
 
 .branches-section-3d {
-  padding: 60px 5%;
+  padding: 70px 5%;
   background: #ffffff;
   perspective: 1500px;
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .branches-section-3d {
+    padding: 50px 20px;
+  }
+}
+@media (max-width: 480px) {
+  .branches-section-3d {
+    padding: 40px 15px;
+  }
 }
 
 .section-header {
@@ -2292,6 +2303,10 @@
     margin-bottom: -15px !important;
   }
 
+  .excellent-cook-section {
+    padding-top: 80px !important;
+  }
+
   .cook-content {
     width: 55%;
     padding-left: 20px !important;
@@ -2339,7 +2354,7 @@
 
 .reservation-section {
   background-color: #fff9f4 !important;
-  padding: 100px 5% !important;
+  padding: 85px 5% !important;
   display: block !important;
   width: 100% !important;
   box-sizing: border-box;
@@ -2574,6 +2589,10 @@
 
 /* Mobile (600px) */
 @media (max-width: 600px) {
+  .reservation-section {
+    padding: 55px 20px !important;
+  }
+
   .reservation-section .res-main-title {
     font-size: 2.2rem !important;
     transform: perspective(1000px) rotateX(15deg);
@@ -2611,12 +2630,22 @@
   }
 }
 
-/* The Lens Section  */
 .lens-section {
-  padding: 50px 5%;
+  padding: 65px 5%;
   background-color: #fff;
   font-family: "Inter", sans-serif;
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .lens-section {
+    padding: 50px 20px;
+  }
+}
+@media (max-width: 480px) {
+  .lens-section {
+    padding: 40px 15px;
+  }
 }
 
 .lens-container {
@@ -2790,9 +2819,20 @@
 /* Testimonial section  */
 .testimonial-section {
   background-color: #fff9f4;
-  padding: 100px 5%;
+  padding: 80px 5%;
   font-family: "Inter", sans-serif;
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .testimonial-section {
+    padding: 50px 20px;
+  }
+}
+@media (max-width: 480px) {
+  .testimonial-section {
+    padding: 40px 15px;
+  }
 }
 
 .testi-container {

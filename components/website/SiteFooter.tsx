@@ -2,29 +2,31 @@ import Link from "next/link";
 import NewsletterForm from "./NewsletterForm";
 
 const QUICK_LINKS = [
-  { label: "Home",            href: "/"         },
-  { label: "About Us",        href: "/about-us"    },
-  { label: "Menu",            href: "/menu"     },
-  { label: "Banquet / Events",href: "/branches"  },
-  { label: "Gallery",         href: "/gallery"  },
-  { label: "Contact Us",      href: "/contact-us"  },
+  { label: "Home", href: "/" },
+  { label: "About Us", href: "/about-us" },
+  { label: "Menu", href: "/menu" },
+  { label: "Banquet / Events", href: "/branches" },
+  { label: "Gallery", href: "/gallery" },
+  { label: "Contact Us", href: "/contact-us" },
+  { label: "Offers", href: "/offers" },
 ];
 
 const SERVICE_LINKS = [
-  { label: "Online Order",        href: "/menu"    },
-  { label: "Birthday Parties",    href: "/branches"  },
-  { label: "Wedding Functions",   href: "/branches"  },
-  { label: "Corporate Events",    href: "/branches"  },
-  { label: "Catering Services",   href: "/contact-us"  },
-  { label: "Dine-In",             href: "/menu"     },
+  { label: "Online Order", href: "/menu" },
+  { label: "Birthday Parties", href: "/branches" },
+  { label: "Wedding Functions", href: "/branches" },
+  { label: "Corporate Events", href: "/branches" },
+  { label: "Catering Services", href: "/contact-us" },
+  { label: "Dine-In", href: "/menu" },
+  { label: "Blogs", href: "/blogs" },
 ];
 
 const POLICY_LINKS = [
-  { label: "Privacy Policy",    href: "/privacy-policy"   },
-  { label: "Refund Policy",     href: "/refund-policy"    },
-  { label: "Booking Policy",    href: "/booking-policy"   },
-  { label: "Shipping Policy",   href: "/shipping-policy"  },
-  { label: "Terms & Conditions",href: "/terms-and-conditions"            },
+  { label: "Privacy Policy", href: "/privacy-policy" },
+  { label: "Refund Policy", href: "/refund-policy" },
+  { label: "Booking Policy", href: "/booking-policy" },
+  { label: "Shipping Policy", href: "/shipping-policy" },
+  { label: "Terms & Conditions", href: "/terms-and-conditions" },
 ];
 
 export default function SiteFooter() {
