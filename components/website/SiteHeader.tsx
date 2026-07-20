@@ -696,7 +696,7 @@ export default function Header() {
               <li><span className="dot"></span> <Link href="/contact-us" onClick={toggleMenu} className={pathname === "/contact-us" ? "active-menu" : ""}>CONTACT US</Link></li>
               <li><span className="dot"></span> <Link href="/gallery" onClick={toggleMenu} className={pathname === "/gallery" ? "active-menu" : ""}>GALLERY</Link></li>
               <li className="has-submenu">
-                <span className="dot" style={{ background: pathname.startsWith("/blogs") ? "#8da33d" : undefined }}></span>
+                <span className="dot" style={{ background: pathname.startsWith("/blogs") ? "#e67e22" : undefined }}></span>
                 <Link href="/blogs" onClick={toggleMenu} className={pathname.startsWith("/blogs") ? "active-menu" : ""}>BLOGS</Link>
               </li>
               <li><span className="dot"></span> <Link href="/offers" onClick={toggleMenu} className={pathname === "/offers" ? "active-menu" : ""}>OFFERS</Link></li>
@@ -708,7 +708,7 @@ export default function Header() {
                     <span className="dot" style={{ background: "#e74c3c" }}></span>
                     <button
                       onClick={() => { setIsMenuOpen(false); handleLogout(); }}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#e74c3c", fontFamily: "inherit", fontSize: "inherit", fontWeight: "inherit" }}
+                      style={{ color: "#e74c3c" }}
                     >
                       LOGOUT
                     </button>
@@ -719,7 +719,6 @@ export default function Header() {
                   <span className="dot"></span>
                   <button
                     onClick={() => { setIsMenuOpen(false); setIsAuthOpen(true); }}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", fontFamily: "inherit", fontSize: "inherit", fontWeight: "inherit" }}
                   >
                     LOGIN
                   </button>

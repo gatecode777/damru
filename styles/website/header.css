@@ -161,7 +161,7 @@
 .close-menu {
   position: absolute;
   top: 40px;
-  left: 50px;
+  right: 50px;
   font-size: 35px;
   cursor: pointer;
   opacity: 0.8;
@@ -199,17 +199,23 @@
   margin-right: 20px;
 }
 
-.overlay-nav a {
+.overlay-nav a,
+.overlay-nav button {
   font-family: "Playfair Display", serif;
   font-size: 55px;
   color: #fff;
   text-decoration: none;
   letter-spacing: 2px;
   font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
 }
 
 .overlay-nav a.active-menu {
-  color: #8da33d;
+  color: #e67e22;
 }
 
 .submenu {
@@ -272,7 +278,7 @@
 }
 
 .overlay-socials a:hover {
-  color: #8da33d;
+  color: #e67e22;
 }
 
 
@@ -639,7 +645,7 @@
 .close-menu {
   position: absolute;
   top: 30px;
-  left: 30px;
+  right: 30px;
   font-size: 32px;
   cursor: pointer;
   transition: 0.3s;
@@ -673,17 +679,23 @@
   margin-right: 15px;
 }
 
-.overlay-nav a {
+.overlay-nav a,
+.overlay-nav button {
   font-family: "Playfair Display", serif;
   font-size: 42px;
   color: #fff;
   text-decoration: none;
   font-weight: 600;
   transition: 0.3s;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
 }
 
 .overlay-nav a.active-menu {
-  color: #8da33d;
+  color: #e67e22;
 }
 
 .submenu {
@@ -741,18 +753,21 @@
 }
 
 .overlay-socials a:hover {
-  color: #8da33d;
+  color: #e67e22;
 }
 
 @media (max-width: 767px) {
   .full-menu-overlay {
     padding: 30px 4%;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
 
   .close-menu {
     top: 20px;
-    left: 20px;
+    right: 20px;
     font-size: 28px;
+    color: #000000 !important;
   }
 
   .overlay-content {
@@ -760,14 +775,21 @@
     gap: 30px;
   }
 
-  .overlay-nav a {
+  .overlay-nav a,
+  .overlay-nav button {
     font-size: 28px;
+    color: #000000 !important;
+  }
+
+  .overlay-nav a.active-menu {
+    color: #e67e22 !important;
   }
 
   .overlay-nav .dot {
     width: 5px;
     height: 5px;
     margin-right: 12px;
+    background-color: #000000 !important;
   }
 
   .overlay-nav ul li {
@@ -776,15 +798,22 @@
 
   .submenu a {
     font-size: 14px !important;
+    color: #555555 !important;
   }
 
   .overlay-contact h3 {
     font-size: 24px;
+    color: #000000 !important;
+  }
+
+  .dotted-divider {
+    border-bottom: 2px dotted rgba(0, 0, 0, 0.2) !important;
   }
 
   .contact-detail,
   .contact-address {
     font-size: 14px;
+    color: #333333 !important;
   }
 
   .overlay-socials {
@@ -793,6 +822,11 @@
 
   .overlay-socials a {
     font-size: 20px;
+    color: #000000 !important;
+  }
+
+  .overlay-socials a:hover {
+    color: #e67e22 !important;
   }
 }
 
@@ -807,7 +841,8 @@
 }
 
 @media (max-width: 480px) {
-  .overlay-nav a {
+  .overlay-nav a,
+  .overlay-nav button {
     font-size: 24px;
   }
 
@@ -826,7 +861,8 @@
 }
 
 @media (max-width: 374px) {
-  .overlay-nav a {
+  .overlay-nav a,
+  .overlay-nav button {
     font-size: 20px;
   }
 
