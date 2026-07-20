@@ -24,12 +24,13 @@
 
 /* Hero Section */
 .shipping .shipping-hero {
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   height: 700px;
-  background: url("/assets/images/shippingpolicy.png") no-repeat center center/cover;
+  background: url("https://ik.imagekit.io/zp0tch54w/DAMRU/Shipping%20Policy%20Final.webp") no-repeat center center;
+  background-size: 100% 100%;
   position: relative;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
 }
 
 /* Main Content Container - CRITICAL FIX */
@@ -142,16 +143,16 @@
   .shipping .shipping-hero {
     height: 450px;
   }
-  
+
   .shipping .shipping-container {
     margin: 50px auto;
     padding: 0 20px;
   }
-  
+
   .shipping .policy-title {
     font-size: 40px;
   }
-  
+
   .shipping .policy-section h2 {
     font-size: 26px;
   }
@@ -160,30 +161,30 @@
 /* ============================================================
    RESPONSIVE: MOBILE LARGE (426px - 767px)
    ============================================================ */
-@media (max-width: 767px) and (min-width: 426px) {
+@media (max-width: 768px) and (min-width: 426px) {
   .shipping .shipping-hero {
-    height: 300px;
+    height: 340px;
   }
-  
+
   .shipping .shipping-container {
     margin: 40px auto;
     padding: 0 16px;
   }
-  
+
   .shipping .policy-title {
     font-size: 34px;
   }
-  
+
   .shipping .policy-section h2 {
     font-size: 24px;
   }
-  
+
   .shipping .intro-text,
   .shipping .policy-section p,
   .shipping .policy-section ul li {
     font-size: 14px;
   }
-  
+
   .shipping .policy-section ul {
     padding-left: 16px;
   }
@@ -192,30 +193,34 @@
 /* ============================================================
    RESPONSIVE: MOBILE MEDIUM (376px - 425px)
    ============================================================ */
-@media (max-width: 425px) and (min-width: 376px) {
+
+@media (max-width: 767px) and (min-width: 424px) {
   .shipping .shipping-hero {
-    height: 250px;
+    height: 190px;
   }
-  
+}
+
+
+@media (max-width: 425px) and (min-width: 376px) {
   .shipping .shipping-container {
     margin: 35px auto;
     padding: 0 14px;
   }
-  
+
   .shipping .policy-title {
     font-size: 30px;
   }
-  
+
   .shipping .policy-section h2 {
     font-size: 22px;
   }
-  
+
   .shipping .intro-text,
   .shipping .policy-section p,
   .shipping .policy-section ul li {
     font-size: 13px;
   }
-  
+
   .shipping .policy-section ul {
     padding-left: 14px;
   }
@@ -224,34 +229,38 @@
 /* ============================================================
    RESPONSIVE: MOBILE SMALL (320px - 375px)
    ============================================================ */
-@media (max-width: 375px) and (min-width: 320px) {
+
+@media (max-width: 376px) and (min-width: 320px) {
   .shipping .shipping-hero {
-    height: 200px;
+    height: 168px;
   }
-  
+}
+
+@media (max-width: 375px) and (min-width: 320px) {
+
   .shipping .shipping-container {
     margin: 30px auto;
     padding: 0 12px;
   }
-  
+
   .shipping .policy-title {
     font-size: 26px;
   }
-  
+
   .shipping .policy-section h2 {
     font-size: 20px;
   }
-  
+
   .shipping .intro-text,
   .shipping .policy-section p,
   .shipping .policy-section ul li {
     font-size: 12px;
   }
-  
+
   .shipping .policy-section ul {
     padding-left: 12px;
   }
-  
+
   .shipping .policy-section ul li {
     padding-left: 16px;
   }
@@ -260,34 +269,34 @@
 /* ============================================================
    RESPONSIVE: MOBILE EXTRA SMALL (below 320px)
    ============================================================ */
-@media (max-width: 319px) {
+@media (max-width: 320px) {
   .shipping .shipping-hero {
-    height: 160px;
+    height: 140px;
   }
-  
+
   .shipping .shipping-container {
     margin: 25px auto;
     padding: 0 10px;
   }
-  
+
   .shipping .policy-title {
     font-size: 24px;
   }
-  
+
   .shipping .policy-section h2 {
     font-size: 18px;
   }
-  
+
   .shipping .intro-text,
   .shipping .policy-section p,
   .shipping .policy-section ul li {
     font-size: 11px;
   }
-  
+
   .shipping .policy-section ul {
     padding-left: 10px;
   }
-  
+
   .shipping .policy-section ul li {
     padding-left: 14px;
   }
@@ -301,7 +310,7 @@
     max-width: 1200px;
     padding: 0 20px;
   }
-  
+
   .shipping .shipping-hero {
     height: 600px;
   }
@@ -313,7 +322,7 @@
     margin: 80px auto;
     padding: 0 20px;
   }
-  
+
   .shipping .shipping-hero {
     height: 750px;
   }

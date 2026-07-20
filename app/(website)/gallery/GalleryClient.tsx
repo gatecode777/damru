@@ -67,7 +67,7 @@ export default function GalleryClient({ initialTabs }: GalleryClientProps) {
         {activeTab?.bannerImage ? (
           <img id="hero-main-img" src={`/uploads/gallery/${activeTab.bannerImage}`} alt={activeTab.bannerAlt || activeTab.label} />
         ) : (
-          <img id="hero-main-img" src="/assets/images/gallery1.png" alt="Gallery Banner" />
+          <img id="hero-main-img" src="https://ik.imagekit.io/zp0tch54w/DAMRU/All%20menu%20page.webp" alt="Gallery Banner" />
         )}
       </div>
 

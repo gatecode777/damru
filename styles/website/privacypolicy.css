@@ -3,7 +3,8 @@
    ============================================================ */
 
 /* Global reset for this page only */
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
     width: 100%;
@@ -19,10 +20,13 @@ html, body {
 }
 
 .privacypolicy .privacy-hero {
-    width: 100%;
-    height: 500px;
-    background: url("/assets/images/privacy.png") no-repeat center center/cover;
-    background-size: cover;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 700px;
+    background: url("https://ik.imagekit.io/zp0tch54w/DAMRU/Privacy%20&%20Policies%20Final.webp") no-repeat center center;
+    background-size: 100% 100%;
+    position: relative;
+    overflow-x: hidden !important;
 }
 
 .privacypolicy .privacy-main-container {
@@ -88,18 +92,42 @@ html, body {
     margin-bottom: 5px;
 }
 
+@media (max-width: 1024px) and (min-width: 768px) {
+    .privacypolicy .privacy-hero {
+        height: 450px;
+    }
+}
+
 /* Mobile */
 @media (max-width: 768px) {
     .privacypolicy .privacy-hero {
-        height: 250px;
+        height: 340px;
     }
-    
+
     .privacypolicy .main-orange-title {
         font-size: 28px;
     }
-    
+
     .privacypolicy .privacy-section h3 {
         font-size: 20px;
+    }
+}
+
+@media (max-width: 767px) and (min-width: 424px) {
+    .privacypolicy .privacy-hero {
+        height: 190px;
+    }
+}
+
+@media (max-width: 425px) and (min-width: 375px) {
+    .privacypolicy .privacy-hero {
+        height: 168px;
+    }
+}
+
+@media (max-width: 375px) and (min-width: 320px) {
+    .privacypolicy .privacy-hero {
+        height: 140px;
     }
 }
 
@@ -107,14 +135,20 @@ html, body {
     .privacypolicy .privacy-main-container {
         padding: 30px 12px;
     }
-    
+
     .privacypolicy .main-orange-title {
         font-size: 24px;
     }
-    
+
     .privacypolicy .intro-text,
     .privacypolicy .privacy-section p,
     .privacypolicy .privacy-section ul li {
         font-size: 13px;
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1600px) {
+    .privacypolicy .privacy-hero {
+        height: 600px !important;
     }
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
 
 interface Variant { label: string; price: number }
@@ -22,7 +23,8 @@ export default function MenuItemCard({
   menuItemId, name, description, image, basePrice,
   variantType, variants, isVeg, reverse = false,
 }: Props) {
-  const { addItem, isLoggedIn } = useCart();
+  const { addItem, clearCart, isLoggedIn } = useCart();
+  const router = useRouter();
 
   // qty is only used for fixed-price items (added directly)
   const [qty, setQty] = useState(1);
@@ -31,6 +33,7 @@ export default function MenuItemCard({
   const [selectedVariant, setSelectedVariant] = useState<number>(0);
   const [checkedAddons,   setCheckedAddons]   = useState<boolean[]>(variants.map(() => false));
   const [added,           setAdded]           = useState(false); // brief feedback
+  const [isOrderNowFlow,  setIsOrderNowFlow]  = useState(false);
 
   // Fix double-increment: use separate handlers with stopPropagation
   function handleInc(e: React.MouseEvent) {
@@ -61,6 +64,7 @@ export default function MenuItemCard({
   // Add fixed-price item directly to cart
   function handleAddToCart(e: React.MouseEvent) {
     e.stopPropagation();
+    setIsOrderNowFlow(false);
     if (!isLoggedIn) {
       window.dispatchEvent(new CustomEvent("open-auth-modal"));
       return;
@@ -74,21 +78,24 @@ export default function MenuItemCard({
     }
   }
 
-  function handleOrderNow(e: React.MouseEvent) {
+  async function handleOrderNow(e: React.MouseEvent) {
     e.stopPropagation();
     if (!isLoggedIn) {
       window.dispatchEvent(new CustomEvent("open-auth-modal"));
       return;
     }
+    setIsOrderNowFlow(true);
     if (variantType === "none") {
-      handleAddToCart(e);
+      await clearCart();
+      await addItem({ id: `${menuItemId}-plain`, menuItemId, name, custom: "", price: basePrice, image, variantType: "none" }, qty);
+      router.push("/checkout");
     } else {
       openModal();
     }
   }
 
   // Add variant/addon item from modal
-  function handleModalAdd() {
+  async function handleModalAdd() {
     if (!isLoggedIn) {
       closeModal();
       window.dispatchEvent(new CustomEvent("open-auth-modal"));
@@ -110,10 +117,17 @@ export default function MenuItemCard({
       id      = `${menuItemId}-${custom}`;
     }
 
-    addItem({ id, menuItemId, name, custom, price, image, variantType });
-    closeModal();
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    if (isOrderNowFlow) {
+      await clearCart();
+      await addItem({ id, menuItemId, name, custom, price, image, variantType });
+      closeModal();
+      router.push("/checkout");
+    } else {
+      await addItem({ id, menuItemId, name, custom, price, image, variantType });
+      closeModal();
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+    }
   }
 
   function toggleAddon(i: number) {

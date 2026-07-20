@@ -26,12 +26,13 @@ export default function AboutUsPage() {
       <section className="story-section">
         <div className="story-container">
           <div className="story-content">
-            <h2>Our Story</h2>
+            <h2>About Us</h2>
             <p>
-              Every great dish has a story, and so do we. Our journey began with a passion for creating
-              delicious food and memorable dining experiences. From handpicked ingredients to carefully
-              crafted recipes, we bring flavors that connect people and create moments worth cherishing. Every
-              plate we serve reflects our dedication to quality, taste, and hospitality.
+              Welcome to डमरू (Damru) — where pure vegetarian food meets warmth, quality, and timeless hospitality.<br />
+              At Damru, our vision is simple: to serve fresh, pure, and delicious vegetarian cuisine at affordable prices without compromising on quality or experience. We believe that great food should be accessible to everyone, served in an elegant and welcoming environment that makes every visit memorable.<br />
+              Every dish is prepared using carefully selected ingredients, authentic recipes, and uncompromising hygiene standards. Whether you're joining us for a family dinner, a casual outing with friends, or a special celebration, we strive to create an experience that combines exceptional taste, heartfelt service, and a premium ambience.<br />
+              At Damru, we don't just serve meals—we create moments where every guest enjoys purity, quality, comfort, and value, all under one roof.
+              Pure Taste. Premium Experience. Honest Value
             </p>
           </div>
 

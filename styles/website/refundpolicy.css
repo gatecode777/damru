@@ -36,11 +36,13 @@
 
 /* Hero Section */
 .refund .refund-hero {
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   height: 700px;
-  background: url("/assets/images/refundpolicy.png") no-repeat center center/cover;
+  background: url("https://ik.imagekit.io/zp0tch54w/DAMRU/Rectangle%20136%20(4).png?updatedAt=1782476571007") no-repeat center center;
+  background-size: 100% 100%;
   position: relative;
+  overflow-x: hidden !important;
 }
 
 /* Main Content Container - CRITICAL FIX */
@@ -167,16 +169,16 @@
   .refund .refund-hero {
     height: 450px;
   }
-  
+
   .refund .refund-container {
     margin: 50px 0;
     padding: 0 20px;
   }
-  
+
   .refund .policy-title {
     font-size: 40px;
   }
-  
+
   .refund .policy-section h2 {
     font-size: 26px;
   }
@@ -185,30 +187,30 @@
 /* ============================================================
    RESPONSIVE: MOBILE LARGE (426px - 767px)
    ============================================================ */
-@media (max-width: 767px) and (min-width: 426px) {
+@media (max-width: 768px) and (min-width: 426px) {
   .refund .refund-hero {
-    height: 300px;
+    height: 340px;
   }
-  
+
   .refund .refund-container {
     margin: 40px 0;
     padding: 0 16px;
   }
-  
+
   .refund .policy-title {
     font-size: 34px;
   }
-  
+
   .refund .policy-section h2 {
     font-size: 24px;
   }
-  
+
   .refund .intro-text,
   .refund .policy-section p,
   .refund .policy-section ul li {
     font-size: 14px;
   }
-  
+
   .refund .policy-section ul {
     padding-left: 16px;
   }
@@ -217,34 +219,36 @@
 /* ============================================================
    RESPONSIVE: MOBILE MEDIUM (376px - 425px)
    ============================================================ */
-@media (max-width: 425px) and (min-width: 376px) {
+
+
+@media (max-width: 426px) and (min-width: 376px) {
   .refund .refund-hero {
-    height: 250px;
+    height: 168px;
   }
-  
+
   .refund .refund-container {
     margin: 35px 0;
     padding: 0 14px;
   }
-  
+
   .refund .policy-title {
     font-size: 30px;
   }
-  
+
   .refund .policy-section h2 {
     font-size: 22px;
   }
-  
+
   .refund .intro-text,
   .refund .policy-section p,
   .refund .policy-section ul li {
     font-size: 13px;
   }
-  
+
   .refund .policy-section ul {
     padding-left: 14px;
   }
-  
+
   .refund .policy-section ul li {
     padding-left: 18px;
   }
@@ -253,34 +257,34 @@
 /* ============================================================
    RESPONSIVE: MOBILE SMALL (320px - 375px)
    ============================================================ */
-@media (max-width: 375px) and (min-width: 320px) {
+@media (max-width: 376px) and (min-width: 320px) {
   .refund .refund-hero {
-    height: 200px;
+    height: 168px;
   }
-  
+
   .refund .refund-container {
     margin: 30px 0;
     padding: 0 12px;
   }
-  
+
   .refund .policy-title {
     font-size: 26px;
   }
-  
+
   .refund .policy-section h2 {
     font-size: 20px;
   }
-  
+
   .refund .intro-text,
   .refund .policy-section p,
   .refund .policy-section ul li {
     font-size: 12px;
   }
-  
+
   .refund .policy-section ul {
     padding-left: 12px;
   }
-  
+
   .refund .policy-section ul li {
     padding-left: 16px;
   }
@@ -289,34 +293,34 @@
 /* ============================================================
    RESPONSIVE: MOBILE EXTRA SMALL (below 320px)
    ============================================================ */
-@media (max-width: 319px) {
+@media (max-width: 320px) {
   .refund .refund-hero {
-    height: 160px;
+    height: 140px;
   }
-  
+
   .refund .refund-container {
     margin: 25px 0;
     padding: 0 10px;
   }
-  
+
   .refund .policy-title {
     font-size: 24px;
   }
-  
+
   .refund .policy-section h2 {
     font-size: 18px;
   }
-  
+
   .refund .intro-text,
   .refund .policy-section p,
   .refund .policy-section ul li {
     font-size: 11px;
   }
-  
+
   .refund .policy-section ul {
     padding-left: 10px;
   }
-  
+
   .refund .policy-section ul li {
     padding-left: 14px;
   }
@@ -331,7 +335,7 @@
     margin: 60px auto;
     padding: 0 20px;
   }
-  
+
   .refund .refund-hero {
     height: 600px;
   }
@@ -343,7 +347,7 @@
     margin: 80px auto;
     padding: 0 20px;
   }
-  
+
   .refund .refund-hero {
     height: 750px;
   }
@@ -352,7 +356,8 @@
 /* ============================================================
    EXTRA SAFE - REMOVE ANY HIDDEN WHITE SPACE
    ============================================================ */
-html, body {
+html,
+body {
   overflow-x: hidden;
   width: 100%;
   margin: 0;

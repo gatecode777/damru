@@ -6,44 +6,45 @@
    ============================================================ */
 
 /* Force no horizontal scroll on all elements */
-html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-    position: relative !important;
+html,
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  position: relative !important;
 }
 
 /* Ensure all containers respect width */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 /* Fix for terms container */
 .terms {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
 }
 
 .terms .terms-container {
-    width: 100% !important;
-    max-width: 100% !important;
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-    margin: 0 auto !important;
-    box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
 }
 
 /* Fix for any overflowing elements */
 .terms .terms-hero {
-    width: 100% !important;
-    max-width: 100% !important;
-    background-size: cover !important;
-    background-position: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  background-size: cover !important;
+  background-position: center !important;
 }
 
 /* Fix for lists and paragraphs */
@@ -51,10 +52,10 @@ html, body {
 .terms .policy-section p,
 .terms .intro-text,
 .terms .contact-details {
-    width: 100% !important;
-    max-width: 100% !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
 /* Fix for all text elements */
@@ -63,9 +64,10 @@ html, body {
 .terms .policy-section h2,
 .terms .policy-section ul li,
 .terms .contact-details p {
-    word-break: break-word !important;
-    max-width: 100% !important;
+  word-break: break-word !important;
+  max-width: 100% !important;
 }
+
 /* Parent Scoped Class */
 .terms {
   margin: 0;
@@ -78,10 +80,13 @@ html, body {
 
 /* Hero Section */
 .terms .terms-hero {
-  width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   height: 700px;
-  background: url("/assets/images/terms.png") no-repeat center center/cover;
+  background: url("https://ik.imagekit.io/zp0tch54w/DAMRU/Terms%20&%20Conditions%20Final.webp");
+  background-size: cover;
   position: relative;
+  overflow-x: hidden !important;
 }
 
 /* Main Content Container */
@@ -101,6 +106,7 @@ html, body {
   margin-bottom: 20px;
   font-weight: 600;
   line-height: 1.2;
+  padding-top: 60px;
 }
 
 .terms .effective-date {
@@ -185,23 +191,23 @@ html, body {
    ============================================================ */
 @media (max-width: 1024px) and (min-width: 768px) {
   .terms .terms-hero {
-    height: 400px;
+    height: 490px;
   }
-  
+
   .terms .terms-container {
     max-width: 95%;
     margin: 50px auto;
     padding: 0 30px;
   }
-  
+
   .terms .policy-title {
     font-size: 42px;
   }
-  
+
   .terms .policy-section h2 {
     font-size: 26px;
   }
-  
+
   .terms .intro-text,
   .terms .policy-section p,
   .terms .policy-section ul li,
@@ -213,53 +219,53 @@ html, body {
 /* ============================================================
    RESPONSIVE: MOBILE LARGE (426px - 767px)
    ============================================================ */
-@media (max-width: 767px) and (min-width: 426px) {
+@media (max-width: 768px) and (min-width: 426px) {
   .terms .terms-hero {
-    height: 280px;
+    height: 370px;
   }
-  
+
   .terms .terms-container {
     margin: 35px auto;
     padding: 0 25px;
     width: 100%;
   }
-  
+
   .terms .policy-title {
     font-size: 32px;
     margin-bottom: 15px;
   }
-  
+
   .terms .effective-date {
     font-size: 14px;
     margin-bottom: 20px;
   }
-  
+
   .terms .intro-text {
     font-size: 14px;
     margin-bottom: 35px;
     line-height: 1.6;
   }
-  
+
   .terms .policy-section {
     margin-bottom: 35px;
   }
-  
+
   .terms .policy-section h2 {
     font-size: 22px;
     margin-bottom: 15px;
   }
-  
+
   .terms .policy-section p,
   .terms .policy-section ul li,
   .terms .contact-details p {
     font-size: 13px;
     line-height: 1.6;
   }
-  
+
   .terms .policy-section ul {
     padding-left: 5px;
   }
-  
+
   .terms .policy-section ul li {
     padding-left: 18px;
     margin-bottom: 8px;
@@ -269,59 +275,59 @@ html, body {
 /* ============================================================
    RESPONSIVE: MOBILE MEDIUM (376px - 425px)
    ============================================================ */
-@media (max-width: 425px) and (min-width: 376px) {
+
+@media (max-width: 426px) and (min-width: 376px) {
   .terms .terms-hero {
-    height: 220px;
-    background-position: center;
+    height: 202px;
   }
-  
+
   .terms .terms-container {
     margin: 30px auto;
     padding: 0 20px;
     width: 100%;
   }
-  
+
   .terms .policy-title {
     font-size: 28px;
     margin-bottom: 12px;
   }
-  
+
   .terms .effective-date {
     font-size: 13px;
     margin-bottom: 18px;
   }
-  
+
   .terms .intro-text {
     font-size: 13px;
     margin-bottom: 30px;
     line-height: 1.6;
   }
-  
+
   .terms .policy-section {
     margin-bottom: 30px;
   }
-  
+
   .terms .policy-section h2 {
     font-size: 20px;
     margin-bottom: 12px;
   }
-  
+
   .terms .policy-section p,
   .terms .policy-section ul li,
   .terms .contact-details p {
     font-size: 12.5px;
     line-height: 1.6;
   }
-  
+
   .terms .policy-section ul {
     padding-left: 5px;
   }
-  
+
   .terms .policy-section ul li {
     padding-left: 16px;
     margin-bottom: 7px;
   }
-  
+
   .contact-details {
     margin-top: 10px;
   }
@@ -330,59 +336,59 @@ html, body {
 /* ============================================================
    RESPONSIVE: MOBILE SMALL (320px - 375px)
    ============================================================ */
-@media (max-width: 375px) and (min-width: 320px) {
+@media (max-width: 376px) and (min-width: 321px) {
   .terms .terms-hero {
-    height: 180px;
+    height: 185px;
     background-position: center;
   }
-  
+
   .terms .terms-container {
     margin: 25px auto;
     padding: 0 15px;
     width: 100%;
   }
-  
+
   .terms .policy-title {
     font-size: 24px;
     margin-bottom: 10px;
   }
-  
+
   .terms .effective-date {
     font-size: 12px;
     margin-bottom: 15px;
   }
-  
+
   .terms .intro-text {
     font-size: 12px;
     margin-bottom: 25px;
     line-height: 1.5;
   }
-  
+
   .terms .policy-section {
     margin-bottom: 25px;
   }
-  
+
   .terms .policy-section h2 {
     font-size: 18px;
     margin-bottom: 10px;
   }
-  
+
   .terms .policy-section p,
   .terms .policy-section ul li,
   .terms .contact-details p {
     font-size: 12px;
     line-height: 1.55;
   }
-  
+
   .terms .policy-section ul {
     padding-left: 5px;
   }
-  
+
   .terms .policy-section ul li {
     padding-left: 16px;
     margin-bottom: 6px;
   }
-  
+
   .contact-details {
     margin-top: 8px;
   }
@@ -391,50 +397,50 @@ html, body {
 /* ============================================================
    RESPONSIVE: MOBILE EXTRA SMALL (below 320px)
    ============================================================ */
-@media (max-width: 319px) {
+@media (max-width: 320px) {
   .terms .terms-hero {
-    height: 150px;
+    height: 151px;
     background-position: center;
   }
-  
+
   .terms .terms-container {
     margin: 20px auto;
     padding: 0 12px;
     width: 100%;
   }
-  
+
   .terms .policy-title {
     font-size: 22px;
     margin-bottom: 8px;
   }
-  
+
   .terms .effective-date {
     font-size: 11px;
     margin-bottom: 12px;
   }
-  
+
   .terms .intro-text {
     font-size: 11px;
     margin-bottom: 20px;
     line-height: 1.5;
   }
-  
+
   .terms .policy-section {
     margin-bottom: 20px;
   }
-  
+
   .terms .policy-section h2 {
     font-size: 17px;
     margin-bottom: 8px;
   }
-  
+
   .terms .policy-section p,
   .terms .policy-section ul li,
   .terms .contact-details p {
     font-size: 11px;
     line-height: 1.5;
   }
-  
+
   .terms .policy-section ul li {
     padding-left: 14px;
     margin-bottom: 5px;
@@ -445,14 +451,16 @@ html, body {
    RESPONSIVE: DESKTOP (1200px and above)
    ============================================================ */
 @media (min-width: 1200px) and (max-width: 1600px) {
+
+  .terms .terms-hero {
+    height: 637px !important;
+  }
+
   .terms .terms-container {
-    max-width: 1200px;
+    max-width: 1200px !important;
     padding: 0 40px;
   }
-  
-  .terms .terms-hero {
-    height: 600px;
-  }
+
 }
 
 /* ============================================================
@@ -463,19 +471,19 @@ html, body {
     max-width: 1400px;
     margin: 80px auto;
   }
-  
+
   .terms .terms-hero {
     height: 750px;
   }
-  
+
   .terms .policy-title {
     font-size: 54px;
   }
-  
+
   .terms .policy-section h2 {
     font-size: 32px;
   }
-  
+
   .terms .intro-text,
   .terms .policy-section p,
   .terms .policy-section ul li {
@@ -507,56 +515,51 @@ img {
    ============================================================ */
 
 @media (max-width: 768px) {
-    html, body {
-        overflow-x: hidden !important;
-        width: 100% !important;
-    }
-    
-    .terms {
-        overflow-x: hidden !important;
-        width: 100% !important;
-    }
-    
-    .terms .terms-container {
-        padding-left: 16px !important;
-        padding-right: 16px !important;
-        width: 100% !important;
-        margin: 0 !important;
-    }
-    
-    /* Remove any margin that might cause white space */
-    .terms .policy-section {
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-    }
-    
-    /* Make sure hero section doesn't cause overflow */
-    .terms .terms-hero {
-        width: 100% !important;
-        left: 0 !important;
-        right: 0 !important;
-    }
+
+  html,
+  body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+  }
+
+  .terms {
+    overflow-x: hidden !important;
+    width: 100% !important;
+  }
+
+  .terms .terms-container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Remove any margin that might cause white space */
+  .terms .policy-section {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
 }
 
 @media (max-width: 480px) {
-    .terms .terms-container {
-        padding-left: 14px !important;
-        padding-right: 14px !important;
-    }
+  .terms .terms-container {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
 }
 
 @media (max-width: 375px) {
-    .terms .terms-container {
-        padding-left: 12px !important;
-        padding-right: 12px !important;
-    }
+  .terms .terms-container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
 }
 
 @media (max-width: 320px) {
-    .terms .terms-container {
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-    }
+  .terms .terms-container {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
 }
