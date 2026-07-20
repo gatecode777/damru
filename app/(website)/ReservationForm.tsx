@@ -101,7 +101,7 @@ export default function ReservationForm() {
     e.preventDefault();
 
     if (!user) {
-      showToast("Please login to make a reservation.", "error");
+      window.dispatchEvent(new CustomEvent("open-auth-modal"));
       return;
     }
     if (!date || date.length < 10) {
