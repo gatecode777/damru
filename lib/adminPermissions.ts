@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/mongodb";
 import AdminUser from "@/models/Admin";
 
 export interface AdminPerms {
+  name?: string;
+  email?: string;
   role: "super_admin" | "admin" | "moderator";
   isSuperAdmin: boolean;
   can: (module: string, action?: "view"|"create"|"edit"|"delete") => boolean;
@@ -15,7 +17,7 @@ export async function getAdminPerms(): Promise<AdminPerms> {
   if (!session?.user) {
     // Unauthenticated — no access
     const none = () => false;
-    return { role:"moderator", isSuperAdmin:false, can:none, permissions:{} };
+    return { name: "Admin", email: "", role:"moderator", isSuperAdmin:false, can:none, permissions:{} };
   }
 
   await connectDB();
