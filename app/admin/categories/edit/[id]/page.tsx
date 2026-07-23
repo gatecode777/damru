@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeader from "@/components/admin/AdminHeader";
 import CategoryForm from "../../CategoryForm";
 import { connectDB } from "@/lib/mongodb";
 import Category from "@/models/Category";

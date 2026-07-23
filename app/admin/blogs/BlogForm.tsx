@@ -358,7 +358,7 @@ export default function BlogForm({ blog, categories = [] }: { blog?: Blog; categ
                       <div className="bf-upload-placeholder">
                         {coverUploading ? <Loader2 size={28} className="spin" /> : <Upload size={28} strokeWidth={1.5} />}
                         <p>{coverUploading ? "Uploading…" : "Click to upload cover image"}</p>
-                        <small>JPG, PNG, WEBP — max 5MB</small>
+                        <small>Any image format (AVIF, WEBP, JPG, PNG) — max 5MB</small>
                       </div>
                     )}
                   </div>
@@ -521,7 +521,7 @@ export default function BlogForm({ blog, categories = [] }: { blog?: Blog; categ
                         )}
                         <div>
                           <p style={{ fontSize:"0.82rem", fontWeight:500, color:"#374151" }}>{authorPreview ? "Change Photo" : "Upload Author Photo"}</p>
-                          <p style={{ fontSize:"0.72rem", color:"#9ca3af" }}>JPG, PNG — max 5MB</p>
+                          <p style={{ fontSize:"0.72rem", color:"#9ca3af" }}>Any image format (AVIF, WEBP, JPG, PNG) — max 5MB</p>
                         </div>
                       </div>
                       <input ref={authorRef} type="file" accept="image/*" style={{ display:"none" }}

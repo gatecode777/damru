@@ -22,8 +22,7 @@ export async function checkApiPerm(module: string, action: Action = "view"): Pro
     email: (session.user as any).email,
   }).select("role permissions isActive").lean() as any;
 
-  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (admin.role === "super_admin") return null; // always allowed
+  if (admin.role === "super_admin" || admin.role === "admin") return null; // always allowed
 
   const allowed = Boolean(admin.permissions?.[module]?.[action]);
   if (!allowed) return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });

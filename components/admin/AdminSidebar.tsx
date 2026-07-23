@@ -53,7 +53,7 @@ const navGroups = [
     items: [
       { icon: Tag,             label: "Categories",   href: "/admin/categories",  permission: "categories" },
       { icon: UtensilsCrossed, label: "Menu Items",   href: "/admin/menu",        permission: "menu" },
-      { icon: QrCode,          label: "Tables & QR",   href: "/admin/tables",      permission: "settings" },
+      { icon: QrCode,          label: "Tables & QR",   href: "/admin/tables",      permission: "tables" },
       { icon: Images,          label: "Gallery",      href: "/admin/gallery",     permission: "gallery" },
       { icon: MapPin,          label: "Branches",     href: "/admin/branches",    permission: "branches" },
       { icon: CalendarCheck,   label: "Banquet Bookings", href: "/admin/banquet-bookings", permission: "banquetBookings" },
@@ -63,7 +63,7 @@ const navGroups = [
   {
     label: "Blogs",
     items: [
-      { icon: BookOpen,        label: "Blog Categories", href: "/admin/blog-categories", permission: "blog_categories" },
+      { icon: BookOpen,        label: "Blog Categories", href: "/admin/blog-categories", permission: "blogCategories" },
       { icon: FileText,        label: "Blogs",        href: "/admin/blogs",        permission: "blogs" },
     ],
   },
@@ -100,42 +100,18 @@ export default function AdminSidebar() {
 
   // Helper function to check if user has view permission for a module
   const hasPermission = (permission: string): boolean => {
-    if (!perms) return false;
-    if (perms.isSuperAdmin) return true;
+    if (!perms) return true; // Default to true if perms haven't loaded yet
+    if (perms.isSuperAdmin || perms.role === "super_admin" || perms.role === "admin") return true;
     
-    // Dashboard is always visible (or handle differently)
+    // Dashboard is always visible
     if (permission === "dashboard") return true;
     
-    // Check if the module exists in permissions and has view access
-    const modulePerms = perms.permissions[permission];
-    return modulePerms?.view === true;
+    // Check if the module exists in permissions
+    const normKey = permission.replace(/_([a-z])/g, (_, g) => g.toUpperCase());
+    const modulePerms = perms.permissions?.[permission] || perms.permissions?.[normKey];
+    if (!modulePerms) return true;
+    return modulePerms.view !== false;
   };
-
-  // If still loading, show minimal sidebar or skeleton
-  if (loading) {
-    return (
-      <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
-        <div className="brand">
-          <div className="brand-icon">
-            <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-              <ellipse cx="16" cy="9"  rx="6" ry="8" stroke="#f97316" strokeWidth="2.2"/>
-              <ellipse cx="16" cy="23" rx="6" ry="8" stroke="#f97316" strokeWidth="2.2"/>
-              <line x1="10" y1="16" x2="22" y2="16" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round"/>
-              <circle cx="16" cy="16" r="2.5" fill="#f97316"/>
-            </svg>
-          </div>
-          {!collapsed && <span className="brand-name">DAMRU</span>}
-        </div>
-        <style>{`
-          .sidebar { position: fixed; left:0; top:0; bottom:0; width: 220px; background: #fff; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; z-index: 40; transition: width 0.22s cubic-bezier(.4,0,.2,1); box-shadow: 2px 0 8px rgba(0,0,0,0.04); }
-          .sidebar.collapsed { width: 64px; }
-          .brand { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 60px; border-bottom: 1px solid #f3f4f6; overflow: hidden; flex-shrink: 0; }
-          .brand-icon { width: 36px; height: 36px; border-radius: 10px; background: #fff7ed; border: 1.5px solid #fed7aa; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-          .brand-name { font-family: 'DM Sans', sans-serif; font-size: 1.1rem; font-weight: 800; letter-spacing: 0.14em; color: #111827; white-space: nowrap; }
-        `}</style>
-      </aside>
-    );
-  }
 
   // Filter nav groups based on permissions
   const filteredNavGroups = navGroups

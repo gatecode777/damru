@@ -284,7 +284,7 @@ export default function MenuItemForm({ categories, item }: Props) {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    accept="image/*"
                     style={{ display: "none" }}
                     onChange={handleFileChange}
                   />
@@ -297,9 +297,10 @@ export default function MenuItemForm({ categories, item }: Props) {
                       <p className="upload-title">Upload food image</p>
                       <p className="upload-subtitle">Click or drag & drop</p>
                       <div className="upload-formats">
+                        <span>AVIF</span>
+                        <span>WEBP</span>
                         <span>JPG</span>
                         <span>PNG</span>
-                        <span>WEBP</span>
                       </div>
                     </div>
                   ) : (

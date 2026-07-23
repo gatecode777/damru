@@ -5,7 +5,6 @@ import { auth } from "@/auth";
 import { getUserFromCookie } from "@/lib/userSession";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-const ALLOWED  = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 // Valid upload targets → maps to subdirectory under /public/uploads/
 const TARGETS: Record<string, string> = {
@@ -28,21 +27,25 @@ export async function POST(req: NextRequest) {
 
   if (!file)
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
-  if (!ALLOWED.includes(file.type))
-    return NextResponse.json({ error: "Only JPG, PNG, WEBP files allowed" }, { status: 400 });
+
+  const ext = file.name.split(".").pop()?.toLowerCase() || "";
+  const isImage = file.type.startsWith("image/") || /^(jpg|jpeg|png|webp|avif|gif|svg|bmp|tiff|heic|heif|ico)$/i.test(ext);
+
+  if (!isImage)
+    return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 });
   if (file.size > MAX_SIZE)
-    return NextResponse.json({ error: "File too large. Maximum 3 MB." }, { status: 400 });
+    return NextResponse.json({ error: "File too large. Maximum 5 MB." }, { status: 400 });
 
   const subDir = TARGETS[target] ?? "misc";
 
   // Sanitised unique filename
-  const ext      = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const fileExt  = ext || "jpg";
   const base     = file.name
     .replace(/\.[^.]+$/, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .slice(0, 40);
-  const filename = `${base}-${Date.now()}.${ext}`;
+  const filename = `${base}-${Date.now()}.${fileExt}`;
 
   const imageKitPrivateKey = process.env.IMAGEKIT_PRIVATE_KEY;
   if (imageKitPrivateKey) {

@@ -285,9 +285,9 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
           <div className="profile__complaint-label">Attachment (Optional)</div>
           {!imagePreview ? (
             <div className="profile__complaint-upload" onClick={()=>document.getElementById("complaint-img-input")?.click()}>
-              <p>Click to upload or drag & drop<br/><span style={{fontSize:12,color:"#aaa"}}>JPG, PNG, PDF supported</span></p>
+              <p>Click to upload or drag & drop<br/><span style={{fontSize:12,color:"#aaa"}}>Images (AVIF, WEBP, JPG, PNG) & PDF supported</span></p>
               <i className="fa-solid fa-paperclip"></i>
-              <input id="complaint-img-input" type="file" style={{display:"none"}} accept=".jpg,.jpeg,.png,.pdf" onChange={handleImageSelect}/>
+              <input id="complaint-img-input" type="file" style={{display:"none"}} accept="image/*,.pdf" onChange={handleImageSelect}/>
             </div>
           ) : (
             <div style={{position:"relative",display:"inline-block",marginBottom:16}}>

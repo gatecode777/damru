@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
@@ -9,10 +9,27 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function AdminHeader({ title }: { title?: string }) {
-  const { data: session } = useSession();
+  const [adminUser, setAdminUser] = useState<{ name: string; role: string }>({
+    name: "Admin",
+    role: "admin",
+  });
 
-  const name  = (session?.user as any)?.name  || "Admin";
-  const role  = (session?.user as any)?.role  || "admin";
+  useEffect(() => {
+    fetch("/api/admin/permissions")
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          setAdminUser({
+            name: data.name || "Admin",
+            role: data.role || "admin",
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const name  = adminUser.name || "Admin";
+  const role  = adminUser.role || "admin";
   const label = ROLE_LABELS[role] ?? "Admin";
 
   // Avatar initials — first letter of first + last word

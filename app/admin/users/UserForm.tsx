@@ -169,7 +169,7 @@ export default function UserForm({ user }: Props) {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    accept="image/*"
                     style={{ display: "none" }}
                     onChange={handleFileChange}
                   />
@@ -198,7 +198,7 @@ export default function UserForm({ user }: Props) {
                     )}
                   </div>
                   <p className="upload-hint">
-                    JPG, PNG or WEBP · Max 2MB<br />
+                    Any image format (AVIF, WEBP, JPG, PNG) · Max 5MB<br />
                     The file is saved on the server. Only the filename is stored in MongoDB.
                   </p>
                   {uploadError && <p className="upload-error">⚠ {uploadError}</p>}

@@ -28,7 +28,7 @@ export async function getAdminPerms(): Promise<AdminPerms> {
     return { role:"moderator", isSuperAdmin:false, can:none, permissions:{} };
   }
 
-  const isSuperAdmin = admin.role === "super_admin";
+  const isSuperAdmin = admin.role === "super_admin" || admin.role === "admin";
   const permissions  = admin.permissions || {};
 
   const can = (module: string, action: "view"|"create"|"edit"|"delete" = "view"): boolean => {
@@ -36,7 +36,7 @@ export async function getAdminPerms(): Promise<AdminPerms> {
     return Boolean(permissions[module]?.[action]);
   };
 
-  return { role: admin.role, isSuperAdmin, can, permissions };
+  return { name: admin.name || "Admin", email: admin.email || "", role: admin.role, isSuperAdmin, can, permissions };
 }
 
 /** Serialisable version to pass as props to client components.
@@ -54,6 +54,8 @@ export function serializePerms(p: AdminPerms) {
     };
   }
   return {
+    name:         (p as any).name || "Admin",
+    email:        (p as any).email || "",
     role:         p.role,
     isSuperAdmin: p.isSuperAdmin,
     permissions:  cleanPermissions,

@@ -1,7 +1,9 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeader from "@/components/admin/AdminHeader";
 import MenuItemForm from "../../MenuItemForm";
+import { getAdminPerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import MenuItemModel from "@/models/MenuItem";
 import Category from "@/models/Category";
@@ -11,6 +13,9 @@ export const metadata = { title: "Edit Menu Item" };
 export default async function EditMenuItemPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session) redirect("/admin/login");
+
+  const perms = await getAdminPerms();
+  if (!perms.can("menu", "edit")) redirect("/admin/dashboard");
 
   const { id } = await params;
 
