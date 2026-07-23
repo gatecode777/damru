@@ -2,12 +2,20 @@
  * lib/mongodb.ts — Node.js runtime ONLY.
  * Never imported by middleware.ts or any Edge-runtime file.
  */
-import { setServers } from "node:dns/promises";
-import { setDefaultResultOrder } from "dns";
-setDefaultResultOrder("ipv4first");
-setServers(['1.1.1.1']);
-
 import mongoose from "mongoose";
+
+// Safely configure DNS fallback for MongoDB Atlas SRV lookup (1.1.1.1 / 8.8.8.8)
+try {
+  const dns = require("dns");
+  if (typeof dns.setDefaultResultOrder === "function") {
+    dns.setDefaultResultOrder("ipv4first");
+  }
+  if (typeof dns.setServers === "function") {
+    dns.setServers(["1.1.1.1", "8.8.8.8"]);
+  }
+} catch {
+  /* Ignore DNS override failures on restricted environments like Vercel */
+}
 
 const MONGODB_URI = process.env.MONGODB_URI!;
 
@@ -36,10 +44,8 @@ if (!cache.promise) {
   console.log("🔄 MongoDB: starting connection...");
   cache.promise = mongoose
     .connect(MONGODB_URI, {
-      bufferCommands: false,
       serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 45000,
-      family: 4,
       tls: true,
       tlsAllowInvalidCertificates: false,
     })
