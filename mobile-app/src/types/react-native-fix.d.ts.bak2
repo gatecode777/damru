@@ -1,0 +1,18 @@
+import * as React from 'react';
+
+declare module 'react' {
+  interface Component<P = {}, S = {}, SS = any> {
+    context?: any;
+    setState?: any;
+    forceUpdate?: any;
+    render?: any;
+    refs?: any;
+    state?: any;
+  }
+}
+
+declare module 'react-native/types/public/ReactNativeTypes' {
+  interface ReactNativeElement {
+    props: any;
+  }
+}

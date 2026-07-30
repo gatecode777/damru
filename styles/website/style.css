@@ -516,62 +516,69 @@
 
 /* OVERLAY COMMON STYLES */
 .diet-interactive-section .di-overlay {
-  width: 75%;
-  background: rgba(0, 0, 0, 0.75);
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.78);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 40px;
+  padding: 20px 90px 20px 24px;
   opacity: 0;
-  transition: all 0.5s ease-in-out;
+  transition: all 0.4s ease-in-out;
   position: absolute;
   top: 0;
-  height: 100%;
-  backdrop-filter: blur(2px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backdrop-filter: blur(4px);
   z-index: 2;
   color: white;
+  box-sizing: border-box;
 }
 
-/* Left Card Overlay (Curves from Right) */
+/* Left Card Overlay */
 .diet-interactive-section .di-overlay-right {
   right: 0;
-
-  border-radius: 100% 0 0 100% / 90% 0 0 90%;
-  text-align: center;
-  align-items: center;
-  padding-left: 120px;
+  border-radius: 8px;
+  text-align: left;
+  align-items: flex-start;
+  padding-right: 90px;
+  padding-left: 24px;
 }
 
-/* Right Card Overlay (Curves from Left) */
+/* Right Card Overlay */
 .diet-interactive-section .di-overlay-left {
   left: 0;
-  border-radius: 0 100% 100% 0 / 0 50% 50% 0;
-  text-align: center;
-  align-items: center;
-  padding-right: 120px;
+  border-radius: 8px;
+  text-align: left;
+  align-items: flex-start;
+  padding-right: 90px;
+  padding-left: 24px;
 }
 
 /* Hover Effects */
 .diet-interactive-section .di-image-card:hover .di-overlay {
   opacity: 1;
-  transform: translateX(0);
 }
 
 /* Content Inside Overlay */
 .diet-interactive-section .di-icon {
   line-height: 0;
+  margin-bottom: 4px;
 }
 
 .diet-interactive-section .di-icon img {
-  width: 70px;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
 .diet-interactive-section .di-overlay-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 40px;
+  gap: 8px;
   width: 100%;
   position: relative;
   z-index: 3;
@@ -579,55 +586,56 @@
 
 .diet-interactive-section .di-card-title {
   font-family: "Montserrat", sans-serif;
-  font-size: 2.2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  /* margin-bottom: 8px; */
-  text-transform: none;
-  line-height: 1.2;
+  line-height: 1.25;
   margin: 0;
   color: #ffffff;
-  text-align: center;
+  text-align: left;
+  max-width: 100%;
+  word-wrap: break-word;
 }
 
 .diet-interactive-section .di-card-tags {
   font-family: "Montserrat", sans-serif;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: #ffffff;
-
   opacity: 0.9;
   margin: 0;
+  text-align: left;
 }
 
 .diet-interactive-section .di-explore-btn {
   font-family: "Montserrat", sans-serif;
   color: #fbd404;
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   text-decoration: none;
-
   align-items: center;
-  gap: 8px;
-  margin-top: 5px;
-  display: inline-block;
+  gap: 6px;
+  margin-top: 6px;
+  display: inline-flex;
 }
 
 /* CHEF IMAGE STYLING (The Peek Effect) */
 .diet-interactive-section .di-chef {
   position: absolute;
-  bottom: -1px;
-  width: 140px;
+  bottom: -2px;
+  right: -15px;
+  width: 85px;
   z-index: 5;
+  pointer-events: none;
 }
 
 .diet-interactive-section .di-chef-right {
-  right: 5px;
+  right: -15px;
 }
 
 .diet-interactive-section .di-chef-left {
-  left: 5px;
-  bottom: 10px;
+  right: -15px;
+  bottom: -2px;
 }
 
 .diet-interactive-section .di-image-card:hover .di-chef {

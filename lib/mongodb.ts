@@ -4,15 +4,17 @@
  */
 import mongoose from "mongoose";
 
-// Safely configure DNS fallback for MongoDB Atlas SRV lookup (1.1.1.1 / 8.8.8.8)
+// Safely configure DNS fallback for MongoDB Atlas SRV lookup (using system default resolution first)
 try {
   const dns = require("dns");
   if (typeof dns.setDefaultResultOrder === "function") {
     dns.setDefaultResultOrder("ipv4first");
   }
+  /*
   if (typeof dns.setServers === "function") {
     dns.setServers(["1.1.1.1", "8.8.8.8"]);
   }
+  */
 } catch {
   /* Ignore DNS override failures on restricted environments like Vercel */
 }
