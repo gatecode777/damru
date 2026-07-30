@@ -92,8 +92,7 @@ export function BlogCard({ blog, index }: BlogCardProps) {
   };
 
   const handlePress = () => {
-    // Navigate to the existing blogs search screen
-    router.push('/blogs' as any);
+    router.push({ pathname: '/blog/[slug]', params: { slug: blog.slug } } as any);
   };
 
   /* ── Resolved URLs ── */
