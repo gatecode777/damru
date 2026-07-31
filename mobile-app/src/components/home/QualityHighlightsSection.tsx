@@ -156,7 +156,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 24,
-    fontWeight: '700',
     color: '#000000',
     textAlign: 'center',
     marginBottom: 10,

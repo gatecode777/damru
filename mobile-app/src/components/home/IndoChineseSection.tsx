@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -100,16 +101,26 @@ function SectionHeader() {
    Main section export
 ───────────────────────────────────────────── */
 export function IndoChineseSection() {
+  const [showAll, setShowAll] = useState(false);
+  const displayedProducts = showAll ? INDO_CHINESE_PRODUCTS : INDO_CHINESE_PRODUCTS.slice(0, 2);
+
   return (
     <View style={styles.section}>
       <SectionHeader />
 
       {/* Card list — vertically stacked */}
       <View style={styles.cardList}>
-        {INDO_CHINESE_PRODUCTS.map((product, i) => (
+        {displayedProducts.map((product, i) => (
           <AnimatedCard key={product.key} product={product} index={i} />
         ))}
       </View>
+
+      <Pressable
+        style={styles.viewAllBtn}
+        onPress={() => setShowAll(prev => !prev)}
+      >
+        <Text style={styles.viewAllText}>{showAll ? 'View Less' : 'View All'}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -161,5 +172,24 @@ const styles = StyleSheet.create({
   /* Card list */
   cardList: {
     paddingTop: 4,
+  },
+  viewAllBtn: {
+    alignSelf: 'center',
+    marginTop: 24,
+    backgroundColor: colors.orange,
+    paddingHorizontal: 30,
+    paddingVertical: 13,
+    borderRadius: 22,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  viewAllText: {
+    color: '#ffffff',
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

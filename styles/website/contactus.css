@@ -15,19 +15,17 @@
   box-sizing: border-box;
 }
 
-/* --- IMAGE 1: HERO SECTION --- */
+/* --- HERO SECTION --- */
 .contact .contact-hero {
   position: relative;
   width: 100%;
-  height: 100vh;
-  min-height: 700px;
+  min-height: 550px;
   background: url("https://ik.imagekit.io/zp0tch54w/DAMRU/Get%20in%20touch%201.png?updatedAt=1782476618361") no-repeat center center/cover;
   display: flex;
   align-items: center;
   overflow: hidden;
+  padding: 60px 0;
 }
-
-
 
 .contact .hero-container {
   position: relative;
@@ -38,7 +36,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding-bottom: 80px;
+  gap: 40px;
 }
 
 /* LEFT CONTENT: Get in Touch */
@@ -48,18 +46,18 @@
 
 .contact .hero-left h1 {
   font-family: "Playfair Display", serif;
-  font-size: clamp(60px, 10vw, 120px);
+  font-size: clamp(50px, 8vw, 110px);
   color: #000;
   margin: 0;
-  line-height: 1;
-  font-weight: 400;
+  line-height: 1.05;
+  font-weight: 500;
 }
 
 .contact .hero-left p {
   font-family: "Poppins", sans-serif;
-  font-size: 24px;
-  color: #000;
-  margin-top: 25px;
+  font-size: clamp(16px, 2vw, 22px);
+  color: #333;
+  margin-top: 20px;
   font-weight: 400;
 }
 
@@ -72,168 +70,80 @@
 
 .contact .open-time-section {
   width: 100%;
-  max-width: 680px;
+  max-width: 620px;
   color: #000;
-
-  margin-bottom: -170px;
+  background: transparent;
+  padding: 10px 0;
 }
 
 .contact .open-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 15px;
-  gap: 15px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 12px;
+  gap: 4px;
 }
 
 .contact .open-header h2 {
   font-family: "Playfair Display", serif;
-  font-size: 42px;
+  font-size: 32px;
   margin: 0;
   font-weight: 600;
+  color: #000000;
+  letter-spacing: -0.2px;
 }
 
 .contact .open-header .days {
   font-family: "Poppins", sans-serif;
-  font-size: 22px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 500;
+  color: #0066cc;
+}
+
+.contact .dotted-divider {
+  width: 100%;
+  border-top: 2px dotted #ccc;
+  margin: 15px 0 20px 0;
 }
 
 /* Grid for Brunch, Lunch, Dinner */
 .contact .time-grid {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
+  align-items: center;
   gap: 20px;
 }
 
 .contact .time-item {
-  text-align: left;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .contact .time-item label {
   display: block;
   font-family: "Poppins", sans-serif;
-  font-size: 22px;
-  font-weight: 500;
-  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 4px;
+  text-align: center;
 }
 
 .contact .time-item .time-val {
   font-family: "Poppins", sans-serif;
-  font-size: 24px;
-  font-weight: 300;
+  font-size: 15px;
+  font-weight: 500;
+  color: #e37a24;
   display: block;
+  text-align: center;
 }
 
-@media (max-width: 1100px) {
-  .contact .hero-left h1 {
-    font-size: 80px;
-  }
-
-  .contact .open-time-section {
-    max-width: 500px;
-  }
-}
-
-@media (max-width: 480px) {
-  .contact .hero-left h1 {
-    font-size: 40px;
-  }
-
-  .contact .open-time-section {
-    max-width: 250px;
-  }
-
-  .contact .open-header h2 {
-    font-size: 28px;
-  }
-
-  .contact .time-item label {
-    font-size: 18px;
-  }
-
-  .contact .time-item .time-val {
-    font-size: 20px;
-  }
-
-  .contact .info-container .info-text-col p,
-  .contact .info-container .info-text-col h3 {
-    font-size: 18px;
-  }
-
-  .overlay-content {
-    flex-direction: row;
-    gap: 30px;
-  }
-
-  .full-menu-overlay {
-    padding: 45px 4%;
-  }
-
-  .contact .contact-hero .hero-container {
-    text-align: center;
-    flex-direction: column;
-    align-items: center;
-    padding-bottom: 220px;
-  }
-
-  .contact .info-container .info-row {
-    display: grid;
-  }
-}
-
-@media (max-width: 376px) {
-
-  .contact .contact-hero {
-    padding: 30px 0px;
-    min-height: 400px;
-    display: flex;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .contact .info-row {
-    flex-direction: column;
-  }
-
-  .contact .info-row.reverse {
-    flex-direction: column !important;
-  }
-}
-
-@media (max-width: 850px) {
-  .contact .hero-container {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding-bottom: 40px;
-  }
-
-  .contact .hero-right {
-    justify-content: center;
-    margin-top: 50px;
-    width: 100%;
-  }
-
-  .contact .open-header {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .contact .time-grid {
-    flex-direction: column;
-    gap: 35px;
-  }
-
-  .contact .time-item {
-    text-align: center;
-  }
-}
-
-/* --- IMAGE 2: INFO SECTIONS --- */
+/* --- INFO SECTIONS --- */
 .contact .info-section {
-  padding-top: 100px;
+  padding: 70px 0 30px 0;
   background: #fff;
 }
 
@@ -246,8 +156,8 @@
 .contact .info-row {
   display: flex;
   align-items: center;
-  gap: 80px;
-  margin-bottom: 100px;
+  gap: 60px;
+  margin-bottom: 70px;
 }
 
 .contact .info-row.reverse {
@@ -263,292 +173,311 @@
   width: 100%;
   height: auto;
   display: block;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  object-fit: cover;
 }
 
 .contact .orange-art-deco {
   position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 580px;
+  top: -40px;
+  right: -40px;
+  width: 400px;
   z-index: -1;
+  opacity: 0.7;
 }
 
 .contact .info-text-col {
   flex: 1;
 }
 
-.contact .info-text-col p,
-.contact .info-text-col h3 {
+.contact .info-card-title {
   font-family: "Playfair Display", serif;
   font-size: 28px;
-  line-height: 1.8;
-  color: #2b3621;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 8px;
 }
 
-.contact .info-text-col a {
-  color: #e37a24;
-  text-decoration: none;
+.contact .info-card-sub {
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  color: #666666;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.contact .contact-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact .contact-link-pill {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #FAF7F2;
+  border: 1px solid #F0EBE1;
+  border-radius: 14px;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+}
+
+.contact .contact-link-pill:hover {
+  background: #fff;
+  border-color: #c1611c;
+  box-shadow: 0 4px 15px rgba(193, 97, 28, 0.1);
+}
+
+.contact .contact-link-pill i {
+  font-size: 20px;
+  color: #ffffff;
+  background: #c1611c;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact .contact-link-pill .pill-lbl {
+  display: block;
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #888888;
+  letter-spacing: 0.5px;
+}
+
+.contact .contact-link-pill .pill-val {
+  display: block;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
   font-weight: 600;
+  color: #1a1a1a;
+}
+
+.contact .location-address-text {
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  color: #333333;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  background: #FAF7F2;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #F0EBE1;
+}
+
+.contact .info-text-col a:hover {
+  color: #c9661a;
+  text-decoration: underline;
 }
 
 .contact .map-btn {
   display: inline-block;
-  margin-top: 30px;
-  padding: 12px 35px;
-  border: 1.5px solid #333;
-  color: #000 !important;
+  margin-top: 25px;
+  padding: 12px 32px;
+  border: 2px solid #2b3621;
+  border-radius: 30px;
+  color: #2b3621 !important;
   font-family: "Poppins", sans-serif;
-  text-transform: capitalize;
-  transition: 0.3s;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
 }
 
 .contact .map-btn:hover {
-  background: #000;
+  background: #2b3621;
   color: #fff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
 }
 
-/* --- IMAGE 3: RESERVATION FORM --- */
+/* --- RESERVATION SECTION --- */
 .contact .reservation-section {
-  padding: 100px 0;
+  padding: 60px 0 80px 0;
   background-color: #fdf8f4;
   text-align: center;
 }
 
 .contact .form-container {
-  max-width: 1300px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-.contact .form-header {
-  margin-bottom: 50px;
-  position: relative;
-}
+/* ============================================================
+   RESPONSIVE MEDIA QUERIES FOR MOBILE BEHAVIOR FIX
+   ============================================================ */
 
-/* Container jo text aur image ko side-by-side layega */
-.contact .title-flex {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 15px;
-  margin-bottom: 5px;
-}
-
-/* Image ki styling adjust karein */
-.contact .form-leaf-deco {
-  width: 195px;
-  height: auto;
-  margin-bottom: 0;
-  display: inline-block;
-}
-
-@media (max-width: 768px) {
-  .contact .title-flex {
-    gap: 10px;
-  }
-
-  .contact .form-leaf-deco {
-    width: 35px;
-  }
-}
-
-.contact .form-header h2 {
-  font-family: "Playfair Display", serif;
-  font-size: 64px;
-  margin: 0;
-}
-
-.contact .form-header p {
-  font-family: "Poppins", sans-serif;
-  color: #666;
-  margin-top: 5px;
-}
-
-.contact .reservation-form .form-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.contact .reservation-form input,
-.contact .reservation-form select {
-  width: 100%;
-  padding: 18px;
-  border: 1.5px solid #000;
-  background: transparent;
-  font-family: "Popins", sans-serif;
-  font-size: 15px;
-  outline: none;
-}
-
-.contact .form-row.full {
-  width: 100%;
-}
-
-.contact .select-wrapper {
-  width: 100%;
-  position: relative;
-}
-
-.contact .book-now-btn {
-  background-color: #e37a24;
-  color: #fff;
-  padding: 18px 80px;
-  border: none;
-  font-family: "Playfair Display", serif;
-  font-size: 22px;
-  cursor: pointer;
-  margin-top: 30px;
-  transition: 0.3s;
-}
-
-.contact .book-now-btn:hover {
-  background-color: #c9661a;
-}
-
-/* Mobile Medium (376px - 425px) */
-@media (max-width: 425px) and (min-width: 376px) {
+@media (max-width: 992px) {
   .contact .contact-hero {
-    min-height: 450px;
+    min-height: auto;
+    padding: 50px 0 40px 0;
   }
 
   .contact .hero-container {
     flex-direction: column;
-    padding: 0 14px 30px 14px;
+    align-items: center;
+    text-align: center;
+    gap: 35px;
+    padding-bottom: 0;
   }
 
   .contact .hero-left {
-    margin-bottom: 25px;
-  }
-
-  .contact .hero-right {
     width: 100%;
-  }
-
-  .contact .open-header {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .contact .time-grid {
-    flex-direction: column;
-    gap: 15px;
-  }
-
-  .contact .time-item {
     text-align: center;
   }
 
-  .contact .info-section {
-    padding: 40px 0;
-  }
-
-  .contact .info-row,
-  .contact .info-row.reverse {
-    flex-direction: column !important;
-    gap: 15px;
-  }
-
-  .contact .orange-art-deco {
-    display: none;
-  }
-
-  .contact .reservation-form input,
-  .contact .reservation-form select {
-    padding: 12px 15px;
-    font-size: 14px;
-  }
-
-  .contact .book-now-btn {
-    padding: 10px 35px;
-    font-size: 15px;
-  }
-
-  .contact .form-header h2 {
-    font-size: 28px;
-  }
-}
-
-/* Mobile Small (320px - 375px) */
-@media (max-width: 375px) and (min-width: 320px) {
-  .contact .contact-hero {
-    min-height: 400px;
-  }
-
-  .contact .hero-container {
-    flex-direction: column;
-    padding: 0 12px 25px 12px;
-  }
-
-  .contact .hero-left {
-    margin-bottom: 20px;
+  .contact .hero-left h1 {
+    font-size: clamp(38px, 8vw, 68px);
+    text-align: center;
   }
 
   .contact .hero-left p {
-    font-size: 12px;
+    font-size: 18px;
+    margin-top: 12px;
+    text-align: center;
   }
 
   .contact .hero-right {
     width: 100%;
+    justify-content: center;
   }
 
-  .contact .open-header {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .contact .time-grid {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .contact .time-item {
+  .contact .open-time-section {
+    margin-bottom: 0;
+    max-width: 100%;
     text-align: center;
+    padding: 24px 20px;
   }
 
   .contact .info-section {
-    padding: 30px 0;
+    padding: 40px 0 20px 0;
   }
 
   .contact .info-row,
   .contact .info-row.reverse {
     flex-direction: column !important;
-    gap: 12px;
+    gap: 25px;
+    margin-bottom: 50px;
+    text-align: center;
+  }
+
+  .contact .info-text-col p,
+  .contact .info-text-col h3 {
+    font-size: 20px;
+    line-height: 1.6;
+    text-align: center;
   }
 
   .contact .orange-art-deco {
     display: none;
   }
 
-  .contact .reservation-form input,
-  .contact .reservation-form select {
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-
-  .contact .book-now-btn {
-    padding: 8px 30px;
-    font-size: 14px;
-  }
-
-  .contact .form-header h2 {
-    font-size: 24px;
-  }
-
-  .contact .map-btn {
-    padding: 8px 20px;
-    font-size: 12px;
+  .contact .main-info-img {
+    max-height: 320px;
+    border-radius: 16px;
   }
 }
 
-/* ============================================================
-   ULTIMATE WHITE SPACE FIX
-   ============================================================ */
-html,
-body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  overflow-x: hidden;
+@media (max-width: 600px) {
+  .contact .contact-hero {
+    padding: 35px 0 30px 0;
+  }
+
+  .contact .hero-container {
+    width: 92%;
+    gap: 25px;
+  }
+
+  .contact .hero-left h1 {
+    font-size: 36px;
+  }
+
+  .contact .hero-left p {
+    font-size: 15px;
+    margin-top: 8px;
+  }
+
+  .contact .open-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .contact .open-header h2 {
+    font-size: 26px;
+  }
+
+  .contact .open-header .days {
+    font-size: 14px;
+  }
+
+  .contact .time-grid {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .contact .time-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border-bottom: none;
+  }
+
+  .contact .time-item label {
+    font-size: 14px;
+    margin-bottom: 3px;
+    text-align: center;
+  }
+
+  .contact .time-item .time-val {
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .contact .info-section {
+    padding: 30px 0 10px 0;
+  }
+
+  .contact .info-container {
+    width: 92%;
+  }
+
+  .contact .info-row {
+    margin-bottom: 40px;
+    gap: 18px;
+  }
+
+  .contact .main-info-img {
+    max-height: 240px;
+    border-radius: 14px;
+  }
+
+  .contact .info-text-col p,
+  .contact .info-text-col h3 {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .contact .map-btn {
+    margin-top: 16px;
+    padding: 10px 24px;
+    font-size: 13px;
+  }
+
+  .contact .reservation-section {
+    padding: 35px 0 45px 0;
+  }
 }

@@ -38,7 +38,7 @@ export default function CheckoutScreen() {
     } catch (e) { Alert.alert("Could not place order", e instanceof Error ? e.message : "Please try again."); } finally { setBusy(false); }
   }
   if (!cart.length) return <EmptyState title="Nothing to check out" message="Your cart is empty." />;
-  return <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+  return <ScrollView contentContainerStyle={{ paddingBottom: 75 }} keyboardShouldPersistTaps="handled">
     <ScreenTitle eyebrow="Delivery" title="Where should we bring it?" />
     <View style={styles.section}>
       {addresses.map((item) => <Pressable key={item._id} onPress={() => setSelected(item._id!)} style={[styles.address, selected === item._id && styles.selected]}>

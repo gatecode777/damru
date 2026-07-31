@@ -1,42 +1,304 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { TopBar } from "@/components/TopBar";
-import { EmptyState, ScreenTitle } from "@/components/ui";
-import { assetUrl, colors } from "@/config";
-import { get } from "@/lib/api";
-import type { Branch } from "@/types";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInUp } from "react-native-reanimated";
+
+import { HomeHeader } from "../../components/home/HomeHeader";
+import { EmptyState } from "../../components/ui";
+import { LocalAssets, getWebImageUri } from "../../constants/assets";
+import { get } from "../../lib/api";
+import { colors } from "../../config";
+import type { Branch } from "../../types";
+
+const STATIC_FALLBACK: Branch[] = [
+  {
+    _id: "f1",
+    name: "Damru By Namo (Mansarovar, Jaipur)",
+    slug: "mansarovar-jaipur",
+    description:
+      "Our Mansarovar branch offers a perfect blend of great food and a spacious banquet hall, ideal for birthdays, family gatherings, and small celebrations.",
+    contact: "+91 9660527210",
+    timing: "11:00 AM – 11:00 PM",
+    cardImage: "",
+  },
+  {
+    _id: "f2",
+    name: "Damru By Namo (Gandhipath, Vaishali, Jaipur)",
+    slug: "vaishali-jaipur",
+    description:
+      "Located in Vaishali Nagar, this branch is perfect for weddings, corporate events, and grand celebrations with modern facilities and expert catering.",
+    contact: "+91 9660527210",
+    timing: "11:00 AM – 11:00 PM",
+    cardImage: "",
+  },
+  {
+    _id: "f3",
+    name: "Damru By Namo (Coaching Hub, Pratap Nagar, Jaipur)",
+    slug: "pratap-nagar-jaipur",
+    description:
+      "Our Pratap Nagar branch offers a lively dining experience along with banquet services, making it ideal for student parties, birthdays, and casual events.",
+    contact: "+91 9660527210",
+    timing: "11:00 AM – 11:00 PM",
+    cardImage: "",
+  },
+];
 
 export default function BranchesScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { get<{ branches: Branch[] }>("/api/branches").then((d) => setBranches(d.branches)).finally(() => setLoading(false)); }, []);
-  return <View style={{ flex: 1, backgroundColor: "#fff" }}><TopBar />
-    {loading ? <ActivityIndicator style={{ flex: 1 }} color={colors.orange} /> :
-    <FlatList data={branches} keyExtractor={(item) => item._id} contentContainerStyle={{ paddingBottom: 30 }}
-      ListHeaderComponent={<ScreenTitle eyebrow="Find us" title="Our branches" subtitle="Come for the food. Stay for the unmistakable Damru vibe." />}
-      ListEmptyComponent={<EmptyState title="No branches found" message="Please check your connection and try again." />}
-      renderItem={({ item }) => <View style={styles.card}>
-        <Image source={{ uri: assetUrl("branches", item.cardImage ?? item.heroImage) }} style={styles.image} />
-        <View style={styles.body}><Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.address}>{item.address ?? item.city}</Text>
-          {item.shortDescription ? <Text style={styles.copy} numberOfLines={2}>{item.shortDescription}</Text> : null}
-          <View style={styles.actions}>
-            {item.phone ? <Pressable style={styles.action} onPress={() => Linking.openURL(`tel:${item.phone}`)}><MaterialIcons name="call" size={18} color={colors.orange} /><Text style={styles.actionText}>Call</Text></Pressable> : null}
-            <Pressable style={styles.action} onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.name} ${item.address ?? item.city ?? ""}`)}`)}><MaterialIcons name="directions" size={18} color={colors.orange} /><Text style={styles.actionText}>Directions</Text></Pressable>
+
+  useEffect(() => {
+    get<{ branches: Branch[] }>("/api/branches")
+      .then((d) => {
+        if (d.branches && d.branches.length > 0) {
+          setBranches(d.branches);
+        } else {
+          setBranches(STATIC_FALLBACK);
+        }
+      })
+      .catch(() => {
+        setBranches(STATIC_FALLBACK);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  function handleReadMore(branch: Branch) {
+    if (branch.slug) {
+      router.push({
+        pathname: "/branches/[slug]",
+        params: { slug: branch.slug },
+      });
+    } else {
+      router.push("/contact-us");
+    }
+  }
+
+  function renderBranchCard({ item, index }: { item: Branch; index: number }) {
+    // Resolve Image source
+    let imageSource;
+    if (item.cardImage) {
+      imageSource = { uri: getWebImageUri(`/uploads/branches/${item.cardImage}`) };
+    } else {
+      // Use fallback static image based on index
+      if (index === 1) imageSource = LocalAssets.contact2;
+      else if (index === 2) imageSource = LocalAssets.contactHeroBg;
+      else imageSource = LocalAssets.contact1;
+    }
+
+    return (
+      <Animated.View
+        entering={FadeInUp.delay(index * 120).duration(600)}
+        style={styles.card}
+      >
+        <Pressable onPress={() => handleReadMore(item)} style={styles.cardPressable}>
+          <View style={styles.imageWrapper}>
+            <Image
+              source={imageSource}
+              style={styles.image}
+              contentFit="cover"
+              transition={300}
+            />
           </View>
+          <View style={styles.cardBody}>
+            <Text style={styles.name}>{item.name}</Text>
+            
+            {/* Dotted Divider */}
+            <View style={styles.cardDivider}>
+              {Array.from({ length: 10 }).map((_, j) => (
+                <View key={j} style={styles.dividerDot} />
+              ))}
+            </View>
+
+            <Text style={styles.description}>{item.description}</Text>
+
+            <View style={styles.metaInfo}>
+              {item.contact && (
+                <Text style={styles.metaText}>
+                  <Text style={styles.metaLabel}>Contact Us: </Text>
+                  {item.contact}
+                </Text>
+              )}
+              {item.timing && (
+                <Text style={styles.metaText}>
+                  <Text style={styles.metaLabel}>Timing: </Text>
+                  {item.timing}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.readMoreRow}>
+              <Text style={styles.readMoreText}>Read More</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.ink} />
+            </View>
+          </View>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <View style={styles.page}>
+      <HomeHeader />
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.orange} />
         </View>
-      </View>} />}
-  </View>;
+      ) : (
+        <FlatList
+          data={branches}
+          keyExtractor={(item) => item._id}
+          renderItem={renderBranchCard}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 85 },
+          ]}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <Text style={styles.title}>Our Branches</Text>
+              <Text style={styles.subtitle}>
+                Serving delicious food and unforgettable moments at multiple locations
+              </Text>
+            </View>
+          }
+          ListEmptyComponent={
+            <EmptyState
+              title="No Branches Available"
+              message="We are updating our locations. Please try again later."
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </View>
+  );
 }
+
 const styles = StyleSheet.create({
-  card: { marginHorizontal: 20, marginBottom: 18, borderRadius: 22, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line },
-  image: { height: 190, width: "100%", backgroundColor: colors.cream },
-  body: { padding: 18 },
-  name: { fontSize: 21, fontWeight: "900", color: colors.ink },
-  address: { color: colors.orangeDark, fontWeight: "700", fontSize: 13, marginTop: 5 },
-  copy: { color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 9 },
-  actions: { flexDirection: "row", gap: 10, marginTop: 16 },
-  action: { flex: 1, height: 42, borderRadius: 12, flexDirection: "row", gap: 7, justifyContent: "center", alignItems: "center", backgroundColor: colors.cream },
-  actionText: { color: colors.orangeDark, fontWeight: "800", fontSize: 13 },
+  page: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 28,
+  },
+  title: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 34,
+    color: colors.ink,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 14,
+    color: "#6b6560",
+    textAlign: "center",
+    lineHeight: 20,
+    maxWidth: "90%",
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e3ddd6",
+    borderRadius: 8,
+    overflow: "hidden",
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardPressable: {
+    width: "100%",
+  },
+  imageWrapper: {
+    width: "100%",
+    height: 220,
+    backgroundColor: "#faf8f5",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+  cardBody: {
+    padding: 20,
+  },
+  name: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 20,
+    color: colors.ink,
+    lineHeight: 26,
+  },
+  cardDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginVertical: 12,
+  },
+  dividerDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#c8a96e",
+    opacity: 0.7,
+  },
+  description: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13.5,
+    color: "#6b6560",
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  metaInfo: {
+    gap: 6,
+    marginBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#f0ece6",
+    paddingTop: 14,
+  },
+  metaText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: colors.ink,
+  },
+  metaLabel: {
+    fontFamily: "Poppins_600SemiBold",
+    color: "#6b6560",
+  },
+  readMoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  readMoreText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 13.5,
+    color: colors.ink,
+    letterSpacing: 0.5,
+  },
 });

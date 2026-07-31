@@ -9,6 +9,8 @@ import { BranchesSection } from '../../components/home/BranchesSection';
 import { IndoChineseSection } from '../../components/home/IndoChineseSection';
 import { QualityHighlightsSection } from '../../components/home/QualityHighlightsSection';
 import { BlogsSection } from '../../components/home/BlogsSection';
+import { ReservationSection } from '../../components/home/ReservationSection';
+import { TasteThroughLensSection } from '../../components/home/TasteThroughLensSection';
 import { Colors } from '../../constants/theme';
 
 export default function HomeScreen() {
@@ -40,6 +42,12 @@ export default function HomeScreen() {
 
         {/* ── 9. OUR BLOGS SECTION ── */}
         <BlogsSection />
+
+        {/* ── 10. RESERVATION SECTION ── */}
+        <ReservationSection />
+
+        {/* ── 11. TASTE THROUGH LENS SECTION ── */}
+        <TasteThroughLensSection />
       </ScrollView>
     </View>
   );
@@ -51,6 +59,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 75,
   },
 });

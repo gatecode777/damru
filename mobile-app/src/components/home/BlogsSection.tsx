@@ -41,6 +41,7 @@ function SectionHeading() {
 ───────────────────────────────────────────── */
 export function BlogsSection() {
   const { blogs, loading, error } = useHomepageBlogs();
+  console.log('🔍 [BlogsSection] Render. blogs count:', blogs.length, 'loading:', loading, 'error:', error);
 
   // Hide section cleanly if not loading, no error, and no blogs returned
   if (!loading && !error && blogs.length === 0) {

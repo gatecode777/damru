@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from './Image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useApp } from '../../providers/AppProvider';
 import { Colors } from '../../constants/theme';
 import { StaticAssets } from '../../constants/assets';
 
@@ -13,8 +14,9 @@ interface AppHeaderProps {
   onMenuPress?: () => void;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ cartCount = 0, onSearchPress, onMenuPress }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ cartCount, onSearchPress, onMenuPress }) => {
   const router = useRouter();
+  const { totalItems } = useApp();
   const { height: screenHeight } = useWindowDimensions();
 
   // Dynamic height calculated according to screen height
@@ -42,9 +44,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ cartCount = 0, onSearchPre
 
           <Pressable onPress={() => router.push('/cart')} style={styles.iconBtn}>
             <Ionicons name="cart-outline" size={22} color={Colors.text} />
-            {cartCount > 0 && (
+            {((cartCount !== undefined ? cartCount : totalItems) > 0) && (
               <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+                <Text style={styles.cartBadgeText}>{cartCount !== undefined ? cartCount : totalItems}</Text>
               </View>
             )}
           </Pressable>

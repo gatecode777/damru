@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -21,33 +21,14 @@ import {
   type BlogSummary,
 } from '../../hooks/useBlogDetail';
 import { ContentBlock } from '../../components/blog/ContentBlock';
+import { HomeHeader } from '../../components/home/HomeHeader';
 
 const { width: SW } = Dimensions.get('window');
-const COVER_HEIGHT = Math.round(SW * 0.6);   // 60% of screen width — proportional to ~16:10
+const CONTENT_WIDTH = SW - 40; // 20px padding each side
+const COVER_HEIGHT = Math.round(CONTENT_WIDTH * 0.62);   // proportional to ~16:10 aspect ratio of content width
 const API_URL_RAW  = process.env.EXPO_PUBLIC_API_URL ?? 'https://damrurestro.com';
 
-/* ─────────────────────────────────────────────────────────────
-   Header — back button + truncated title
-───────────────────────────────────────────────────────────── */
-function BlogHeader({ title }: { title: string }) {
-  const insets = useSafeAreaInsets();
-  return (
-    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-      <Pressable
-        onPress={() => router.back()}
-        style={styles.backBtn}
-        accessibilityRole="button"
-        accessibilityLabel="Go back"
-      >
-        <Ionicons name="arrow-back" size={22} color="#111" />
-      </Pressable>
-      <Text style={styles.headerTitle} numberOfLines={1}>
-        {title}
-      </Text>
-      <View style={{ width: 42 }} />
-    </View>
-  );
-}
+
 
 /* ─────────────────────────────────────────────────────────────
    Recent post row card (sidebar "Recent Posted" in website)
@@ -100,7 +81,7 @@ function NavCard({
     >
       <Image
         source={{ uri: resolveBlogImage(post.coverImage) }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         resizeMode="cover"
       />
       <View style={styles.navOverlay} />
@@ -179,11 +160,16 @@ export default function BlogDetailScreen() {
   const { blog, recent, prev, next, loading, error } = useBlogDetail(slug ?? '');
   const insets = useSafeAreaInsets();
 
+  const headerOpts = (
+    <Stack.Screen options={{ headerShown: false }} />
+  );
+
   /* ── Loading ── */
   if (loading) {
     return (
       <>
-        <BlogHeader title="" />
+        {headerOpts}
+        <HomeHeader />
         <BlogDetailSkeleton />
       </>
     );
@@ -193,7 +179,8 @@ export default function BlogDetailScreen() {
   if (error === 'not_found') {
     return (
       <>
-        <BlogHeader title="Not Found" />
+        {headerOpts}
+        <HomeHeader />
         <NotFound />
       </>
     );
@@ -203,7 +190,8 @@ export default function BlogDetailScreen() {
   if (error || !blog) {
     return (
       <>
-        <BlogHeader title="Error" />
+        {headerOpts}
+        <HomeHeader />
         <ErrorState onRetry={() => {/* hook re-runs automatically on slug change */}} />
       </>
     );
@@ -215,33 +203,25 @@ export default function BlogDetailScreen() {
 
   return (
     <View style={styles.page}>
-      {/* Fixed header */}
-      <BlogHeader title={blog.title} />
+      {headerOpts}
+      <HomeHeader />
 
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Cover Image + Category badge ── */}
-        <View style={styles.coverWrapper}>
-          <Image
-            source={{ uri: coverUri }}
-            style={styles.coverImage}
-            resizeMode="cover"
-            accessibilityLabel={blog.coverImageAlt || blog.title}
-          />
-          {blog.category ? (
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{blog.category}</Text>
-            </View>
-          ) : null}
-        </View>
-
         <View style={styles.content}>
+          {/* ── Breadcrumb ── */}
+          <Text style={styles.breadcrumb}>
+            <Text style={styles.breadcrumbLink}>Home</Text>
+            <Text style={styles.breadcrumbSep}> / </Text>
+            <Text style={styles.breadcrumbLink}>Blog</Text>
+            <Text style={styles.breadcrumbSep}> / </Text>
+            <Text style={styles.breadcrumbCurrent}>{blog.title}</Text>
+          </Text>
 
           {/* ── Blog title (h1) ── */}
-          {/* .sb-page__main-title: Playfair Display 30px mobile, #000, text-align center */}
           <Text style={styles.title}>{blog.title}</Text>
 
           {/* ── Meta row: author • date • readTime ── */}
@@ -250,6 +230,21 @@ export default function BlogDetailScreen() {
             {dateStr ? ` • ${dateStr}` : ''}
             {` • ${blog.readTime} min read`}
           </Text>
+
+          {/* ── Cover Image + Category badge ── */}
+          <View style={styles.coverWrapper}>
+            <Image
+              source={{ uri: coverUri }}
+              style={styles.coverImage}
+              resizeMode="cover"
+              accessibilityLabel={blog.coverImageAlt || blog.title}
+            />
+            {blog.category ? (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText}>{blog.category}</Text>
+              </View>
+            ) : null}
+          </View>
 
           {/* ── Excerpt / intro ── */}
           {/* .sb-main__intro: Poppins 16px, color #444, margin-bottom 30 */}
@@ -327,53 +322,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
 
-  /* Fixed header bar */
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f2f2f2',
-    zIndex: 10,
-  },
-  backBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontFamily: 'Poppins_600SemiBold',
-    fontSize: 14,
-    color: '#111',
-    textAlign: 'center',
-    marginHorizontal: 8,
-  },
-
   scrollContent: {
     paddingBottom: 40,
   },
 
+  /* Breadcrumb */
+  breadcrumb: {
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 13.5,
+    color: '#b0b0b0',
+    textAlign: 'center',
+    marginBottom: 20,
+    marginTop: 10,
+    lineHeight: 20,
+  },
+  breadcrumbLink: {
+    color: '#b0b0b0',
+  },
+  breadcrumbSep: {
+    color: '#b0b0b0',
+  },
+  breadcrumbCurrent: {
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#111111',
+  },
+
   /* Cover image */
   coverWrapper: {
-    width: SW,
+    width: CONTENT_WIDTH,
     height: COVER_HEIGHT,
     position: 'relative',
     backgroundColor: '#f5f0eb',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 30,
   },
   coverImage: {
-    width: SW,
+    width: CONTENT_WIDTH,
     height: COVER_HEIGHT,
   },
   categoryBadge: {
     position: 'absolute',
     bottom: 16,
-    left: 20,
+    left: 16,
     backgroundColor: '#e66a0d',
     paddingVertical: 5,
     paddingHorizontal: 14,
@@ -389,7 +380,7 @@ const styles = StyleSheet.create({
   /* Content padding area */
   content: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 12,
   },
 
   /* .sb-page__main-title (mobile ≤767): Playfair Display 30px, #000, text-align center */
@@ -500,7 +491,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   navContent: {

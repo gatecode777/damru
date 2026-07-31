@@ -242,7 +242,8 @@ const styles = StyleSheet.create({
   /* Cards scroll */
   scrollContent: {
     paddingVertical: 4,
-    paddingRight: SCREEN_WIDTH * 0.05,
+    paddingLeft: 20,
+    paddingRight: 20,
   },
 
   /* Error */

@@ -1,20 +1,28 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { router } from "expo-router";
-import { TopBar } from "@/components/TopBar";
+import { router, useLocalSearchParams } from "expo-router";
+import { HomeHeader } from "@/components/home/HomeHeader";
 import { EmptyState, ScreenTitle } from "@/components/ui";
+import { MenuHeroSection } from "@/components/menu/MenuHeroSection";
 import { assetUrl, colors } from "@/config";
 import { get } from "@/lib/api";
 import { useApp } from "@/providers/AppProvider";
 import type { MenuItem } from "@/types";
 
 export default function MenuScreen() {
-  const [query, setQuery] = useState("");
+  const params = useLocalSearchParams<{ q?: string }>();
+  const [query, setQuery] = useState(params.q || "");
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("Search for dishes by name or ingredient.");
   const { addItem, totalItems } = useApp();
+
+  useEffect(() => {
+    if (params.q) {
+      setQuery(params.q);
+    }
+  }, [params.q]);
 
   useEffect(() => {
     const normalized = query.trim();
@@ -34,12 +42,13 @@ export default function MenuScreen() {
   }, [query]);
 
   return <View style={styles.page}>
-    <TopBar />
+    <HomeHeader />
     <FlatList
       data={items}
       keyExtractor={(item) => item._id}
       contentContainerStyle={styles.list}
       ListHeaderComponent={<>
+        <MenuHeroSection />
         <ScreenTitle eyebrow="Freshly prepared" title="Find your favourite" subtitle="Search the live Damru menu and add dishes straight to your cart." />
         <View style={styles.search}>
           <MaterialIcons name="search" color={colors.muted} size={22} />
@@ -89,6 +98,6 @@ const styles = StyleSheet.create({
   price: { fontSize: 15, fontWeight: "900", color: colors.ink },
   add: { flexDirection: "row", alignItems: "center", backgroundColor: colors.orange, paddingHorizontal: 11, height: 34, borderRadius: 10 },
   addText: { color: "#fff", fontSize: 11, fontWeight: "900" },
-  cartBar: { position: "absolute", bottom: 12, left: 18, right: 18, height: 56, borderRadius: 16, backgroundColor: colors.orangeDark, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18 },
+  cartBar: { position: "absolute", bottom: 85, left: 18, right: 18, height: 56, borderRadius: 16, backgroundColor: colors.orangeDark, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18 },
   cartText: { color: "#fff", fontWeight: "800", fontSize: 14 },
 });

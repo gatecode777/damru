@@ -70,10 +70,12 @@ export function useHomepageBlogs() {
         setLoading(true);
         setError(null);
         const data = await publicGet<HomepageBlogsResponse>('/api/homepage-blogs');
+        console.log('📡 [useHomepageBlogs] API response:', JSON.stringify(data));
         if (!cancelled) {
           setBlogs(data.blogs ?? []);
         }
       } catch (err: any) {
+        console.error('❌ [useHomepageBlogs] Fetch failed:', err);
         if (!cancelled) {
           setError(err?.message ?? 'Failed to load blogs');
         }

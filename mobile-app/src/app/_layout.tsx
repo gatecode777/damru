@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
-import { useFonts, PlayfairDisplay_800ExtraBold, PlayfairDisplay_700Bold } from "@expo-google-fonts/playfair-display";
+import { useFonts, PlayfairDisplay_800ExtraBold, PlayfairDisplay_700Bold, PlayfairDisplay_500Medium, PlayfairDisplay_400Regular } from "@expo-google-fonts/playfair-display";
 import { Montserrat_400Regular, Montserrat_600SemiBold, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
 import {
   Poppins_300Light,
@@ -17,10 +17,14 @@ import { StatusBar } from "react-native";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+import { GlobalBottomBar } from "@/components/navigation/GlobalBottomBar";
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     PlayfairDisplay_800ExtraBold,
     PlayfairDisplay_700Bold,
+    PlayfairDisplay_500Medium,
+    PlayfairDisplay_400Regular,
     Montserrat_400Regular,
     Montserrat_600SemiBold,
     Montserrat_700Bold,
@@ -55,6 +59,9 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="contact-us" options={{ headerShown: false }} />
+          <Stack.Screen name="about-us" options={{ headerShown: false }} />
+          <Stack.Screen name="branches/[slug]" options={{ headerShown: false }} />
           <Stack.Screen name="auth" options={{ presentation: "transparentModal", headerShown: false }} />
           <Stack.Screen name="cart" options={{ title: "Your Cart" }} />
           <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
@@ -62,6 +69,7 @@ export default function RootLayout() {
           <Stack.Screen name="banquet" options={{ title: "Plan an Event" }} />
           <Stack.Screen name="blogs" options={{ title: "Food Stories" }} />
         </Stack>
+        <GlobalBottomBar />
       </AppProvider>
     </SafeAreaProvider>
   );

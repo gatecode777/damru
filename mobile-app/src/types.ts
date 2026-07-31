@@ -48,11 +48,26 @@ export type Branch = {
   sortOrder?: number;
 };
 
+export type GalleryItem = {
+  _id: string;
+  image: string;
+  alt?: string;
+  title: string;
+  description: string;
+  type?: "wide" | "narrow";
+  overlayClass?: "" | "top-aligned";
+  sortOrder?: number;
+};
+
 export type GalleryTab = {
   _id: string;
   tabKey: string;
   label: string;
-  images: (string | { image?: string; url?: string; alt?: string })[];
+  bannerImage?: string;
+  bannerAlt?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+  items: GalleryItem[];
 };
 
 export type Address = {

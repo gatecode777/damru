@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, useFocusEffect } from "expo-router";
-import { TopBar } from "@/components/TopBar";
+import { HomeHeader } from "@/components/home/HomeHeader";
 import { Button, EmptyState, ScreenTitle } from "@/components/ui";
 import { colors } from "@/config";
 import { get, post } from "@/lib/api";
@@ -20,10 +20,10 @@ export default function ProfileScreen() {
     get<{ orders: Order[] }>("/api/orders").then((d) => setOrders(d.orders)).finally(() => setLoading(false));
   }, [user]));
   if (!ready) return <ActivityIndicator style={{ flex: 1 }} color={colors.orange} />;
-  return <View style={{ flex: 1, backgroundColor: "#fff" }}><TopBar />
+  return <View style={{ flex: 1, backgroundColor: "#fff" }}><HomeHeader />
     {!user ? <View style={{ flex: 1 }}><ScreenTitle eyebrow="Your Damru" title="Sign in to continue" subtitle="Track orders, save addresses, reserve tables and manage your profile." />
       <View style={styles.loginCard}><Text style={styles.loginIcon}>👋</Text><Text style={styles.loginTitle}>Welcome back</Text><Text style={styles.loginCopy}>Your favourites and order history are waiting.</Text><Button label="Sign in or create account" onPress={() => router.push("/auth")} /></View></View> :
-    <FlatList data={orders} keyExtractor={(item) => item._id} contentContainerStyle={{ paddingBottom: 30 }}
+    <FlatList data={orders} keyExtractor={(item) => item._id} contentContainerStyle={{ paddingBottom: 75 }}
       ListHeaderComponent={<>
         <View style={styles.profile}><View style={styles.avatar}><Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{user.name}</Text><Text style={styles.email}>{user.email}</Text></View>
           <Pressable accessibilityLabel="Log out" onPress={async () => { await post("/api/user/logout"); setUser(null); }}><MaterialIcons name="logout" size={23} color={colors.orange} /></Pressable>
