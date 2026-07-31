@@ -3,7 +3,6 @@ import Script from "next/script";
 import { getSettings } from "@/lib/getSettings";
 import SiteHeader from "@/components/website/SiteHeader";
 import SiteFooter from "@/components/website/SiteFooter";
-import MobileBottomBar from "@/components/website/MobileBottomBar";
 import { CartProvider } from "@/lib/CartContext";
 
 import "@/styles/website/header.css";
@@ -90,9 +89,6 @@ export default async function WebsiteLayout({ children }: { children: React.Reac
 
         {/* Footer */}
         <SiteFooter />
-
-        {/* Mobile Bottom Navigation Bar */}
-        <MobileBottomBar />
       </CartProvider>
 
       {/* JS for animations (wheel, sliders etc.) */}

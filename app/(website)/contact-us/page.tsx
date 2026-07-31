@@ -74,8 +74,12 @@ export default function ContactUsPage() {
 
       <section className="reservation-section" id="reservation">
         <div className="res-container">
-          <h2>Reservation</h2>
-          <p>Book a table in advance for a seamless dining experience.</p>
+          <div className="res-header-content">
+            <div className="res-main-title">
+              <h2>Make a Reservation</h2>
+            </div>
+            <p className="res-sub-text">Get in touch with the restaurant</p>
+          </div>
           <ReservationForm />
         </div>
       </section>

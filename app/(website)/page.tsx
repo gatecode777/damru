@@ -1,5 +1,4 @@
 import ReservationForm from "./ReservationForm";
-import IndoChineseWebSection from "./IndoChineseWebSection";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connectDB } from "@/lib/mongodb";
@@ -315,7 +314,35 @@ export default async function HomePage() {
       </section>
 
       {/* ── Indo Chinese Section ── */}
-      <IndoChineseWebSection />
+      <section className="menu-section">
+        <div className="container">
+          <h2 className="menu-title">Indo Chinese</h2>
+          <div className="menu-grid">
+            {[
+              { img: "IC1", name: "Paneer in Hot Garlic Sauce" },
+              { img: "IC2", name: "Honey Chilli Potato" },
+              { img: "IC3", name: "EOK Tossed Waterchestnut" },
+              { img: "IC4", name: "Mushroom Chilli Dry" },
+              { img: "IC5", name: "Spring Roll" },
+              { img: "IC6", name: "Paneer 65" },
+              { img: "IC7", name: "Crispy Corn" },
+              { img: "IC8", name: "Paneer Kung Pao" },
+              { img: "IC9", name: "Schezwan Vegetables in Hot" },
+            ].map((d) => (
+              <div key={d.name} className="menu-card bounce-reveal">
+                <div className="food-img-wrapper">
+                  <img src={`/assets/images/${d.img}.png`} alt={d.name} />
+                </div>
+                <div className="card-content">
+                  <div className="bottom-row">
+                    <h3 className="dish-name">{d.name}</h3>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── Special Features + Blog Cards ── */}
       <section className="special-feature-section">
