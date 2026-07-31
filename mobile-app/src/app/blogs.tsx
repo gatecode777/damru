@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -306,6 +306,7 @@ export default function BlogsScreen() {
 
   return (
     <View style={styles.page}>
+      <Stack.Screen options={{ headerShown: false }} />
       <HomeHeader />
 
       <FlatList
