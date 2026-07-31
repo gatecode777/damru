@@ -220,44 +220,7 @@ export function NavMenu({ visible, onClose }: NavMenuProps) {
             );
           })}
 
-          {/* LOGIN */}
-          <Pressable
-            style={styles.navRow}
-            onPress={() => navigate(LOGIN_ITEM.route)}
-            accessibilityRole="menuitem"
-            accessibilityLabel="Login"
-          >
-            <View style={styles.dot} />
-            <Text style={styles.navLabel}>{LOGIN_ITEM.label}</Text>
-          </Pressable>
 
-          {/* ── Contact section ── */}
-          <View style={styles.sectionDivider} />
-
-          <Text style={styles.contactHeading}>Contact</Text>
-          <View style={styles.dottedDivider} />
-
-          <Pressable onPress={() => Linking.openURL(`tel:${CONTACT.phone}`)}>
-            <Text style={styles.contactDetail}>{CONTACT.phone}</Text>
-          </Pressable>
-          <Pressable onPress={() => Linking.openURL(`mailto:${CONTACT.email}`)}>
-            <Text style={[styles.contactDetail, styles.contactEmail]}>{CONTACT.email}</Text>
-          </Pressable>
-          <Text style={[styles.contactDetail, styles.contactAddress]}>{CONTACT.address}</Text>
-
-          {/* Social icons */}
-          <View style={styles.socialsRow}>
-            {SOCIALS.map(s => (
-              <Pressable
-                key={s.id}
-                onPress={() => Linking.openURL(s.url)}
-                style={styles.socialBtn}
-                accessibilityLabel={s.id}
-              >
-                <Ionicons name={s.icon} size={22} color="#000" />
-              </Pressable>
-            ))}
-          </View>
         </ScrollView>
       </Animated.View>
     </Modal>

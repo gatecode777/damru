@@ -139,13 +139,17 @@ export default function BlogsScreen() {
         clearTimeout(delayTimer);
       };
     } else {
-      // Fetch Paginated Blogs Feed
-      publicGet<{ blogs: any[]; totalPages: number }>(`/api/blogs?page=${page}`)
+      // Fetch Homepage Blogs Feed (already deployed on live server)
+      publicGet<{ blogs: any[] }>("/api/homepage-blogs")
         .then((d) => {
           if (!active) return;
           console.log("📡 [BlogsScreen] Fetch success, count:", d.blogs?.length);
-          setBlogs(d.blogs || []);
-          setTotalPages(d.totalPages || 1);
+          if (d.blogs && d.blogs.length > 0) {
+            setBlogs(d.blogs);
+          } else {
+            setBlogs(STATIC_FALLBACK);
+          }
+          setTotalPages(1);
         })
         .catch((err) => {
           console.error("❌ [BlogsScreen] Fetch failed:", err);
