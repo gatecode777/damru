@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { publicGet } from '../lib/api';
+import { queryKeys } from '../lib/queryClient';
 import type { Branch } from '../types';
 
 interface BranchesResponse {
@@ -7,35 +8,19 @@ interface BranchesResponse {
 }
 
 export function useHomepageBranches() {
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: queryKeys.home.branches(),
+    queryFn: () => publicGet<BranchesResponse>('/api/branches'),
+    staleTime: 15 * 60 * 1000, // 15 minutes stale time
+    select: (data) => {
+      return (data.branches ?? []).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    },
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetch() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await publicGet<BranchesResponse>('/api/branches');
-        if (!cancelled) {
-          // Sort by sortOrder ascending (the API should do this, but safe fallback)
-          const sorted = (data.branches ?? []).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-          setBranches(sorted);
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          setError(err?.message ?? 'Failed to load branches');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    fetch();
-    return () => { cancelled = true; };
-  }, []);
-
-  return { branches, loading, error };
+  return {
+    branches: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : (query.error ? String(query.error) : null),
+    reload: query.refetch,
+  };
 }

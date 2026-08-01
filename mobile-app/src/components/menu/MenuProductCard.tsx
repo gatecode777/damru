@@ -1,53 +1,34 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, Dimensions } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { colors, assetUrl } from "../../config";
-import { useApp } from "../../providers/AppProvider";
 import type { MenuItem } from "../../types";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
 interface MenuProductCardProps {
   item: MenuItem;
+  qty: number;
+  onAdd: (item: MenuItem) => void;
+  onIncrement: (item: MenuItem) => void;
+  onDecrement: (item: MenuItem) => void;
+  onOrderNow: (item: MenuItem) => void;
 }
 
-export function MenuProductCard({ item }: MenuProductCardProps) {
-  const router = useRouter();
-  const { cart, addItem, setQuantity } = useApp();
-
-  const cartEntry = cart.find((c) => c.menuItemId === item._id);
-  const qty = cartEntry ? cartEntry.qty : 0;
-
-  const handleAdd = () => {
-    addItem(item);
-  };
-
-  const handleIncrement = () => {
-    if (cartEntry) {
-      setQuantity(cartEntry, qty + 1);
-    }
-  };
-
-  const handleDecrement = () => {
-    if (cartEntry) {
-      setQuantity(cartEntry, qty - 1);
-    }
-  };
-
-  const handleOrderNow = async () => {
-    if (qty === 0) {
-      await addItem(item);
-    }
-    router.push("/cart");
-  };
-
+export const MenuProductCard = React.memo(function MenuProductCard({
+  item,
+  qty,
+  onAdd,
+  onIncrement,
+  onDecrement,
+  onOrderNow,
+}: MenuProductCardProps) {
   return (
     <View style={styles.card}>
       {/* Product Image */}
       <View style={styles.imageBox}>
         {item.image ? (
           <Image
-            source={{ uri: assetUrl("menu-items", item.image) }}
+            source={{ uri: assetUrl("menu-items", item.image) + "?tr=w-160,h-160,fo-auto" }}
             style={styles.image}
             contentFit="cover"
           />
@@ -66,28 +47,28 @@ export function MenuProductCard({ item }: MenuProductCardProps) {
         </View>
 
         <Text style={styles.description} numberOfLines={2}>
-          {item.description || item.desc}
+          {item.description}
         </Text>
 
         {/* Action Row */}
         <View style={styles.actionRow}>
           {qty > 0 ? (
             <View style={styles.stepper}>
-              <Pressable onPress={handleDecrement} style={styles.stepBtn}>
+              <Pressable onPress={() => onDecrement(item)} style={styles.stepBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.stepText}>−</Text>
               </Pressable>
               <Text style={styles.qtyText}>{qty}</Text>
-              <Pressable onPress={handleIncrement} style={styles.stepBtn}>
+              <Pressable onPress={() => onIncrement(item)} style={styles.stepBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.stepText}>+</Text>
               </Pressable>
             </View>
           ) : (
-            <Pressable onPress={handleAdd} style={styles.addBtn}>
+            <Pressable onPress={() => onAdd(item)} style={styles.addBtn}>
               <Text style={styles.addBtnText}>+ Add</Text>
             </Pressable>
           )}
 
-          <Pressable onPress={handleOrderNow} style={styles.orderBtn}>
+          <Pressable onPress={() => onOrderNow(item)} style={styles.orderBtn}>
             <Ionicons name="bag-outline" size={14} color="#ffffff" style={styles.bagIcon} />
             <Text style={styles.orderBtnText}>Order Now</Text>
           </Pressable>
@@ -95,7 +76,7 @@ export function MenuProductCard({ item }: MenuProductCardProps) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

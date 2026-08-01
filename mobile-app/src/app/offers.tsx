@@ -1,44 +1,47 @@
-import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl, Clipboard } from "react-native";
-import { Stack, useFocusEffect } from "expo-router";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import { Stack } from "expo-router";
 import { get } from "@/lib/api";
 import { colors } from "@/config";
 import type { Coupon } from "@/types";
 import { EmptyState } from "@/components/ui";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 
 export default function OffersScreen() {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, isRefetching, error: queryError, refetch } = useQuery({
+    queryKey: queryKeys.profile.coupons(),
+    queryFn: () => get<{ coupons: Coupon[] }>("/api/coupons"),
+    staleTime: 5 * 60 * 1000,
+    select: (res) => res.coupons ?? [],
+  });
+
+  const coupons = data ?? [];
+  const loading = isLoading;
+  const refreshing = isRefetching;
+  const error = queryError instanceof Error ? queryError.message : (queryError ? String(queryError) : null);
+
   const [toast, setToast] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
 
-  const fetchCoupons = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
+  const fetchCoupons = (_isRefresh?: boolean) => {
+    refetch();
+  };
 
+  const handleCopy = async (code: string) => {
+    if (copying) return;
+    setCopying(true);
     try {
-      const data = await get<{ coupons: Coupon[] }>("/api/coupons");
-      setCoupons(data.coupons || []);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load offers. Please try again.");
+      await Clipboard.setStringAsync(code);
+      setToast(`Code "${code}" copied to clipboard!`);
+      setTimeout(() => setToast(null), 1500);
+    } catch {
+      setToast("Could not copy. Please try manually.");
+      setTimeout(() => setToast(null), 2000);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setCopying(false);
     }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchCoupons();
-    }, [fetchCoupons])
-  );
-
-  const handleCopy = (code: string) => {
-    Clipboard.setString(code);
-    setToast(`Code "${code}" copied to clipboard!`);
-    setTimeout(() => setToast(null), 1500);
   };
 
   return (
@@ -60,6 +63,9 @@ export default function OffersScreen() {
         <FlatList
           data={coupons}
           keyExtractor={(item) => item._id}
+          initialNumToRender={6}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           refreshControl={
             React.createElement(RefreshControl as any, {
               refreshing: refreshing,

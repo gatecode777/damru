@@ -1,10 +1,9 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/config";
+import { colors, avatarUrl } from "@/config";
 import type { User } from "@/types";
 import { Image } from "../ui/Image";
-import { assetUrl } from "@/config";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -32,7 +31,7 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
             <View style={styles.avatarContainer}>
               {user.avatar ? (
                 <Image
-                  source={assetUrl("avatars", user.avatar)}
+                  source={avatarUrl(user.avatar)}
                   style={styles.avatar}
                 />
               ) : (

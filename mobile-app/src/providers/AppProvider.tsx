@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useRef } from "react";
+import { queryClient } from "@/lib/queryClient";
 import { get, post } from "@/lib/api";
 import type { CartItem, MenuItem, User } from "@/types";
 
@@ -25,15 +26,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
 
-  const saveGuest = useCallback(async (items: CartItem[]) => {
-    setCart(items);
-    await AsyncStorage.setItem(GUEST_CART, JSON.stringify(items));
-  }, []);
+
+
+  const syncedCartRef = useRef<CartItem[]>([]);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSyncingRef = useRef(false);
+  const hasPendingChangesRef = useRef(false);
+  const cartRef = useRef<CartItem[]>([]);
+
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
 
   const syncCart = useCallback(async () => {
     if (!user) return;
     const data = await get<{ items: CartItem[] }>("/api/cart");
-    setCart(data.items ?? []);
+    const items = data.items ?? [];
+    setCart(items);
+    syncedCartRef.current = items;
   }, [user]);
 
   const refreshUser = useCallback(async () => {
@@ -46,12 +56,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const start = performance.now();
     Promise.all([
-      refreshUser(),
-      AsyncStorage.getItem(GUEST_CART).then((raw) => {
-        if (raw) setCart(JSON.parse(raw));
+      refreshUser().then(() => {
+        if (__DEV__) {
+          console.info(`[Startup] Session restored in ${(performance.now() - start).toFixed(2)}ms`);
+        }
       }),
-    ]).finally(() => setReady(true));
+      AsyncStorage.getItem(GUEST_CART).then((raw) => {
+        if (raw) {
+          try {
+            setCart(JSON.parse(raw));
+          } catch (error) {
+            if (__DEV__) {
+              console.error("Failed to parse guest cart from AsyncStorage:", error);
+            }
+            AsyncStorage.removeItem(GUEST_CART).catch(() => undefined);
+            setCart([]);
+          }
+        }
+        if (__DEV__) {
+          console.info(`[Startup] Guest cart restored in ${(performance.now() - start).toFixed(2)}ms`);
+        }
+      }),
+    ]).finally(() => {
+      setReady(true);
+      if (__DEV__) {
+        console.info(`[Startup] AppProvider initialized in ${(performance.now() - start).toFixed(2)}ms`);
+      }
+    });
   }, [refreshUser]);
 
   useEffect(() => {
@@ -60,10 +93,129 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setUser = useCallback((next: User | null) => {
     setUserState(next);
+    // Clear user-specific cache on login/logout to prevent private data leakage
+    queryClient.clear();
+
     if (!next) {
-      AsyncStorage.getItem(GUEST_CART).then((raw) => setCart(raw ? JSON.parse(raw) : []));
+      AsyncStorage.getItem(GUEST_CART).then((raw) => {
+        if (raw) {
+          try {
+            const items = JSON.parse(raw);
+            setCart(items);
+            syncedCartRef.current = items;
+          } catch (error) {
+            if (__DEV__) {
+              console.error("Failed to parse guest cart from AsyncStorage on logout:", error);
+            }
+            AsyncStorage.removeItem(GUEST_CART).catch(() => undefined);
+            setCart([]);
+            syncedCartRef.current = [];
+          }
+        } else {
+          setCart([]);
+        }
+      });
     }
   }, []);
+
+  const scheduleSync = useCallback(() => {
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+    syncTimeoutRef.current = setTimeout(async () => {
+      syncTimeoutRef.current = null;
+      if (isSyncingRef.current) {
+        hasPendingChangesRef.current = true;
+        return;
+      }
+      await runSync();
+    }, 500);
+  }, []);
+
+  const runSync = async () => {
+    if (!user) return;
+    isSyncingRef.current = true;
+    hasPendingChangesRef.current = false;
+
+    const targetCart = [...cartRef.current];
+    const syncedCart = syncedCartRef.current;
+
+    try {
+      // Find diffs
+      const toDelete = syncedCart.filter(
+        (s) => !targetCart.some((t) => t.menuItemId === s.menuItemId && t.custom === s.custom)
+      );
+      const toAdd = targetCart.filter(
+        (t) => !syncedCart.some((s) => s.menuItemId === t.menuItemId && s.custom === t.custom)
+      );
+      const toUpdate = targetCart.filter((t) => {
+        const s = syncedCart.find((x) => x.menuItemId === t.menuItemId && x.custom === t.custom);
+        return s && s.qty !== t.qty;
+      });
+
+      if (toDelete.length === 0 && toAdd.length === 0 && toUpdate.length === 0) {
+        isSyncingRef.current = false;
+        return;
+      }
+
+      let finalCartItems = [...syncedCart];
+
+      for (const item of toDelete) {
+        const { del } = await import("@/lib/api");
+        const data = await del<{ items: CartItem[] }>("/api/cart/item", {
+          menuItemId: item.menuItemId,
+          custom: item.custom,
+        });
+        finalCartItems = data.items || [];
+      }
+
+      for (const item of toAdd) {
+        const data = await post<{ items: CartItem[] }>("/api/cart/item", {
+          menuItemId: item.menuItemId,
+          custom: item.custom,
+          price: item.price,
+          qty: item.qty,
+        });
+        finalCartItems = data.items || [];
+      }
+
+      for (const item of toUpdate) {
+        const { patch } = await import("@/lib/api");
+        const data = await patch<{ items: CartItem[] }>("/api/cart/item", {
+          menuItemId: item.menuItemId,
+          custom: item.custom,
+          qty: item.qty,
+        });
+        finalCartItems = data.items || [];
+      }
+
+      syncedCartRef.current = finalCartItems;
+
+      const currentLocalCart = cartRef.current;
+      const isAligned = currentLocalCart.length === finalCartItems.length &&
+        currentLocalCart.every((item) => {
+          const matched = finalCartItems.find((f) => f.menuItemId === item.menuItemId && f.custom === item.custom);
+          return matched && matched.qty === item.qty;
+        });
+
+      if (!isAligned) {
+        hasPendingChangesRef.current = true;
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error("Cart sync failed:", error);
+      }
+      setCart(syncedCartRef.current);
+      const { Alert } = await import("react-native");
+      Alert.alert("Connection Error", "Failed to update your cart. Please try again.");
+    } finally {
+      isSyncingRef.current = false;
+      if (hasPendingChangesRef.current) {
+        hasPendingChangesRef.current = false;
+        await runSync();
+      }
+    }
+  };
 
   const addItem = useCallback(async (item: MenuItem) => {
     const cartItem: CartItem = {
@@ -75,51 +227,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       qty: 1,
     };
     if (user) {
-      const data = await post<{ items: CartItem[] }>("/api/cart/item", {
-        menuItemId: item._id,
-        custom: item.custom ?? "",
-        price: item.price,
-        qty: 1,
+      setCart((prevCart) => {
+        const index = prevCart.findIndex((entry) => entry.menuItemId === item._id && entry.custom === cartItem.custom);
+        const next = [...prevCart];
+        if (index >= 0) next[index] = { ...next[index], qty: next[index].qty + 1 };
+        else next.push(cartItem);
+        return next;
       });
-      setCart(data.items);
+      scheduleSync();
       return;
     }
-    const index = cart.findIndex((entry) => entry.menuItemId === item._id && entry.custom === cartItem.custom);
-    const next = [...cart];
-    if (index >= 0) next[index] = { ...next[index], qty: next[index].qty + 1 };
-    else next.push(cartItem);
-    await saveGuest(next);
-  }, [cart, saveGuest, user]);
+    setCart((prevCart) => {
+      const index = prevCart.findIndex((entry) => entry.menuItemId === item._id && entry.custom === cartItem.custom);
+      const next = [...prevCart];
+      if (index >= 0) next[index] = { ...next[index], qty: next[index].qty + 1 };
+      else next.push(cartItem);
+      AsyncStorage.setItem(GUEST_CART, JSON.stringify(next)).catch(() => undefined);
+      return next;
+    });
+  }, [user, scheduleSync]);
 
   const setQuantity = useCallback(async (item: CartItem, qty: number) => {
     if (user) {
-      if (qty <= 0) {
-        const { del } = await import("@/lib/api");
-        const data = await del<{ items: CartItem[] }>("/api/cart/item", { menuItemId: item.menuItemId, custom: item.custom });
-        setCart(data.items);
-      } else {
-        const { patch } = await import("@/lib/api");
-        const data = await patch<{ items: CartItem[] }>("/api/cart/item", { menuItemId: item.menuItemId, custom: item.custom, qty });
-        setCart(data.items);
-      }
+      setCart((prevCart) => {
+        const next = prevCart.flatMap((entry) =>
+          entry.menuItemId === item.menuItemId && entry.custom === item.custom
+            ? qty > 0 ? [{ ...entry, qty }] : []
+            : [entry],
+        );
+        return next;
+      });
+      scheduleSync();
       return;
     }
-    await saveGuest(cart.flatMap((entry) =>
-      entry.menuItemId === item.menuItemId && entry.custom === item.custom
-        ? qty > 0 ? [{ ...entry, qty }] : []
-        : [entry],
-    ));
-  }, [cart, saveGuest, user]);
+    setCart((prevCart) => {
+      const next = prevCart.flatMap((entry) =>
+        entry.menuItemId === item.menuItemId && entry.custom === item.custom
+          ? qty > 0 ? [{ ...entry, qty }] : []
+          : [entry],
+      );
+      AsyncStorage.setItem(GUEST_CART, JSON.stringify(next)).catch(() => undefined);
+      return next;
+    });
+  }, [user, scheduleSync]);
 
   const clearCart = useCallback(async () => {
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+    setCart([]);
+    syncedCartRef.current = [];
     if (user) {
       const { del } = await import("@/lib/api");
-      await del("/api/cart");
-      setCart([]);
+      await del("/api/cart").catch(() => undefined);
     } else {
-      await saveGuest([]);
+      await AsyncStorage.removeItem(GUEST_CART).catch(() => undefined);
     }
-  }, [saveGuest, user]);
+  }, [user]);
 
   const value = useMemo(() => ({
     user, cart, ready, refreshUser, setUser, addItem, setQuantity, clearCart, syncCart,

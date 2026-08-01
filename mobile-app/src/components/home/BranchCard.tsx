@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, Text, Pressable, Image, Linking } from 'react-native';
+import { View, StyleSheet, Text, Pressable, Linking } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 import { colors, assetUrl } from '@/config';
 import type { Branch } from '@/types';
+import { Image } from '../ui/Image';
 
 interface BranchCardProps {
   branch: Branch;
@@ -56,7 +57,7 @@ export function BranchCard({ branch, index }: BranchCardProps) {
   };
 
   const handleReadMore = () => {
-    router.push('/(tabs)/branches');
+    router.navigate('/(tabs)/branches');
   };
 
   const handleCall = () => {

@@ -57,7 +57,7 @@ export function IndoChineseProductCard({
     cardScale.value  = withSpring(1, { damping: 15 });
     arrowScale.value = withSpring(1, { damping: 15 });
   };
-  const handlePress    = () => router.push('/(tabs)/menu' as any);
+  const handlePress    = () => router.navigate('/(tabs)/menu' as any);
 
   /* ── Orange image block (reused in both layouts) ── */
   const ImageBlock = (

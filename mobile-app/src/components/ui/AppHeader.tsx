@@ -28,7 +28,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ cartCount, onSearchPress, 
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={[styles.container, { height: headerHeight }]}>
         {/* Left: Brand Logo */}
-        <Pressable onPress={() => router.push('/')} style={styles.logoRow}>
+        <Pressable onPress={() => router.navigate('/')} style={styles.logoRow}>
           <Image
             source={StaticAssets.logo}
             style={{ width: logoWidth, height: logoHeight }}
@@ -51,7 +51,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ cartCount, onSearchPress, 
             )}
           </Pressable>
 
-          <Pressable onPress={onMenuPress || (() => router.push('/profile'))} style={styles.iconBtn}>
+          <Pressable onPress={onMenuPress || (() => router.navigate('/profile'))} style={styles.iconBtn}>
             <Ionicons name="menu-outline" size={26} color={Colors.text} />
           </Pressable>
         </View>

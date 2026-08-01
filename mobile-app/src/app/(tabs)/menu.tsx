@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   FlatList,
   StyleSheet,
   Text,
   View,
+  Platform,
 } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HomeHeader } from "../../components/home/HomeHeader";
@@ -17,6 +18,7 @@ import { MenuReservationSection } from "../../components/menu/MenuReservationSec
 import { MenuProductSkeleton } from "../../components/menu/MenuProductSkeleton";
 import { publicGet } from "../../lib/api";
 import { colors } from "../../config";
+import { useApp } from "../../providers/AppProvider";
 import type { MenuItem } from "../../types";
 
 interface Category {
@@ -126,67 +128,42 @@ const FALLBACK_ITEMS: MenuItem[] = [
   },
 ];
 
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../../lib/queryClient";
+
 export default function MenuScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { cart, addItem, setQuantity } = useApp();
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [allItems, setAllItems] = useState<MenuItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch Menu Data (Categories & Products)
+  const cartRef = useRef(cart);
+  const isNavigatingRef = useRef(false);
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(null);
+    cartRef.current = cart;
+  }, [cart]);
 
-    publicGet<{ categories: Category[]; items: MenuItem[] }>("/api/menu")
-      .then((data) => {
-        if (!active) return;
-        setCategories(data.categories || []);
-        setAllItems(data.items || []);
-        if (data.categories && data.categories.length > 0) {
-          setSelectedCategory(data.categories[0]._id);
-        }
-      })
-      .catch((err) => {
-        console.error("❌ [MenuScreen] Fetch failed:", err);
-        if (active) {
-          setCategories(FALLBACK_CATEGORIES);
-          setAllItems(FALLBACK_ITEMS);
-          setSelectedCategory(FALLBACK_CATEGORIES[0]._id);
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: queryKeys.menu.list(),
+    queryFn: () => publicGet<{ categories: Category[]; items: MenuItem[] }>("/api/menu"),
+    staleTime: 5 * 60 * 1000, // 5 minutes stale
+  });
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  const loading = isLoading;
+  const error = isError ? "Failed to load menu data. Please check your internet connection." : null;
+
+  const categories = data?.categories || FALLBACK_CATEGORIES;
+  const allItems = data?.items || FALLBACK_ITEMS;
+
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+  useEffect(() => {
+    if (categories.length > 0 && !selectedCategory) {
+      setSelectedCategory(categories[0]._id);
+    }
+  }, [categories, selectedCategory]);
 
   const handleRetry = () => {
-    setLoading(true);
-    setError(null);
-    publicGet<{ categories: Category[]; items: MenuItem[] }>("/api/menu")
-      .then((data) => {
-        setCategories(data.categories || []);
-        setAllItems(data.items || []);
-        if (data.categories && data.categories.length > 0) {
-          setSelectedCategory(data.categories[0]._id);
-        }
-      })
-      .catch((err) => {
-        console.error("❌ [MenuScreen] Retry fetch failed:", err);
-        setCategories(FALLBACK_CATEGORIES);
-        setAllItems(FALLBACK_ITEMS);
-        setSelectedCategory(FALLBACK_CATEGORIES[0]._id);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    refetch();
   };
 
   // Filter products based on selected category
@@ -195,6 +172,57 @@ export default function MenuScreen() {
   );
 
   const activeCategoryObj = categories.find((c) => c._id === selectedCategory);
+
+  const handleAdd = useCallback((item: MenuItem) => {
+    addItem(item);
+  }, [addItem]);
+
+  const handleIncrement = useCallback((item: MenuItem) => {
+    const entry = cartRef.current.find((c) => c.menuItemId === item._id);
+    if (entry) {
+      setQuantity(entry, entry.qty + 1);
+    }
+  }, [setQuantity]);
+
+  const handleDecrement = useCallback((item: MenuItem) => {
+    const entry = cartRef.current.find((c) => c.menuItemId === item._id);
+    if (entry) {
+      setQuantity(entry, entry.qty - 1);
+    }
+  }, [setQuantity]);
+
+  const handleOrderNow = useCallback(async (item: MenuItem) => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    try {
+      const entry = cartRef.current.find((c) => c.menuItemId === item._id);
+      const qty = entry ? entry.qty : 0;
+      if (qty === 0) {
+        await addItem(item);
+      }
+      router.push("/cart");
+    } finally {
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 500);
+    }
+  }, [addItem, router]);
+
+  const renderProductItem = useCallback(({ item }: { item: MenuItem }) => {
+    const cartEntry = cart.find((c) => c.menuItemId === item._id);
+    const qty = cartEntry ? cartEntry.qty : 0;
+
+    return (
+      <MenuProductCard
+        item={item}
+        qty={qty}
+        onAdd={handleAdd}
+        onIncrement={handleIncrement}
+        onDecrement={handleDecrement}
+        onOrderNow={handleOrderNow}
+      />
+    );
+  }, [cart, handleAdd, handleIncrement, handleDecrement, handleOrderNow]);
 
   const renderHeader = () => (
     <>
@@ -249,7 +277,7 @@ export default function MenuScreen() {
         <FlatList
           data={loading ? [] : filteredProducts}
           keyExtractor={(item) => item._id}
-          renderItem={({ item }) => <MenuProductCard item={item} />}
+          renderItem={renderProductItem}
           ListHeaderComponent={renderHeader}
           ListFooterComponent={!loading ? <MenuReservationSection /> : null}
           ListEmptyComponent={
@@ -267,6 +295,10 @@ export default function MenuScreen() {
             { paddingBottom: insets.bottom + 85 },
           ]}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={6}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
         />
       )}
     </View>

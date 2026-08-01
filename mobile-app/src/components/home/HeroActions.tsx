@@ -24,7 +24,7 @@ export function HeroActions({ onBookPress, onMenuPress }: HeroActionsProps) {
 
       {/* Secondary Menu Link */}
       <Pressable
-        onPress={onMenuPress || (() => router.push('/menu'))}
+        onPress={onMenuPress || (() => router.navigate('/menu'))}
         style={({ pressed }) => [styles.btnMenu, pressed && styles.menuPressed]}
       >
         <Text style={styles.btnMenuText}>View Menu</Text>

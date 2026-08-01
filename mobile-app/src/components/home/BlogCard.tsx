@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   Pressable,
   Dimensions,
@@ -22,6 +21,9 @@ import {
   resolveBlogCover,
   resolveAuthorAvatar,
 } from '../../hooks/useHomepageBlogs';
+import { Image } from '../ui/Image';
+
+let blogNavigationLocked = false;
 
 interface BlogCardProps {
   blog: HomepageBlog;
@@ -91,13 +93,19 @@ export function BlogCard({ blog, index }: BlogCardProps) {
     shadowOp.value   = withTiming(0.05, { duration: 200 });
   };
 
+
   const handlePress = () => {
+    if (blogNavigationLocked) return;
+    blogNavigationLocked = true;
     router.push({ pathname: '/blog/[slug]', params: { slug: blog.slug } } as any);
+    setTimeout(() => {
+      blogNavigationLocked = false;
+    }, 800);
   };
 
   /* ── Resolved URLs ── */
-  const coverUri  = resolveBlogCover(blog.coverImage);
-  const avatarUri = resolveAuthorAvatar(blog.author.avatar);
+  const coverUri  = resolveBlogCover(blog.coverImage) ? resolveBlogCover(blog.coverImage) + "?tr=w-400,h-260,fo-auto" : undefined;
+  const avatarUri = resolveAuthorAvatar(blog.author.avatar) ? resolveAuthorAvatar(blog.author.avatar) + "?tr=w-60,h-60,fo-auto" : undefined;
   const dateStr   = fmtBlogDate(blog.publishedAt);
 
   return (

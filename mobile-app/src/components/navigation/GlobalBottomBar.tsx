@@ -68,15 +68,15 @@ export function GlobalBottomBar() {
 
           const onPress = () => {
             if (item.route === "index") {
-              router.push("/(tabs)");
+              router.navigate("/(tabs)");
             } else if (item.route === "menu") {
-              router.push("/(tabs)/menu");
+              router.navigate("/(tabs)/menu");
             } else if (item.route === "branches") {
-              router.push("/(tabs)/branches");
+              router.navigate("/(tabs)/branches");
             } else if (item.route === "gallery") {
-              router.push("/(tabs)/gallery");
+              router.navigate("/(tabs)/gallery");
             } else if (item.route === "profile") {
-              router.push("/(tabs)/profile");
+              router.navigate("/(tabs)/profile");
             }
           };
 

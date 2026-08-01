@@ -26,12 +26,12 @@ const STATIC_FALLBACK: Branch[] = [
     name: "Damru By Namo (Mansarovar, Jaipur)",
     slug: "mansarovar-jaipur",
     description:
-      "Our Mansarovar branch offers a perfect blend of great food and a spacious banquet hall, ideal for birthdays, family gatherings, and small celebrations.",
+      "Our Mansarovar branch offers a perfect blend of great food and a spacious hall for wedding events, ideal for birthdays, family gatherings, and celebrations.",
     contact: "+91 9660527210",
     timing: "11:00 AM – 11:00 PM",
     cardImage: "",
     address: "Coaching Hub Road, Mansarovar, Jaipur - 302020",
-    whyChoose: "Uncompromised hygiene, beautiful interior design, and dedicated service staff for a smooth banquet experience.",
+    whyChoose: "Uncompromised hygiene, beautiful interior design, and dedicated service staff for a smooth wedding and event experience.",
     offerItems: ["Premium Pure Vegetarian Buffet", "Spacious Air-Conditioned Hall", "Professional Stage & Sound Setup", "In-House Custom Decors"],
     eventTypes: [
       { label: "Birthday Party", image: "" },
@@ -40,9 +40,9 @@ const STATIC_FALLBACK: Branch[] = [
     ],
     hallCards: [
       {
-        title: "Grand Banquet Hall",
+        title: "Grand Wedding & Event Hall",
         subtitle: "Host Royal Gatherings Natively",
-        description: "A premium banquet facility designed to handle large guest lists with state of the art presentation and sound setups.",
+        description: "A premium wedding and event space designed to handle large guest lists with state of the art presentation and sound setups.",
         features: ["Capacity up to 300 guests", "Full stage setup with thematic lightning", "Valet parking service availability"],
         perfectFor: ["Weddings", "Reception Ceremonies", "Corporate Seminars"],
         images: ["", ""],
@@ -84,7 +84,7 @@ const STATIC_FALLBACK: Branch[] = [
     name: "Damru By Namo (Coaching Hub, Pratap Nagar, Jaipur)",
     slug: "pratap-nagar-jaipur",
     description:
-      "Our Pratap Nagar branch offers a lively dining experience along with banquet services, making it ideal for student parties, birthdays, and casual events.",
+      "Our Pratap Nagar branch offers a lively dining experience along with wedding and event services, making it ideal for student parties, birthdays, and casual events.",
     contact: "+91 9660527210",
     timing: "11:00 AM – 11:00 PM",
     cardImage: "",

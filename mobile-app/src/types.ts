@@ -11,12 +11,14 @@ export type User = {
 export type MenuItem = {
   _id: string;
   name: string;
-  desc: string;
+  /** Canonical description field. Matches what /api/menu and /api/home-menu return. */
+  description: string;
   image?: string;
   price: number;
   hasVariants?: boolean;
   category?: string;
   catSlug?: string;
+  isVeg?: boolean;
   custom?: string;
   qty?: number;
 };

@@ -28,8 +28,15 @@ export function Field({ label, error, ...props }: TextInputProps & { label?: str
   </View>;
 }
 
-export function EmptyState({ title, message }: { title: string; message: string }) {
-  return <View style={styles.empty}><Text style={styles.emptyIcon}>🍽️</Text><Text style={styles.emptyTitle}>{title}</Text><Text style={styles.subtitle}>{message}</Text></View>;
+export function EmptyState({ title, message, actionLabel, onAction }: { title: string; message: string; actionLabel?: string; onAction?: () => void }) {
+  return <View style={styles.empty}>
+    <Text style={styles.emptyIcon}>🍽️</Text>
+    <Text style={styles.emptyTitle}>{title}</Text>
+    <Text style={styles.subtitle}>{message}</Text>
+    {actionLabel && onAction ? (
+      <Button label={actionLabel} onPress={onAction} style={{ marginTop: 16, width: "100%" }} />
+    ) : null}
+  </View>;
 }
 
 const styles = StyleSheet.create({

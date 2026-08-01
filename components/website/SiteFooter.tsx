@@ -14,7 +14,7 @@ const QUICK_LINKS = [
 const SERVICE_LINKS = [
   { label: "Online Order", href: "/menu" },
   { label: "Birthday Parties", href: "/branches" },
-  { label: "Wedding Functions", href: "/branches" },
+  { label: "Wedding Events", href: "/branches" },
   { label: "Corporate Events", href: "/branches" },
   { label: "Catering Services", href: "/contact-us" },
   { label: "Dine-In", href: "/menu" },

@@ -19,6 +19,7 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
+  cancelAnimation,
 } from "react-native-reanimated";
 
 import { StaticAssets } from "../../constants/assets";
@@ -104,6 +105,11 @@ export function ReservationSection() {
       -1,
       false
     );
+
+    return () => {
+      cancelAnimation(leafARotation);
+      cancelAnimation(leafBRotation);
+    };
   }, []);
 
   const animatedLeafA = useAnimatedStyle(() => ({

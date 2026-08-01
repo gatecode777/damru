@@ -35,7 +35,7 @@ const AUTO_PLAY_MS      = 3000;   // main.js: setInterval 3000ms
 const FADE_DURATION_MS  = 1500;   // CSS: transition: opacity 1.5s ease-in-out
 const SECTION_HEIGHT    = 380;    // set to 380 to prevent slides looking cut in half
 const FLOATING_HALF_MS  = 2500;   // @keyframes floating: 5s total → 2.5s each half
-const HEADING  = 'Elegant Banquet Hall for Your Special Events';
+const HEADING  = 'Elegant Wedding Events & Special Celebrations';
 const CTA_ROUTE = '/branches';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

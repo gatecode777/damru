@@ -21,7 +21,7 @@ interface MenuCategoryTabsProps {
   onSelect: (id: string) => void;
 }
 
-export function MenuCategoryTabs({
+export const MenuCategoryTabs = React.memo(function MenuCategoryTabs({
   categories,
   activeId,
   onSelect,
@@ -71,7 +71,7 @@ export function MenuCategoryTabs({
       </ScrollView>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -26,7 +26,7 @@ const STATIC_FALLBACK: Branch[] = [
     name: "Damru By Namo (Mansarovar, Jaipur)",
     slug: "mansarovar-jaipur",
     description:
-      "Our Mansarovar branch offers a perfect blend of great food and a spacious banquet hall, ideal for birthdays, family gatherings, and small celebrations.",
+      "Our Mansarovar branch offers a perfect blend of great food and a spacious hall for wedding events, ideal for birthdays, family gatherings, and celebrations.",
     contact: "+91 9660527210",
     timing: "11:00 AM – 11:00 PM",
     cardImage: "",
@@ -46,7 +46,7 @@ const STATIC_FALLBACK: Branch[] = [
     name: "Damru By Namo (Coaching Hub, Pratap Nagar, Jaipur)",
     slug: "pratap-nagar-jaipur",
     description:
-      "Our Pratap Nagar branch offers a lively dining experience along with banquet services, making it ideal for student parties, birthdays, and casual events.",
+      "Our Pratap Nagar branch offers a lively dining experience along with wedding and event services, making it ideal for student parties, birthdays, and casual events.",
     contact: "+91 9660527210",
     timing: "11:00 AM – 11:00 PM",
     cardImage: "",

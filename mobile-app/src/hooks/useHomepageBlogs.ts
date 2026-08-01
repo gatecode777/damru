@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { publicGet } from '../lib/api';
+import { queryKeys } from '../lib/queryClient';
 import { API_URL } from '../config';
 
 /* ── Types ── */
@@ -58,35 +59,16 @@ export function resolveAuthorAvatar(filename: string): string {
 
 /* ── Hook ── */
 export function useHomepageBlogs() {
-  const [blogs, setBlogs]     = useState<HomepageBlog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: queryKeys.home.blogs(),
+    queryFn: () => publicGet<HomepageBlogsResponse>('/api/homepage-blogs'),
+    staleTime: 15 * 60 * 1000, // 15 minutes stale time
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchBlogs() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await publicGet<HomepageBlogsResponse>('/api/homepage-blogs');
-        console.log('📡 [useHomepageBlogs] API response:', JSON.stringify(data));
-        if (!cancelled) {
-          setBlogs(data.blogs ?? []);
-        }
-      } catch (err: any) {
-        console.error('❌ [useHomepageBlogs] Fetch failed:', err);
-        if (!cancelled) {
-          setError(err?.message ?? 'Failed to load blogs');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    fetchBlogs();
-    return () => { cancelled = true; };
-  }, []);
-
-  return { blogs, loading, error };
+  return {
+    blogs: query.data?.blogs ?? [],
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : (query.error ? String(query.error) : null),
+    reload: query.refetch,
+  };
 }

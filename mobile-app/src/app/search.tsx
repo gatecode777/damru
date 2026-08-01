@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   FlatList,
   ActivityIndicator,
   Keyboard,
+  Platform,
 } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,6 +19,8 @@ import { colors } from "@/config";
 import type { MenuItem } from "@/types";
 import { MenuProductCard } from "@/components/menu/MenuProductCard";
 import { MenuProductSkeleton } from "@/components/menu/MenuProductSkeleton";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 
 const POPULAR_KEYWORDS = [
   "Soup",
@@ -38,37 +41,78 @@ interface SearchData {
 export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { totalItems } = useApp();
+  const { cart, addItem, setQuantity, totalItems } = useApp();
   const inputRef = useRef<any>(null);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [allItems, setAllItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<Array<{ _id: string; name: string }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch all menu items for local searching
+  const cartRef = useRef(cart);
+  const isNavigatingRef = useRef(false);
   useEffect(() => {
-    let active = true;
-    publicGet<SearchData>("/api/menu")
-      .then((data) => {
-        if (!active) return;
-        setAllItems(data.items || []);
-        setCategories(data.categories || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("❌ [SearchScreen] Failed to load search menu index:", err);
-        if (active) {
-          setError("Failed to load menu list. Please try again.");
-          setLoading(false);
-        }
-      });
+    cartRef.current = cart;
+  }, [cart]);
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: queryKeys.menu.list(),
+    queryFn: () => publicGet<SearchData>("/api/menu"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const allItems = data?.items || [];
+  const categories = data?.categories || [];
+  const loading = isLoading;
+  const error = isError ? "Failed to load menu list. Please try again." : null;
+
+  const handleAdd = useCallback((item: MenuItem) => {
+    addItem(item);
+  }, [addItem]);
+
+  const handleIncrement = useCallback((item: MenuItem) => {
+    const entry = cartRef.current.find((c) => c.menuItemId === item._id);
+    if (entry) {
+      setQuantity(entry, entry.qty + 1);
+    }
+  }, [setQuantity]);
+
+  const handleDecrement = useCallback((item: MenuItem) => {
+    const entry = cartRef.current.find((c) => c.menuItemId === item._id);
+    if (entry) {
+      setQuantity(entry, entry.qty - 1);
+    }
+  }, [setQuantity]);
+
+  const handleOrderNow = useCallback(async (item: MenuItem) => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    try {
+      const entry = cartRef.current.find((c) => c.menuItemId === item._id);
+      const qty = entry ? entry.qty : 0;
+      if (qty === 0) {
+        await addItem(item);
+      }
+      router.push("/cart");
+    } finally {
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 500);
+    }
+  }, [addItem, router]);
+
+  const renderProductItem = useCallback(({ item }: { item: MenuItem }) => {
+    const cartEntry = cart.find((c) => c.menuItemId === item._id);
+    const qty = cartEntry ? cartEntry.qty : 0;
+
+    return (
+      <MenuProductCard
+        item={item}
+        qty={qty}
+        onAdd={handleAdd}
+        onIncrement={handleIncrement}
+        onDecrement={handleDecrement}
+        onOrderNow={handleOrderNow}
+      />
+    );
+  }, [cart, handleAdd, handleIncrement, handleDecrement, handleOrderNow]);
 
   // Autofocus search input on mount
   useEffect(() => {
@@ -84,7 +128,7 @@ export default function SearchScreen() {
     const query = searchQuery.toLowerCase().trim();
     return allItems.filter((item) => {
       const nameMatch = item.name.toLowerCase().includes(query);
-      const descMatch = (item.desc || "").toLowerCase().includes(query);
+      const descMatch = (item.description || "").toLowerCase().includes(query);
       const categoryMatch = categories
         .find((c) => c._id === item.category)
         ?.name.toLowerCase()
@@ -191,8 +235,12 @@ export default function SearchScreen() {
         <FlatList
           data={filteredItems}
           keyExtractor={(item) => item._id}
-          renderItem={({ item }) => <MenuProductCard item={item} />}
+          renderItem={renderProductItem}
           keyboardShouldPersistTaps="handled"
+          initialNumToRender={6}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           contentContainerStyle={[
             styles.listContent,
             { paddingBottom: insets.bottom + 40 },

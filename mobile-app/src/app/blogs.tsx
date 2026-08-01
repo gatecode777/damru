@@ -121,7 +121,6 @@ export default function BlogsScreen() {
               publishedAt: b.publishedAt ? String(b.publishedAt) : String(b.createdAt),
               category: b.category?.name ?? "Healthy Food",
             }));
-            console.log("📡 [BlogsScreen] Search success, count:", normalized.length);
             setBlogs(normalized);
             setTotalPages(1); // Search results are single-page
           })
@@ -143,7 +142,6 @@ export default function BlogsScreen() {
       publicGet<{ blogs: any[] }>("/api/homepage-blogs")
         .then((d) => {
           if (!active) return;
-          console.log("📡 [BlogsScreen] Fetch success, count:", d.blogs?.length);
           if (d.blogs && d.blogs.length > 0) {
             setBlogs(d.blogs);
           } else {
@@ -190,12 +188,12 @@ export default function BlogsScreen() {
   function renderBlogCard({ item, index }: { item: Blog; index: number }) {
     // Resolve cover image source
     const coverSource = item.coverImage
-      ? { uri: getWebImageUri(`/uploads/blogs/${item.coverImage}`) }
+      ? { uri: getWebImageUri(`/uploads/blogs/${item.coverImage}`) + "?tr=w-400,h-260,fo-auto" }
       : { uri: IMG_FALLBACK };
 
     // Resolve author avatar source
     const avatarSource = item.author.avatar
-      ? { uri: getWebImageUri(`/uploads/authors/${item.author.avatar}`) }
+      ? { uri: getWebImageUri(`/uploads/authors/${item.author.avatar}`) + "?tr=w-60,h-60,fo-auto" }
       : { uri: AVATAR_FALLBACK };
 
     return (
@@ -317,6 +315,9 @@ export default function BlogsScreen() {
         data={blogs}
         keyExtractor={(item) => item._id}
         renderItem={renderBlogCard}
+        initialNumToRender={4}
+        maxToRenderPerBatch={6}
+        windowSize={5}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: insets.bottom + 85 },

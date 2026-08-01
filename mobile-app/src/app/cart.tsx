@@ -70,7 +70,7 @@ export default function CartScreen() {
       <Image
         source={
           item.image
-            ? { uri: assetUrl("menu-items", item.image) }
+            ? { uri: assetUrl("menu-items", item.image) + "?tr=w-130,h-130,fo-auto" }
             : null
         }
         style={styles.cardImage}
@@ -135,7 +135,7 @@ export default function CartScreen() {
             message="Looks like you haven't added anything to your cart yet."
           />
           <Pressable
-            onPress={() => router.push("/menu")}
+            onPress={() => router.navigate("/menu")}
             style={styles.exploreBtn}
           >
             <Text style={styles.exploreBtnText}>Go to Menu</Text>
@@ -147,6 +147,8 @@ export default function CartScreen() {
             data={cart}
             keyExtractor={(item) => `${item.menuItemId}-${item.custom}`}
             renderItem={renderItem}
+            initialNumToRender={8}
+            maxToRenderPerBatch={10}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={

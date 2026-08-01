@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useHomepageBlogs } from '../../hooks/useHomepageBlogs';
+import { useHomepageBlogs, type HomepageBlog } from '../../hooks/useHomepageBlogs';
 import { BlogCard, BlogCardSkeleton } from './BlogCard';
 import { colors } from '@/config';
 
@@ -69,7 +69,7 @@ export function BlogsSection() {
       ) : (
         /* Real blog cards */
         <>
-          {blogs.map((blog, i) => (
+          {blogs.map((blog: HomepageBlog, i: number) => (
             <BlogCard key={blog._id} blog={blog} index={i} />
           ))}
         </>

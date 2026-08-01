@@ -1,40 +1,33 @@
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl, Alert } from "react-native";
-import { Stack, useRouter, useFocusEffect } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { get, del } from "@/lib/api";
 import { colors } from "@/config";
 import type { Address } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { EmptyState } from "@/components/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 
 export default function AddressListScreen() {
   const router = useRouter();
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchAddresses = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
+  const { data, isLoading, isRefetching, error: queryError, refetch } = useQuery({
+    queryKey: queryKeys.profile.addresses(),
+    queryFn: () => get<{ addresses: Address[] }>("/api/address"),
+    staleTime: 2 * 60 * 1000, // 2 minutes stale time
+    select: (res) => res.addresses ?? [],
+  });
 
-    try {
-      const data = await get<{ addresses: Address[] }>("/api/address");
-      setAddresses(data.addresses || []);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load addresses. Please try again.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const addresses = data ?? [];
+  const loading = isLoading;
+  const refreshing = isRefetching;
+  const error = queryError instanceof Error ? queryError.message : (queryError ? String(queryError) : null);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchAddresses();
-    }, [fetchAddresses])
-  );
+  const fetchAddresses = (_isRefresh?: boolean) => {
+    refetch();
+  };
 
   const handleDelete = (id: string) => {
     Alert.alert(
@@ -48,7 +41,7 @@ export default function AddressListScreen() {
           onPress: async () => {
             try {
               await del("/api/address", { id });
-              setAddresses((prev) => prev.filter((a) => a._id !== id));
+              queryClient.invalidateQueries({ queryKey: queryKeys.profile.addresses() });
             } catch (err: any) {
               Alert.alert("Error", err?.message || "Failed to delete address.");
             }

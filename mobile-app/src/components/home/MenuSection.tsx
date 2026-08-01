@@ -15,6 +15,7 @@ import Animated, {
   withSpring,
   withTiming,
   Easing,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,6 +72,12 @@ function WavingLeaf() {
       -1,
       false,
     );
+
+    return () => {
+      cancelAnimation(rotate);
+      cancelAnimation(translateX);
+      cancelAnimation(translateY);
+    };
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({

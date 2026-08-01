@@ -49,7 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'gallery', label: 'GALLERY',         route: '/gallery',    matchFn: p => p === '/gallery'       },
   { id: 'blogs',   label: 'BLOGS',           route: '/blogs',      matchFn: p => p.startsWith('/blogs') },
   { id: 'offers',  label: 'OFFERS',          route: '/offers',     matchFn: p => p === '/offers'        },
-  { id: 'banquet', label: 'BANQUET / EVENT', route: '/branches',   matchFn: p => p.startsWith('/branches') },
+  { id: 'banquet', label: 'WEDDING / EVENT', route: '/branches',   matchFn: p => p.startsWith('/branches') },
 ];
 const LOGIN_ITEM = { id: 'login', label: 'LOGIN', route: '/auth' };
 
@@ -152,7 +152,7 @@ export function NavMenu({ visible, onClose }: NavMenuProps) {
   // Navigate and close
   const navigate = useCallback((route: string) => {
     closePanel();
-    setTimeout(() => router.push(route as any), CLOSE_MS + 30);
+    setTimeout(() => router.navigate(route as any), CLOSE_MS + 30);
   }, [closePanel, router]);
 
   if (!isRendered) return null;

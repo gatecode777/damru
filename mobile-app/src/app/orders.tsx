@@ -1,38 +1,29 @@
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl } from "react-native";
-import { Stack, useFocusEffect } from "expo-router";
+import { Stack } from "expo-router";
 import { get } from "@/lib/api";
 import { colors } from "@/config";
 import type { Order } from "@/types";
 import { EmptyState } from "@/components/ui";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 
 export default function OrdersScreen() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, isRefetching, error: queryError, refetch } = useQuery({
+    queryKey: queryKeys.profile.orders(),
+    queryFn: () => get<{ orders: Order[] }>("/api/orders"),
+    staleTime: 30 * 1000, // 30 seconds stale time
+    select: (res) => res.orders ?? [],
+  });
 
-  const fetchOrders = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
+  const orders = data ?? [];
+  const loading = isLoading;
+  const refreshing = isRefetching;
+  const error = queryError instanceof Error ? queryError.message : (queryError ? String(queryError) : null);
 
-    try {
-      const data = await get<{ orders: Order[] }>("/api/orders");
-      setOrders(data.orders || []);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load orders. Please try again.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchOrders();
-    }, [fetchOrders])
-  );
+  const fetchOrders = (_isRefresh?: boolean) => {
+    refetch();
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -79,6 +70,9 @@ export default function OrdersScreen() {
         <FlatList
           data={orders}
           keyExtractor={(item) => item._id}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
           refreshControl={
             React.createElement(RefreshControl as any, {
               refreshing: refreshing,

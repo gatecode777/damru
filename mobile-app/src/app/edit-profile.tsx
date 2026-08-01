@@ -4,7 +4,7 @@ import { Stack, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useApp } from "@/providers/AppProvider";
 import { patch } from "@/lib/api";
-import { colors, assetUrl, API_URL } from "@/config";
+import { colors, assetUrl, avatarUrl, API_URL } from "@/config";
 import { Button, Field } from "@/components/ui";
 import { Image } from "@/components/ui/Image";
 
@@ -199,7 +199,7 @@ export default function EditProfileScreen() {
           {selectedImageUri ? (
             <RNImage source={{ uri: selectedImageUri }} style={styles.avatarImage} />
           ) : !avatarDeleted && user?.avatar ? (
-            <Image source={assetUrl("avatars", user.avatar)} style={styles.avatarImage} />
+            <Image source={avatarUrl(user.avatar)} style={styles.avatarImage} />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarPlaceholderText}>

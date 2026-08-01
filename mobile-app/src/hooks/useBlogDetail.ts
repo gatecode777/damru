@@ -95,41 +95,24 @@ export function fmtBlogDetailDate(d: string | null | undefined): string {
   }
 }
 
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryClient';
+
 /* ── Hook ── */
 export function useBlogDetail(slug: string) {
-  const [data, setData]       = useState<BlogDetailResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-
-    async function fetch() {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await publicGet<BlogDetailResponse>(`/api/blogs/${encodeURIComponent(slug)}`);
-        if (!cancelled) setData(res);
-      } catch (err: any) {
-        if (!cancelled) {
-          setError(err?.status === 404 ? 'not_found' : (err?.message ?? 'error'));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    fetch();
-    return () => { cancelled = true; };
-  }, [slug]);
+  const query = useQuery({
+    queryKey: queryKeys.blogs.detail(slug),
+    queryFn: () => publicGet<BlogDetailResponse>(`/api/blogs/${encodeURIComponent(slug)}`),
+    staleTime: 15 * 60 * 1000, // 15 minutes stale time
+    enabled: !!slug,
+  });
 
   return {
-    blog:    data?.blog    ?? null,
-    recent:  data?.recent  ?? [],
-    prev:    data?.prev    ?? null,
-    next:    data?.next    ?? null,
-    loading,
-    error,
+    blog:    query.data?.blog    ?? null,
+    recent:  query.data?.recent  ?? [],
+    prev:    query.data?.prev    ?? null,
+    next:    query.data?.next    ?? null,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : (query.error ? String(query.error) : null),
   };
 }

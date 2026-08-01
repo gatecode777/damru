@@ -8,7 +8,7 @@ import { Colors } from '../../constants/theme';
 import { LocalAssets } from '../../constants/assets';
 import { NavMenu } from '../ui/NavMenu';
 import { useApp } from '@/providers/AppProvider';
-import { assetUrl } from '@/config';
+import { avatarUrl } from '@/config';
 
 interface HomeHeaderProps {
   onSearchPress?: () => void;
@@ -42,7 +42,7 @@ export function HomeHeader({ onSearchPress, onProfilePress }: HomeHeaderProps) {
           </Pressable>
 
           {/* Center-Left: Damru Logo */}
-          <Pressable onPress={() => router.push('/')} style={styles.logoContainer}>
+          <Pressable onPress={() => router.navigate('/')} style={styles.logoContainer}>
             <Image
               source={LocalAssets.logo}
               style={{ width: logoWidth, height: logoHeight }}
@@ -78,13 +78,13 @@ export function HomeHeader({ onSearchPress, onProfilePress }: HomeHeaderProps) {
 
             {user ? (
               <Pressable
-                onPress={() => router.push('/(tabs)/profile')}
+                onPress={() => router.navigate('/(tabs)/profile')}
                 style={styles.avatarBtn}
                 accessibilityLabel="Go to Profile"
               >
                 {user.avatar ? (
                   <Image
-                    source={assetUrl("avatars", user.avatar)}
+                    source={avatarUrl(user.avatar)}
                     style={styles.avatarImg}
                   />
                 ) : (

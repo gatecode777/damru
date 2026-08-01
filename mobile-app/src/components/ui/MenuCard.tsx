@@ -39,11 +39,11 @@ export function MenuCard({ item, index = 0 }: MenuCardProps) {
   }));
 
   const handlePress = useCallback(() => {
-    router.push('/menu' as any);
+    router.navigate('/menu' as any);
   }, [router]);
 
   const imageUri = item.image
-    ? assetUrl('menu-items', item.image)
+    ? assetUrl('menu-items', item.image) + "?tr=w-300,h-300,fo-auto"
     : undefined;
 
   // Fallback to local shake images (same as website homepage)

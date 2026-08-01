@@ -68,7 +68,6 @@ export default function AuthScreen() {
   };
 
   const handleLogin = async (email: string, pass: string) => {
-    console.log('[Auth] Initiating login for:', email);
     setBusy(true);
     setError('');
     setOkMsg('');
@@ -77,7 +76,6 @@ export default function AuthScreen() {
         email: email.trim(),
         password: pass,
       });
-      console.log('[Auth] Login success user:', data.user);
       setUser(data.user);
       router.back();
     } catch (e) {
@@ -89,7 +87,6 @@ export default function AuthScreen() {
   };
 
   const handleRegister = async (name: string, phone: string, email: string, pass: string) => {
-    console.log('[Auth] Initiating registration for:', email);
     setBusy(true);
     setError('');
     setOkMsg('');
@@ -100,7 +97,6 @@ export default function AuthScreen() {
         email: email.trim(),
         password: pass,
       });
-      console.log('[Auth] Registration success user:', data.user);
       setUser(data.user);
       router.back();
     } catch (e) {

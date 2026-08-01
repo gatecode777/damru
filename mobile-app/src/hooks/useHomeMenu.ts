@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { publicGet } from '../lib/api';
+import { queryKeys } from '../lib/queryClient';
 
 export interface HomeMenuItem {
   _id: string;
@@ -20,35 +21,17 @@ interface HomeMenuResponse {
 }
 
 export function useHomeMenu() {
-  const [items, setItems] = useState<HomeMenuItem[]>([]);
-  const [category, setCategory] = useState<{ _id: string; name: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: queryKeys.home.menu(),
+    queryFn: () => publicGet<HomeMenuResponse>('/api/home-menu'),
+    staleTime: 5 * 60 * 1000, // 5 minutes stale time
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetch() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await publicGet<HomeMenuResponse>('/api/home-menu');
-        if (!cancelled) {
-          setItems(data.items ?? []);
-          setCategory(data.category ?? null);
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          setError(err?.message ?? 'Failed to load menu');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    fetch();
-    return () => { cancelled = true; };
-  }, []);
-
-  return { items, category, loading, error };
+  return {
+    items: query.data?.items ?? [],
+    category: query.data?.category ?? null,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : (query.error ? String(query.error) : null),
+    reload: query.refetch,
+  };
 }

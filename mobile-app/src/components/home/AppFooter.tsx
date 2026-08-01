@@ -14,7 +14,7 @@ const QUICK_LINKS = [
   { label: "Home", href: "/" },
   { label: "About Us", href: "/about-us" },
   { label: "Menu", href: "/menu" },
-  { label: "Banquet / Events", href: "/branches" },
+  { label: "Weddings / Events", href: "/branches" },
   { label: "Gallery", href: "/gallery" },
   { label: "Contact Us", href: "/contact-us" },
   { label: "Offers", href: "/offers" },
@@ -23,7 +23,7 @@ const QUICK_LINKS = [
 const SERVICE_LINKS = [
   { label: "Online Order", href: "/menu" },
   { label: "Birthday Parties", href: "/branches" },
-  { label: "Wedding Functions", href: "/branches" },
+  { label: "Wedding Events", href: "/branches" },
   { label: "Corporate Events", href: "/branches" },
   { label: "Catering Services", href: "/contact-us" },
   { label: "Dine-In", href: "/menu" },
@@ -52,15 +52,15 @@ export function AppFooter() {
 
   const handleLinkPress = (href: string) => {
     if (href === "/") {
-      router.push("/");
+      router.navigate("/");
     } else if (href === "/menu") {
-      router.push("/menu");
+      router.navigate("/menu");
     } else if (href === "/branches") {
-      router.push("/branches");
+      router.navigate("/branches");
     } else if (href === "/gallery") {
-      router.push("/gallery");
+      router.navigate("/gallery");
     } else if (href === "/blogs") {
-      router.push("/blogs");
+      router.navigate("/blogs");
     } else {
       Linking.openURL(`https://damrurestro.com${href}`);
     }
@@ -86,7 +86,7 @@ export function AppFooter() {
         <View style={styles.sectionCol}>
           <Text style={styles.introText}>
             We serve delicious food with a perfect ambiance and offer premium
-            banquet services for weddings, birthdays, and special occasions.
+            wedding and event services for weddings, birthdays, and special occasions.
           </Text>
           <View style={styles.socialIconsRow}>
             {SOCIAL_LINKS.map((item) => (

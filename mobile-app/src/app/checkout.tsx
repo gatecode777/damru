@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../lib/queryClient";
 import {
   Alert,
   Pressable,
@@ -42,10 +44,28 @@ export default function CheckoutScreen() {
 
   const { cart, subtotal, clearCart } = useApp();
 
-  const [addresses, setAddresses] = useState<Address[]>([]);
+  const queryClient = useQueryClient();
+
+  const { data: addressesData } = useQuery({
+    queryKey: queryKeys.profile.addresses(),
+    queryFn: () => get<{ addresses: Address[] }>("/api/address"),
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const addresses = addressesData?.addresses ?? [];
+
   const [selectedAddr, setSelectedAddr] = useState("");
   const [editingAddr, setEditingAddr] = useState(false);
   const [newAddr, setNewAddr] = useState<Address>(emptyAddress);
+
+  useEffect(() => {
+    if (addresses.length > 0 && !selectedAddr) {
+      const defaultAddr = addresses.find((a) => a.isDefault) ?? addresses[0];
+      if (defaultAddr?._id) {
+        setSelectedAddr(defaultAddr._id);
+      }
+    }
+  }, [addresses, selectedAddr]);
 
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -60,10 +80,15 @@ export default function CheckoutScreen() {
   const [billExpanded, setBillExpanded] = useState(false);
   const [payMethod, setPayMethod] = useState<"upi" | "card" | "cod">("upi");
   
-  // UPI ID validation states
+  // UPI ID client-side format-check states.
+  // NOTE: This validates only the local-part@provider format.
+  // It does NOT confirm that the UPI account exists or that the bank will
+  // authorise a debit. Final payment validation must occur through the
+  // payment provider (e.g. Razorpay, PhonePe) during payment processing.
   const [upiId, setUpiId] = useState("");
-  const [upiVerified, setUpiVerified] = useState(false);
-  const [verifyingUpi, setVerifyingUpi] = useState(false);
+  const [upiFormatValid, setUpiFormatValid] = useState(false);
+  const [upiFormatError, setUpiFormatError] = useState("");
+  const [checkingUpiFormat, setCheckingUpiFormat] = useState(false);
 
   // Card input states
   const [cardHolder, setCardHolder] = useState("");
@@ -71,21 +96,7 @@ export default function CheckoutScreen() {
   const [cardExp, setCardExp] = useState("");
   const [cardCvv, setCardCvv] = useState("");
 
-  // Fetch Saved Addresses
-  useEffect(() => {
-    get<{ addresses: Address[] }>("/api/address")
-      .then((data) => {
-        setAddresses(data.addresses || []);
-        const defaultAddr =
-          data.addresses.find((a) => a.isDefault) ?? data.addresses[0];
-        if (defaultAddr?._id) {
-          setSelectedAddr(defaultAddr._id);
-        }
-      })
-      .catch((err) => {
-        console.error("❌ Failed to fetch addresses:", err);
-      });
-  }, []);
+  // Address loading handled by useQuery query key caching above.
 
   const updateNewAddr = (key: keyof Address) => (value: string) =>
     setNewAddr((state) => ({ ...state, [key]: value }));
@@ -104,7 +115,7 @@ export default function CheckoutScreen() {
 
     try {
       const data = await post<{ address: Address }>("/api/address", newAddr);
-      setAddresses((items) => [...items, data.address]);
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.addresses() });
       setSelectedAddr(data.address._id!);
       setEditingAddr(false);
       setNewAddr(emptyAddress);
@@ -113,17 +124,31 @@ export default function CheckoutScreen() {
     }
   }
 
-  async function handleVerifyUpi() {
-    if (!upiId.trim() || !upiId.includes("@")) {
-      Alert.alert("UPI Verification", "Please enter a valid UPI ID (e.g. name@upi)");
+  // Client-side UPI format validation.
+  // Accepts the common  local-part@provider  pattern used across Indian UPI apps.
+  // A passing check means the string is well-formed — it does NOT confirm
+  // account ownership or that funds can be debited.
+  function handleCheckUpiFormat() {
+    const trimmed = upiId.trim();
+    // Conservative pattern: non-empty local part, '@', 1-60 char provider
+    const UPI_FORMAT = /^[a-zA-Z0-9._-]+@[a-zA-Z]{2,60}$/;
+    setCheckingUpiFormat(true);
+    setUpiFormatError("");
+    if (!trimmed) {
+      setUpiFormatValid(false);
+      setUpiFormatError("Please enter a UPI ID.");
+      setCheckingUpiFormat(false);
       return;
     }
-    setVerifyingUpi(true);
-    // Mock network call representing API UPI verification
-    setTimeout(() => {
-      setVerifyingUpi(false);
-      setUpiVerified(true);
-    }, 1500);
+    if (!UPI_FORMAT.test(trimmed)) {
+      setUpiFormatValid(false);
+      setUpiFormatError("Invalid format. Expected: name@upi, number@bank, etc.");
+      setCheckingUpiFormat(false);
+      return;
+    }
+    // Format is valid — this is NOT a bank/VPA verification.
+    setUpiFormatValid(true);
+    setCheckingUpiFormat(false);
   }
 
   async function placeOrder() {
@@ -424,9 +449,11 @@ export default function CheckoutScreen() {
               <View style={styles.upiInputRow}>
                 <TextInput
                   value={upiId}
-                  onChangeText={(val) => {
+                  onChangeText={(val: string) => {
                     setUpiId(val);
-                    setUpiVerified(false);
+                    // Always reset format state when the UPI ID changes
+                    setUpiFormatValid(false);
+                    setUpiFormatError("");
                   }}
                   placeholder="example@upi"
                   placeholderTextColor="#a99c94"
@@ -434,23 +461,33 @@ export default function CheckoutScreen() {
                   style={styles.upiInput}
                 />
                 <Pressable
-                  onPress={handleVerifyUpi}
-                  disabled={verifyingUpi || upiVerified || !upiId.trim()}
+                  onPress={handleCheckUpiFormat}
+                  disabled={checkingUpiFormat || upiFormatValid || !upiId.trim()}
                   style={[
                     styles.verifyBtn,
-                    (verifyingUpi || upiVerified || !upiId.trim()) &&
+                    (checkingUpiFormat || upiFormatValid || !upiId.trim()) &&
                       styles.verifyBtnDisabled,
                   ]}
                 >
-                  {verifyingUpi ? (
+                  {checkingUpiFormat ? (
                     <ActivityIndicator size="small" color="#ffffff" />
                   ) : (
                     <Text style={styles.verifyBtnText}>
-                      {upiVerified ? "VERIFIED ✓" : "VERIFY"}
+                      {upiFormatValid ? "FORMAT OK ✓" : "CHECK"}
                     </Text>
                   )}
                 </Pressable>
               </View>
+              {/* Format error feedback */}
+              {!!upiFormatError && (
+                <Text style={styles.upiFormatError}>{upiFormatError}</Text>
+              )}
+              {/* Format-valid note: not a bank/account confirmation */}
+              {upiFormatValid && (
+                <Text style={styles.upiFormatNote}>
+                  Format looks valid. Actual payment confirmation happens via your UPI app.
+                </Text>
+              )}
             </View>
           )}
         </View>
@@ -488,7 +525,7 @@ export default function CheckoutScreen() {
             {cart.slice(0, 3).map((item, idx) => (
               <Image
                 key={item.menuItemId}
-                source={{ uri: assetUrl("menu-items", item.image) }}
+                source={{ uri: assetUrl("menu-items", item.image) + "?tr=w-100,h-100,fo-auto" }}
                 style={[styles.summaryAvatar, { marginLeft: idx > 0 ? -12 : 0 }]}
               />
             ))}
@@ -512,10 +549,10 @@ export default function CheckoutScreen() {
       <View style={[styles.bottomBar, { bottom: insets.bottom > 0 ? insets.bottom + 80 : 96 }]}>
         <Pressable
           onPress={placeOrder}
-          disabled={busy || (payMethod === "upi" && !upiVerified)}
+          disabled={busy}
           style={[
             styles.payBtn,
-            (busy || (payMethod === "upi" && !upiVerified)) && styles.payBtnDisabled,
+            busy && styles.payBtnDisabled,
           ]}
         >
           {busy ? (
@@ -841,7 +878,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   verifyBtnDisabled: {
-    backgroundColor: "#198754",
+    backgroundColor: "#6b7280",
     opacity: 0.8,
   },
   verifyBtnText: {
@@ -849,6 +886,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#ffffff",
     letterSpacing: 0.5,
+  },
+  upiFormatError: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: colors.danger,
+    marginTop: 6,
+  },
+  upiFormatNote: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: colors.muted,
+    marginTop: 6,
+    lineHeight: 15,
   },
   codInstructions: {
     fontFamily: "Poppins_400Regular",

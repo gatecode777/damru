@@ -2,14 +2,15 @@ import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Clipboard,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  FlatList,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { router, useFocusEffect } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,6 +35,7 @@ export default function ProfileScreen() {
   const { user, setUser, ready } = useApp();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
   const [toast, setToast] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
 
   const {
     addresses,
@@ -78,10 +80,19 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleCopyCoupon = (code: string) => {
-    Clipboard.setString(code);
-    setToast(`Code "${code}" copied!`);
-    setTimeout(() => setToast(null), 1000);
+  const handleCopyCoupon = async (code: string) => {
+    if (copying) return;
+    setCopying(true);
+    try {
+      await Clipboard.setStringAsync(code);
+      setToast(`Code "${code}" copied!`);
+      setTimeout(() => setToast(null), 1000);
+    } catch {
+      setToast("Could not copy. Please try manually.");
+      setTimeout(() => setToast(null), 2000);
+    } finally {
+      setCopying(false);
+    }
   };
 
   if (!ready) {
@@ -124,18 +135,18 @@ export default function ProfileScreen() {
               </Pressable>
             </View>
           ) : (
-            <ScrollView
-              contentContainerStyle={styles.scrollContent}
-              refreshControl={
-                React.createElement(RefreshControl as any, {
-                  refreshing: refreshing,
-                  onRefresh: refreshData,
-                  colors: [colors.orange],
-                })
-              }
-            >
+            <>
               {activeTab === "overview" && (
-                <View>
+                <ScrollView
+                  contentContainerStyle={styles.scrollContent}
+                  refreshControl={
+                    React.createElement(RefreshControl as any, {
+                      refreshing: refreshing,
+                      onRefresh: refreshData,
+                      colors: [colors.orange],
+                    })
+                  }
+                >
                   <UserProfileCard user={user} />
                   <AddressBookCard addresses={addresses} />
                   <OrdersCard orders={orders} />
@@ -156,153 +167,212 @@ export default function ProfileScreen() {
                       <Text style={styles.logoutBtnText}>Log Out</Text>
                     </Pressable>
                   </View>
-                </View>
+                </ScrollView>
               )}
 
               {activeTab === "address" && (
-                <View style={styles.inlineSection}>
-                  <Text style={styles.sectionTitle}>Address Book</Text>
-                  {addresses.length === 0 ? (
+                <FlatList
+                  data={addresses}
+                  keyExtractor={(item) => item._id || ""}
+                  contentContainerStyle={styles.scrollContent}
+                  refreshControl={
+                    React.createElement(RefreshControl as any, {
+                      refreshing: refreshing,
+                      onRefresh: refreshData,
+                      colors: [colors.orange],
+                    })
+                  }
+                  ListHeaderComponent={
+                    <Text style={styles.sectionTitle}>Address Book</Text>
+                  }
+                  ListEmptyComponent={
                     <EmptyState title="No addresses saved" message="Add a delivery address to get started." />
-                  ) : (
-                    addresses.map((a) => (
-                      <View key={a._id} style={styles.listItemCard}>
-                        <View style={styles.cardHeader}>
-                          <View style={styles.labelRow}>
-                            <Ionicons
-                              name={
-                                a.label === "Home"
-                                  ? "home-outline"
-                                  : a.label === "Office"
-                                  ? "business-outline"
-                                  : "location-outline"
-                              }
-                              size={16}
-                              color={colors.orange}
-                              style={{ marginRight: 4 }}
-                            />
-                            <Text style={styles.cardLabel}>{a.label}</Text>
-                            {a.isDefault ? (
-                              <View style={styles.defaultBadge}>
-                                <Text style={styles.defaultBadgeText}>Default</Text>
-                              </View>
-                            ) : null}
-                          </View>
-                          <View style={styles.actionRow}>
-                            <Pressable
-                              style={styles.actionBtn}
-                              onPress={() => router.push({ pathname: "/add-address", params: { id: a._id } })}
-                            >
-                              <Ionicons name="pencil-outline" size={16} color="#756860" />
-                            </Pressable>
-                            <Pressable style={styles.actionBtn} onPress={() => handleDeleteAddress(a._id!)}>
-                              <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                            </Pressable>
-                          </View>
+                  }
+                  ListFooterComponent={
+                    <View style={{ marginTop: 12 }}>
+                      <Button label="+ Add New Address" onPress={() => router.push("/add-address")} />
+                    </View>
+                  }
+                  renderItem={({ item: a }) => (
+                    <View style={styles.listItemCard}>
+                      <View style={styles.cardHeader}>
+                        <View style={styles.labelRow}>
+                          <Ionicons
+                            name={
+                              a.label === "Home"
+                                ? "home-outline"
+                                : a.label === "Office"
+                                ? "business-outline"
+                                : "location-outline"
+                            }
+                            size={16}
+                            color={colors.orange}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text style={styles.cardLabel}>{a.label}</Text>
+                          {a.isDefault ? (
+                            <View style={styles.defaultBadge}>
+                              <Text style={styles.defaultBadgeText}>Default</Text>
+                            </View>
+                          ) : null}
                         </View>
-                        <Text style={styles.cardText}>{a.fullName} - {a.phone}</Text>
-                        <Text style={styles.cardSubtext}>
-                          {a.house}
-                          {a.area ? `, ${a.area}` : ""}
-                          {"\n"}
-                          {a.city}, {a.state} {a.pincode}
-                        </Text>
-                      </View>
-                    ))
-                  )}
-                  <View style={{ marginTop: 12 }}>
-                    <Button label="+ Add New Address" onPress={() => router.push("/add-address")} />
-                  </View>
-                </View>
-              )}
-
-              {activeTab === "orders" && (
-                <View style={styles.inlineSection}>
-                  <Text style={styles.sectionTitle}>My Orders</Text>
-                  {orders.length === 0 ? (
-                    <EmptyState title="No orders yet" message="Your delicious history will appear here." />
-                  ) : (
-                    orders.map((o) => (
-                      <View key={o._id} style={styles.listItemCard}>
-                        <View style={styles.cardHeader}>
-                          <Text style={styles.cardLabel}>
-                            #{o.orderNumber || o._id.slice(-6).toUpperCase()}
-                          </Text>
-                          <Text style={styles.statusText}>{o.status.toUpperCase()}</Text>
-                        </View>
-                        <Text style={styles.cardText}>
-                          {o.items?.map((i) => `${i.qty}× ${i.name}`).join(", ") || "Meal"}
-                        </Text>
-                        <View style={styles.cardFooter}>
-                          <Text style={styles.cardDate}>
-                            {new Date(o.createdAt).toLocaleDateString()}
-                          </Text>
-                          <Text style={styles.cardTotal}>₹{o.total}</Text>
-                        </View>
-                      </View>
-                    ))
-                  )}
-                </View>
-              )}
-
-              {activeTab === "payment" && (
-                <View style={styles.inlineSection}>
-                  <Text style={styles.sectionTitle}>Payment Methods</Text>
-                  {paymentMethods.length === 0 ? (
-                    <EmptyState title="No payment methods saved" message="Save a credit or debit card." />
-                  ) : (
-                    paymentMethods.map((c) => (
-                      <View key={c.id} style={[styles.listItemCard, { backgroundColor: "#20272c" }]}>
-                        <View style={styles.cardHeader}>
-                          <View style={{ flexDirection: "row", alignItems: "center" }}>
-                            <View style={styles.chipPlaceholder} />
-                            <Text style={[styles.cardLabel, { color: "#ffffff", letterSpacing: 1.5 }]}>
-                              •••• {c.last4}
-                            </Text>
-                          </View>
-                          <Pressable style={styles.actionBtn} onPress={() => deletePaymentMethod(c.id)}>
+                        <View style={styles.actionRow}>
+                          <Pressable
+                            style={styles.actionBtn}
+                            onPress={() => router.push({ pathname: "/add-address", params: { id: a._id } })}
+                          >
+                            <Ionicons name="pencil-outline" size={16} color="#756860" />
+                          </Pressable>
+                          <Pressable style={styles.actionBtn} onPress={() => handleDeleteAddress(a._id!)}>
                             <Ionicons name="trash-outline" size={16} color={colors.danger} />
                           </Pressable>
                         </View>
-                        <Text style={{ color: "#a99c94", fontSize: 11, fontFamily: "Poppins_500Medium" }}>
-                          {c.brand.toUpperCase()}
-                        </Text>
                       </View>
-                    ))
+                      <Text style={styles.cardText}>{a.fullName} - {a.phone}</Text>
+                      <Text style={styles.cardSubtext}>
+                        {a.house}
+                        {a.area ? `, ${a.area}` : ""}
+                        {"\n"}
+                        {a.city}, {a.state} {a.pincode}
+                      </Text>
+                    </View>
                   )}
-                  <View style={{ marginTop: 12 }}>
-                    <Button label="+ Add New Card" onPress={() => router.push("/payment-methods")} />
-                  </View>
-                </View>
+                />
+              )}
+
+              {activeTab === "orders" && (
+                <FlatList
+                  data={orders}
+                  keyExtractor={(item) => item._id}
+                  contentContainerStyle={styles.scrollContent}
+                  refreshControl={
+                    React.createElement(RefreshControl as any, {
+                      refreshing: refreshing,
+                      onRefresh: refreshData,
+                      colors: [colors.orange],
+                    })
+                  }
+                  ListHeaderComponent={
+                    <Text style={styles.sectionTitle}>My Orders</Text>
+                  }
+                  ListEmptyComponent={
+                    <EmptyState title="No orders yet" message="Your delicious history will appear here." />
+                  }
+                  renderItem={({ item: o }) => (
+                    <View style={styles.listItemCard}>
+                      <View style={styles.cardHeader}>
+                        <Text style={styles.cardLabel}>
+                          #{o.orderNumber || o._id.slice(-6).toUpperCase()}
+                        </Text>
+                        <Text style={styles.statusText}>{o.status.toUpperCase()}</Text>
+                      </View>
+                      <Text style={styles.cardText}>
+                        {o.items?.map((i) => `${i.qty}× ${i.name}`).join(", ") || "Meal"}
+                      </Text>
+                      <View style={styles.cardFooter}>
+                        <Text style={styles.cardDate}>
+                          {new Date(o.createdAt).toLocaleDateString()}
+                        </Text>
+                        <Text style={styles.cardTotal}>₹{o.total}</Text>
+                      </View>
+                    </View>
+                  )}
+                />
+              )}
+
+              {activeTab === "payment" && (
+                <FlatList
+                  data={paymentMethods}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.scrollContent}
+                  refreshControl={
+                    React.createElement(RefreshControl as any, {
+                      refreshing: refreshing,
+                      onRefresh: refreshData,
+                      colors: [colors.orange],
+                    })
+                  }
+                  ListHeaderComponent={
+                    <Text style={styles.sectionTitle}>Payment Methods</Text>
+                  }
+                  ListEmptyComponent={
+                    <EmptyState title="No payment methods saved" message="Save a credit or debit card." />
+                  }
+                  ListFooterComponent={
+                    <View style={{ marginTop: 12 }}>
+                      <Button label="+ Add New Card" onPress={() => router.push("/payment-methods")} />
+                    </View>
+                  }
+                  renderItem={({ item: c }) => (
+                    <View style={[styles.listItemCard, { backgroundColor: "#20272c" }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                          <View style={styles.chipPlaceholder} />
+                          <Text style={[styles.cardLabel, { color: "#ffffff", letterSpacing: 1.5 }]}>
+                            •••• {c.last4}
+                          </Text>
+                        </View>
+                        <Pressable style={styles.actionBtn} onPress={() => deletePaymentMethod(c.id)}>
+                          <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                        </Pressable>
+                      </View>
+                      <Text style={{ color: "#a99c94", fontSize: 11, fontFamily: "Poppins_500Medium" }}>
+                        {c.brand.toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                />
               )}
 
               {activeTab === "coupons" && (
-                <View style={styles.inlineSection}>
-                  <Text style={styles.sectionTitle}>Offers & Coupons</Text>
-                  {coupons.length === 0 ? (
+                <FlatList
+                  data={coupons}
+                  keyExtractor={(item) => item._id}
+                  contentContainerStyle={styles.scrollContent}
+                  refreshControl={
+                    React.createElement(RefreshControl as any, {
+                      refreshing: refreshing,
+                      onRefresh: refreshData,
+                      colors: [colors.orange],
+                    })
+                  }
+                  ListHeaderComponent={
+                    <Text style={styles.sectionTitle}>Offers & Coupons</Text>
+                  }
+                  ListEmptyComponent={
                     <EmptyState title="No coupons yet" message="Check back later for exciting offers." />
-                  ) : (
-                    coupons.map((c) => (
-                      <View key={c._id} style={styles.listItemCard}>
-                        <View style={styles.cardHeader}>
-                          <View style={styles.codeBadge}>
-                            <Text style={styles.codeText}>{c.code}</Text>
-                          </View>
-                          <Pressable onPress={() => handleCopyCoupon(c.code)} style={styles.copyLink}>
-                            <Text style={styles.copyLinkText}>Copy</Text>
-                          </Pressable>
+                  }
+                  renderItem={({ item: c }) => (
+                    <View style={styles.listItemCard}>
+                      <View style={styles.cardHeader}>
+                        <View style={styles.codeBadge}>
+                          <Text style={styles.codeText}>{c.code}</Text>
                         </View>
-                        <Text style={styles.cardSubtext}>{c.description || `${c.value}% OFF`}</Text>
+                        <Pressable onPress={() => handleCopyCoupon(c.code)} style={styles.copyLink}>
+                          <Text style={styles.copyLinkText}>Copy</Text>
+                        </Pressable>
                       </View>
-                    ))
+                      <Text style={styles.cardSubtext}>{c.description || `${c.value}% OFF`}</Text>
+                    </View>
                   )}
-                </View>
+                />
               )}
 
               {activeTab === "help" && (
-                <HelpSupportSection showToast={setToast} />
+                <ScrollView
+                  contentContainerStyle={styles.scrollContent}
+                  refreshControl={
+                    React.createElement(RefreshControl as any, {
+                      refreshing: refreshing,
+                      onRefresh: refreshData,
+                      colors: [colors.orange],
+                    })
+                  }
+                >
+                  <HelpSupportSection showToast={setToast} />
+                </ScrollView>
               )}
-            </ScrollView>
+            </>
           )}
         </View>
       )}

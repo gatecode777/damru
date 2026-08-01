@@ -4,6 +4,8 @@ import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { get, post, patch } from "@/lib/api";
 import { colors } from "@/config";
 import { Button, Field } from "@/components/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 
 export default function AddAddressScreen() {
   const router = useRouter();
@@ -23,33 +25,50 @@ export default function AddAddressScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     if (id) {
       // Fetch addresses to find the matching one
-      setLoading(true);
-      get<{ addresses: any[] }>("/api/address")
-        .then((res) => {
-          const addr = res.addresses?.find((a) => a._id === id);
-          if (addr) {
-            setLabel(addr.label || "Home");
-            setFullName(addr.fullName || "");
-            setPhone(addr.phone || "");
-            setHouse(addr.house || "");
-            setArea(addr.area || "");
-            setCity(addr.city || "");
-            setState(addr.state || "");
-            setPincode(addr.pincode || "");
-            setIsDefault(!!addr.isDefault);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to load address for edit:", err);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+      const cached = queryClient.getQueryData<{ addresses: any[] }>(queryKeys.profile.addresses());
+      const addr = cached?.addresses?.find((a) => a._id === id);
+      if (addr) {
+        setLabel(addr.label || "Home");
+        setFullName(addr.fullName || "");
+        setPhone(addr.phone || "");
+        setHouse(addr.house || "");
+        setArea(addr.area || "");
+        setCity(addr.city || "");
+        setState(addr.state || "");
+        setPincode(addr.pincode || "");
+        setIsDefault(!!addr.isDefault);
+        setLoading(false);
+      } else {
+        setLoading(true);
+        get<{ addresses: any[] }>("/api/address")
+          .then((res) => {
+            const addr = res.addresses?.find((a) => a._id === id);
+            if (addr) {
+              setLabel(addr.label || "Home");
+              setFullName(addr.fullName || "");
+              setPhone(addr.phone || "");
+              setHouse(addr.house || "");
+              setArea(addr.area || "");
+              setCity(addr.city || "");
+              setState(addr.state || "");
+              setPincode(addr.pincode || "");
+              setIsDefault(!!addr.isDefault);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to load address for edit:", err);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
     }
-  }, [id]);
+  }, [id, queryClient]);
 
   const handleSave = async () => {
     if (!fullName.trim() || !phone.trim() || !house.trim() || !city.trim() || !state.trim() || !pincode.trim()) {
@@ -86,6 +105,7 @@ export default function AddAddressScreen() {
       } else {
         await post("/api/address", payload);
       }
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.addresses() });
       router.back();
     } catch (err: any) {
       setError(err?.message || "Failed to save address. Please try again.");
