@@ -33,6 +33,18 @@ export function GlobalBottomBar() {
   const router = useRouter();
   const { totalItems } = useApp();
 
+  const cleanPath = pathname.replace(/^\/\(tabs\)/, "");
+  const isTabRoute = [
+    "/",
+    "/index",
+    "/menu",
+    "/branches",
+    "/gallery",
+    "/profile"
+  ].includes(cleanPath === "" ? "/" : cleanPath);
+
+  if (!isTabRoute) return null;
+
   const bottomPosition = insets.bottom > 0 ? insets.bottom + 8 : 16;
 
   return (

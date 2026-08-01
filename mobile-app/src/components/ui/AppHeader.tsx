@@ -38,7 +38,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ cartCount, onSearchPress, 
 
         {/* Right: Actions */}
         <View style={styles.actionsRow}>
-          <Pressable onPress={onSearchPress || (() => router.push('/menu'))} style={styles.iconBtn}>
+          <Pressable onPress={onSearchPress || (() => router.push('/search'))} style={styles.iconBtn}>
             <Ionicons name="search-outline" size={22} color={Colors.text} />
           </Pressable>
 

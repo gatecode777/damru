@@ -67,7 +67,7 @@ export function MenuReservationSection() {
 
   const showToast = (msg: string, type: "success" | "error") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 4500);
+    setTimeout(() => setToast(null), 1000);
   };
 
   const handleBooking = async () => {
@@ -78,6 +78,23 @@ export function MenuReservationSection() {
 
     if (!date) {
       showToast("Please select a reservation date.", "error");
+      return;
+    }
+
+    const selectedDateObj = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const maxDate = new Date();
+    maxDate.setFullYear(maxDate.getFullYear() + 2);
+
+    if (selectedDateObj < today) {
+      showToast("Reservations cannot be in the past.", "error");
+      return;
+    }
+
+    if (selectedDateObj > maxDate) {
+      showToast("Reservations can only be made up to 2 years in advance.", "error");
       return;
     }
 
@@ -138,19 +155,29 @@ export function MenuReservationSection() {
       calendarDays.push(<View key={`empty-${i}`} style={styles.calendarDayEmpty} />);
     }
 
+    const maxDateLimit = new Date();
+    maxDateLimit.setFullYear(maxDateLimit.getFullYear() + 2);
+
     // Days in current month
     for (let day = 1; day <= daysInMonth; day++) {
       const dayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const isSelected = date === dayStr;
       const isToday = getTodayString() === dayStr;
 
+      const dayDate = new Date(currentYear, currentMonth, day);
+      const isPast = dayDate < new Date(new Date().setHours(0, 0, 0, 0));
+      const isTooFar = dayDate > maxDateLimit;
+      const isDisabled = isPast || isTooFar;
+
       calendarDays.push(
         <Pressable
           key={`day-${day}`}
+          disabled={isDisabled}
           style={[
             styles.calendarDay,
             isToday && styles.calendarDayToday,
             isSelected && styles.calendarDaySelected,
+            isDisabled && styles.calendarDisabledDay,
           ]}
           onPress={() => {
             setDate(dayStr);
@@ -163,6 +190,7 @@ export function MenuReservationSection() {
               styles.calendarDayText,
               isToday && styles.calendarDayTodayText,
               isSelected && styles.calendarDaySelectedText,
+              isDisabled && styles.calendarDisabledDayText,
             ]}
           >
             {day}
@@ -480,6 +508,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#198754",
     shadowColor: "#198754",
+    marginTop: 0,
   },
   bookBtnText: {
     fontFamily: "Poppins_600SemiBold",
@@ -489,6 +518,7 @@ const styles = StyleSheet.create({
   },
   bookedRow: {
     flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     marginTop: 8,
   },
@@ -580,6 +610,12 @@ const styles = StyleSheet.create({
   calendarDaySelectedText: {
     color: "#ffffff",
     fontWeight: "600",
+  },
+  calendarDisabledDay: {
+    opacity: 0.3,
+  },
+  calendarDisabledDayText: {
+    color: colors.muted,
   },
   modalCloseBtn: {
     marginTop: 20,

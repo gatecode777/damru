@@ -62,6 +62,7 @@ export const LocalAssets = {
   bakeImg: require("../../assets/images/bake.png") as ImageSourcePropType,
   rosemary: require("../../assets/images/rosemary.png") as ImageSourcePropType,
   rosemary1: require("../../assets/images/rosemary1.png") as ImageSourcePropType,
+  upiQr: require("../../assets/images/upi_qr.png") as ImageSourcePropType,
 };
 
 export const StaticAssets = {
@@ -73,6 +74,7 @@ export const StaticAssets = {
   drink: LocalAssets.drink,
   soup: LocalAssets.soup,
   chef: LocalAssets.chef,
+  upiQr: LocalAssets.upiQr,
   chef2: LocalAssets.chef2,
   dietPlan1: LocalAssets.dietPlan1,
   dietPlan2: LocalAssets.dietPlan2,

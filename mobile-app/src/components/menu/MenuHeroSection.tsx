@@ -1,47 +1,18 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   Dimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
 
 import { StaticAssets } from "../../constants/assets";
 
 const { width: SW } = Dimensions.get("window");
 
 export function MenuHeroSection() {
-  const router = useRouter();
-  const floatAnim = useSharedValue(0);
-
-  useEffect(() => {
-    // looping translateY float animation between 0 and -10px every 1.5 seconds (3s full loop period)
-    floatAnim.value = withRepeat(
-      withTiming(-10, {
-        duration: 1500,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1, // infinite repeats
-      true // reverse animation back to start
-    );
-  }, []);
-
-  const animatedBtnStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: floatAnim.value }],
-    };
-  });
 
   return (
     <View style={styles.heroContainer}>
@@ -70,20 +41,6 @@ export function MenuHeroSection() {
         <Text style={styles.subtitle}>
           Explore a variety of flavors crafted with passion,{"\n"}freshness, and perfection.
         </Text>
-
-        <Animated.View style={animatedBtnStyle}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Book Your Seat"
-            style={({ pressed }) => [
-              styles.ctaBtn,
-              pressed && styles.ctaBtnPressed,
-            ]}
-            onPress={() => router.push("/reserve")}
-          >
-            <Text style={styles.ctaText}>Book Your Seat</Text>
-          </Pressable>
-        </Animated.View>
       </View>
     </View>
   );

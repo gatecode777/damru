@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from '../ui/Image';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { Colors } from '../../constants/theme';
 import { LocalAssets } from '../../constants/assets';
 import { NavMenu } from '../ui/NavMenu';
 import { useApp } from '@/providers/AppProvider';
+import { assetUrl } from '@/config';
 
 interface HomeHeaderProps {
   onSearchPress?: () => void;
@@ -16,7 +17,7 @@ interface HomeHeaderProps {
 
 export function HomeHeader({ onSearchPress, onProfilePress }: HomeHeaderProps) {
   const router = useRouter();
-  const { user } = useApp();
+  const { user, totalItems } = useApp();
   const { height: screenHeight } = useWindowDimensions();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -49,10 +50,10 @@ export function HomeHeader({ onSearchPress, onProfilePress }: HomeHeaderProps) {
             />
           </Pressable>
 
-          {/* Right: Actions (Search & Profile) */}
+          {/* Right: Actions (Search, Cart & User Avatar) */}
           <View style={styles.rightActions}>
             <Pressable
-              onPress={onSearchPress || (() => router.push('/menu'))}
+              onPress={onSearchPress || (() => router.push('/search'))}
               style={styles.iconBtn}
               accessibilityLabel="Search"
             >
@@ -60,18 +61,41 @@ export function HomeHeader({ onSearchPress, onProfilePress }: HomeHeaderProps) {
             </Pressable>
 
             <Pressable
-              onPress={onProfilePress || (() => {
-                if (user) {
-                  router.push('/profile');
-                } else {
-                  router.push('/auth');
-                }
-              })}
+              onPress={() => router.push('/cart')}
               style={styles.iconBtn}
-              accessibilityLabel="Profile"
+              accessibilityLabel={`Cart, ${totalItems} items`}
+              accessibilityRole="button"
             >
-              <Ionicons name="person-outline" size={22} color={Colors.darkText} />
+              <Ionicons name="cart-outline" size={24} color={Colors.darkText} />
+              {totalItems > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {totalItems > 99 ? '99+' : totalItems}
+                  </Text>
+                </View>
+              ) : null}
             </Pressable>
+
+            {user ? (
+              <Pressable
+                onPress={() => router.push('/(tabs)/profile')}
+                style={styles.avatarBtn}
+                accessibilityLabel="Go to Profile"
+              >
+                {user.avatar ? (
+                  <Image
+                    source={assetUrl("avatars", user.avatar)}
+                    style={styles.avatarImg}
+                  />
+                ) : (
+                  <View style={styles.avatarTextContainer}>
+                    <Text style={styles.avatarInitials}>
+                      {user.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            ) : null}
           </View>
         </View>
       </SafeAreaView>
@@ -114,5 +138,50 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    backgroundColor: '#ff6b35', // Damru Orange
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3.5,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 8.5,
+    fontWeight: '700',
+  },
+  avatarBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    overflow: 'hidden',
+    marginLeft: 4,
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 17,
+  },
+  avatarTextContainer: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 17,
+    backgroundColor: '#e67e22',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

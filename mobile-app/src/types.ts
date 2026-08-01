@@ -84,3 +84,63 @@ export type Address = {
 };
 
 export type ApiError = { error?: string; message?: string };
+
+export type OrderItem = {
+  name: string;
+  qty: number;
+  price?: number;
+};
+
+export type Order = {
+  _id: string;
+  orderId?: string;
+  orderNumber?: string;
+  status: string;
+  paymentMethod: string;
+  total: number;
+  subtotal?: number;
+  discount?: number;
+  couponCode?: string;
+  tax?: number;
+  shipping?: number;
+  items?: OrderItem[];
+  deliveryAddress?: {
+    fullName: string;
+    phone: string;
+    house: string;
+    area?: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  createdAt: string;
+  tableNumber?: string;
+  tableName?: string;
+};
+
+export type Coupon = {
+  _id: string;
+  code: string;
+  description: string;
+  type: string;
+  value: number;
+  expiryDate?: string | null;
+};
+
+export type PaymentMethod = {
+  id: string;
+  brand: string;
+  last4: string;
+  isDefault?: boolean;
+};
+
+export type Complaint = {
+  _id: string;
+  issueType: string;
+  subject: string;
+  description: string;
+  attachment?: string;
+  status: string;
+  adminNote?: string;
+  createdAt: string;
+};

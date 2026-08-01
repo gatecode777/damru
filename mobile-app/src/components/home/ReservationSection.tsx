@@ -24,6 +24,7 @@ import Animated, {
 import { StaticAssets } from "../../constants/assets";
 import { useApp } from "../../providers/AppProvider";
 import { post } from "../../lib/api";
+import { colors } from "../../config";
 
 const TIMES = [
   "11:00 am", "11:30 am",
@@ -115,7 +116,7 @@ export function ReservationSection() {
 
   const showToast = (msg: string, type: "success" | "error") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 4500);
+    setTimeout(() => setToast(null), 1000);
   };
 
   const handleBooking = async () => {
@@ -197,19 +198,22 @@ export function ReservationSection() {
     const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
     const calendarDays = [];
 
+    // Empty spaces for previous month's tail
     for (let i = 0; i < firstDay; i++) {
-      calendarDays.push(<View key={`empty-${i}`} style={styles.calendarDayCell} />);
+      calendarDays.push(<View key={`empty-${i}`} style={styles.calendarDayEmpty} />);
     }
 
     const maxDateLimit = new Date();
     maxDateLimit.setFullYear(maxDateLimit.getFullYear() + 2);
 
+    // Days in current month
     for (let day = 1; day <= daysInMonth; day++) {
       const dayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const isSelected = date === dayStr;
-      
+      const isToday = getTodayString() === dayStr;
+
       const dayDate = new Date(currentYear, currentMonth, day);
-      const isPast = dayDate < new Date(new Date().setHours(0,0,0,0));
+      const isPast = dayDate < new Date(new Date().setHours(0, 0, 0, 0));
       const isTooFar = dayDate > maxDateLimit;
       const isDisabled = isPast || isTooFar;
 
@@ -218,8 +222,9 @@ export function ReservationSection() {
           key={`day-${day}`}
           disabled={isDisabled}
           style={[
-            styles.calendarDayCell,
-            isSelected && styles.calendarSelectedDay,
+            styles.calendarDay,
+            isToday && styles.calendarDayToday,
+            isSelected && styles.calendarDaySelected,
             isDisabled && styles.calendarDisabledDay,
           ]}
           onPress={() => {
@@ -231,7 +236,8 @@ export function ReservationSection() {
           <Text
             style={[
               styles.calendarDayText,
-              isSelected && styles.calendarSelectedDayText,
+              isToday && styles.calendarDayTodayText,
+              isSelected && styles.calendarDaySelectedText,
               isDisabled && styles.calendarDisabledDayText,
             ]}
           >
@@ -288,73 +294,67 @@ export function ReservationSection() {
 
       {/* ── Reservation Section (Form) ── */}
       <View style={styles.reservationSection}>
-        <Text style={styles.resMainTitle}>Make a Reservation</Text>
-        <Text style={styles.resSubText}>Get in touch with restaurant</Text>
+        <View style={styles.card}>
+          <Text style={styles.title}>Make a Reservation</Text>
+          <Text style={styles.subtitle}>
+            Get in touch with the restaurant to book your evening.
+          </Text>
 
-        <View style={styles.resFormGrid}>
-          {/* Date Selector Trigger Box */}
-          <Pressable
-            style={styles.resInputBox}
-            onPress={() => setDateModalVisible(true)}
-          >
-            <View style={styles.inputWrapper}>
-              <Text style={styles.resInputText} numberOfLines={1}>
-                {formatDateToDisplay(date)}
-              </Text>
-              <Ionicons name="calendar-outline" size={14} color="#666" style={styles.calendarIcon} />
-            </View>
-            <Ionicons name="chevron-down" size={12} color="#888" />
-          </Pressable>
-
-          {/* Time Selector Trigger Box */}
-          <Pressable
-            style={styles.resInputBox}
-            onPress={() => setTimeModalVisible(true)}
-          >
-            <Text style={styles.resInputText} numberOfLines={1}>
-              {time}
-            </Text>
-            <Ionicons name="chevron-down" size={12} color="#888" />
-          </Pressable>
-
-          {/* Guest Selector Trigger Box */}
-          <Pressable
-            style={styles.resInputBox}
-            onPress={() => setPersonsModalVisible(true)}
-          >
-            <Text style={styles.resInputText} numberOfLines={1}>
-              {persons}
-            </Text>
-            <Ionicons name="chevron-down" size={12} color="#888" />
-          </Pressable>
-        </View>
-
-        <View style={styles.resBtnWrapper}>
-          {booked ? (
-            <View style={styles.bookedContainer}>
-              <View style={[styles.resSubmitBtn, styles.resSubmitBtnBooked]}>
-                <Text style={styles.resSubmitBtnText}>BOOKED ✓</Text>
-              </View>
-              <Pressable
-                style={styles.resCallBtn}
-                onPress={() => Linking.openURL("tel:+918690987272")}
-              >
-                <Ionicons name="call" size={20} color="#fff" />
-              </Pressable>
-            </View>
-          ) : (
-            <Pressable
-              onPress={handleBooking}
-              disabled={busy}
-              style={[styles.resSubmitBtn, busy && styles.resSubmitBtnDisabled]}
-            >
-              {busy ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.resSubmitBtnText}>BOOK NOW</Text>
-              )}
+          {/* Form Container */}
+          <View style={styles.form}>
+            {/* Select Date field */}
+            <Text style={styles.label}>Select Date</Text>
+            <Pressable onPress={() => setDateModalVisible(true)} style={styles.input}>
+              <Text style={styles.inputText}>{formatDateToDisplay(date)}</Text>
+              <Ionicons name="calendar-outline" size={18} color="#a99c94" />
             </Pressable>
-          )}
+
+            {/* Time and Guests fields in a row */}
+            <View style={styles.row}>
+              <View style={styles.col}>
+                <Text style={styles.label}>Time</Text>
+                <Pressable onPress={() => setTimeModalVisible(true)} style={styles.input}>
+                  <Text style={styles.inputText}>{time}</Text>
+                  <Ionicons name="time-outline" size={18} color="#a99c94" />
+                </Pressable>
+              </View>
+
+              <View style={styles.col}>
+                <Text style={styles.label}>Guests</Text>
+                <Pressable onPress={() => setPersonsModalVisible(true)} style={styles.input}>
+                  <Text style={styles.inputText}>{persons}</Text>
+                  <Ionicons name="people-outline" size={18} color="#a99c94" />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Submit Button */}
+            {booked ? (
+              <View style={styles.bookedRow}>
+                <View style={[styles.bookBtn, styles.bookedBtn]}>
+                  <Text style={styles.bookBtnText}>BOOKED ✓</Text>
+                </View>
+                <Pressable
+                  onPress={() => Linking.openURL("tel:+918690987272")}
+                  style={styles.callBtn}
+                >
+                  <Ionicons name="call" size={20} color="#ffffff" />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={handleBooking}
+                disabled={busy}
+                style={[styles.bookBtn, busy && styles.bookBtnDisabled]}
+              >
+                {busy ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text style={styles.bookBtnText}>BOOK NOW</Text>
+                )}
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
 
@@ -369,25 +369,25 @@ export function ReservationSection() {
           <View style={styles.calendarCard}>
             <View style={styles.calendarHeader}>
               <Pressable onPress={() => handleMonthChange("prev")}>
-                <Ionicons name="chevron-back" size={24} color="#111" />
+                <Ionicons name="chevron-back" size={24} color={colors.ink} />
               </Pressable>
               <Text style={styles.calendarHeaderTitle}>
                 {monthNames[currentMonth]} {currentYear}
               </Text>
               <Pressable onPress={() => handleMonthChange("next")}>
-                <Ionicons name="chevron-forward" size={24} color="#111" />
+                <Ionicons name="chevron-forward" size={24} color={colors.ink} />
               </Pressable>
             </View>
 
             <View style={styles.weekLabelsRow}>
-              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
-                <Text key={day} style={styles.weekLabelText}>{day}</Text>
+              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+                <Text key={day} style={styles.weekLabelText}>
+                  {day}
+                </Text>
               ))}
             </View>
 
-            <View style={styles.calendarGrid}>
-              {renderCalendar()}
-            </View>
+            <View style={styles.calendarGrid}>{renderCalendar()}</View>
 
             <Pressable
               style={styles.modalCloseBtn}
@@ -411,19 +411,27 @@ export function ReservationSection() {
             <Text style={styles.selectionTitle}>Select Time Slot</Text>
             <ScrollView style={{ maxHeight: 300 }}>
               <View style={styles.selectorGrid}>
-                {TIMES.map(t => {
+                {TIMES.map((t) => {
                   const isSelected = time === t;
                   return (
                     <Pressable
                       key={t}
-                      style={[styles.selectorItem, isSelected && styles.selectorItemSelected]}
+                      style={[
+                        styles.selectorItem,
+                        isSelected && styles.selectorItemSelected,
+                      ]}
                       onPress={() => {
                         setTime(t);
                         setBooked(false);
                         setTimeModalVisible(false);
                       }}
                     >
-                      <Text style={[styles.selectorItemText, isSelected && styles.selectorItemSelectedText]}>
+                      <Text
+                        style={[
+                          styles.selectorItemText,
+                          isSelected && styles.selectorItemSelectedText,
+                        ]}
+                      >
                         {t}
                       </Text>
                     </Pressable>
@@ -453,19 +461,27 @@ export function ReservationSection() {
             <Text style={styles.selectionTitle}>Number of Guests</Text>
             <ScrollView style={{ maxHeight: 300 }}>
               <View style={styles.selectorGrid}>
-                {PERSONS.map(p => {
+                {PERSONS.map((p) => {
                   const isSelected = persons === p;
                   return (
                     <Pressable
                       key={p}
-                      style={[styles.selectorItem, isSelected && styles.selectorItemSelected]}
+                      style={[
+                        styles.selectorItem,
+                        isSelected && styles.selectorItemSelected,
+                      ]}
                       onPress={() => {
                         setPersons(p);
                         setBooked(false);
                         setPersonsModalVisible(false);
                       }}
                     >
-                      <Text style={[styles.selectorItemText, isSelected && styles.selectorItemSelectedText]}>
+                      <Text
+                        style={[
+                          styles.selectorItemText,
+                          isSelected && styles.selectorItemSelectedText,
+                        ]}
+                      >
                         {p}
                       </Text>
                     </Pressable>
@@ -570,144 +586,219 @@ const styles = StyleSheet.create({
     opacity: 0.25,
     tintColor: "#ffffff",
   },
-
-  /* ── Reservation Form Styles ── */
   reservationSection: {
-    backgroundColor: "#fff9f4",
-    paddingVertical: 50,
     paddingHorizontal: 16,
+    paddingVertical: 24,
+    backgroundColor: "#faf9f6",
     width: "100%",
-    alignItems: "center",
   },
-  resMainTitle: {
-    fontFamily: "PlayfairDisplay_800ExtraBold",
-    fontSize: 38,
-    color: "#222222",
+  card: {
+    backgroundColor: "#20272c",
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  title: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 24,
+    color: "#ffffff",
+    textAlign: "center",
     marginBottom: 8,
-    textAlign: "center",
-    textShadowColor: "rgba(0, 0, 0, 0.15)",
-    textShadowOffset: { width: 0, height: 10 },
-    textShadowRadius: 8,
-    transform: [{ perspective: 1000 }, { rotateX: "25deg" }],
   },
-  resSubText: {
+  subtitle: {
     fontFamily: "Poppins_400Regular",
-    color: "#666666",
-    fontSize: 14,
-    marginBottom: 35,
+    fontSize: 13,
+    color: "#a99c94",
     textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 20,
   },
-  resFormGrid: {
-    flexDirection: "row",
-    width: "100%",
-    gap: 8,
-    marginBottom: 30,
+  form: {
+    gap: 14,
   },
-  resInputBox: {
-    flex: 1,
-    height: 52,
-    borderWidth: 1,
-    borderColor: "#d5c9bf",
-    backgroundColor: "#ffffff",
-    borderRadius: 8,
+  label: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 12,
+    color: "#a99c94",
+    marginBottom: 4,
+  },
+  input: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.10)",
+    borderRadius: 12,
+    height: 52,
+    paddingHorizontal: 16,
   },
-  inputWrapper: {
+  inputText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 14,
+    color: "#ffffff",
+  },
+  row: {
     flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  resInputText: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 12,
-    color: "#333333",
-    flex: 1,
-  },
-  calendarIcon: {
-    marginRight: 6,
-  },
-  resBtnWrapper: {
-    width: "100%",
-    alignItems: "center",
-  },
-  resSubmitBtn: {
-    backgroundColor: "#1b2607",
-    width: "100%",
-    height: 54,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-    elevation: 3,
-    shadowColor: "#1b2607",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-  },
-  resSubmitBtnDisabled: {
-    opacity: 0.65,
-  },
-  bookedContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
     gap: 12,
   },
-  resSubmitBtnBooked: {
+  col: {
     flex: 1,
-    backgroundColor: "#15803d", // Green success theme
-    shadowColor: "#15803d",
   },
-  resCallBtn: {
-    width: 54,
-    height: 54,
-    backgroundColor: "#e66a0d", // Restaurant theme orange
-    borderRadius: 8,
+  bookBtn: {
+    backgroundColor: colors.orange,
+    height: 52,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 3,
-    shadowColor: "#e66a0d",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
+    marginTop: 8,
+    shadowColor: colors.orange,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  resSubmitBtnText: {
+  bookBtnDisabled: {
+    opacity: 0.7,
+  },
+  bookedBtn: {
+    flex: 1,
+    backgroundColor: "#198754",
+    shadowColor: "#198754",
+    marginTop: 0,
+  },
+  bookBtnText: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 14,
     color: "#ffffff",
-    fontWeight: "600",
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
   },
-
-  /* ── Selection Modals ── */
+  bookedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+  },
+  callBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: colors.orange,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   modalBg: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
-  selectionCard: {
+  calendarCard: {
     width: "100%",
     maxWidth: 340,
     backgroundColor: "#ffffff",
-    borderRadius: 12,
+    borderRadius: 24,
     padding: 20,
-    elevation: 10,
+    alignItems: "center",
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 16,
+  },
+  calendarHeaderTitle: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 16,
+    color: colors.ink,
+  },
+  weekLabelsRow: {
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-around",
+    marginBottom: 8,
+  },
+  weekLabelText: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 12,
+    color: colors.muted,
+    width: 36,
+    textAlign: "center",
+  },
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%",
+    justifyContent: "space-around",
+  },
+  calendarDay: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    marginVertical: 3,
+  },
+  calendarDayEmpty: {
+    width: 36,
+    height: 36,
+    marginVertical: 3,
+  },
+  calendarDayText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: colors.ink,
+  },
+  calendarDayToday: {
+    borderWidth: 1,
+    borderColor: colors.orange,
+  },
+  calendarDayTodayText: {
+    color: colors.orange,
+    fontWeight: "600",
+  },
+  calendarDaySelected: {
+    backgroundColor: colors.orange,
+  },
+  calendarDaySelectedText: {
+    color: "#ffffff",
+    fontWeight: "600",
+  },
+  calendarDisabledDay: {
+    opacity: 0.3,
+  },
+  calendarDisabledDayText: {
+    color: colors.muted,
+  },
+  modalCloseBtn: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  modalCloseText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+    color: colors.orange,
+  },
+  selectionCard: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    padding: 24,
   },
   selectionTitle: {
     fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 20,
-    color: "#111111",
-    textAlign: "center",
+    color: colors.ink,
     marginBottom: 16,
+    textAlign: "center",
   },
   selectorGrid: {
     flexDirection: "row",
@@ -719,131 +810,52 @@ const styles = StyleSheet.create({
   selectorItem: {
     paddingHorizontal: 12,
     paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#e5d9cf",
-    borderRadius: 6,
-    backgroundColor: "#fff9f4",
+    borderColor: colors.line,
+    backgroundColor: "#ffffff",
   },
   selectorItemSelected: {
-    backgroundColor: "#e66a0d",
-    borderColor: "#e66a0d",
+    backgroundColor: colors.orange,
+    borderColor: colors.orange,
   },
   selectorItemText: {
     fontFamily: "Poppins_400Regular",
-    fontSize: 12.5,
-    color: "#21150f",
+    fontSize: 13,
+    color: colors.ink,
   },
   selectorItemSelectedText: {
+    fontFamily: "Poppins_600SemiBold",
     color: "#ffffff",
-    fontFamily: "Poppins_600SemiBold",
   },
-  modalCloseBtn: {
-    marginTop: 16,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#f3ece6",
-  },
-  modalCloseText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 13.5,
-    color: "#756860",
-  },
-
-  /* ── Calendar Picker Styles ── */
-  calendarCard: {
-    width: "100%",
-    maxWidth: 340,
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    elevation: 10,
-  },
-  calendarHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  calendarHeaderTitle: {
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 18,
-    color: "#111111",
-  },
-  weekLabelsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  weekLabelText: {
-    width: `${100 / 7}%`,
-    textAlign: "center",
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 11,
-    color: "#a19288",
-    textTransform: "uppercase",
-  },
-  calendarGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-start",
-  },
-  calendarDayCell: {
-    width: "14.28%",
-    aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-    marginVertical: 2,
-  },
-  calendarSelectedDay: {
-    backgroundColor: "#e66a0d",
-  },
-  calendarDisabledDay: {
-    opacity: 0.18,
-  },
-  calendarDayText: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 13,
-    color: "#111111",
-  },
-  calendarSelectedDayText: {
-    color: "#ffffff",
-    fontFamily: "Poppins_600SemiBold",
-  },
-  calendarDisabledDayText: {
-    color: "#999",
-  },
-
-  /* ── Toast Container ── */
   toastContainer: {
     position: "absolute",
     bottom: 40,
-    left: "10%",
-    right: "10%",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 8,
+    left: 20,
+    right: 20,
+    padding: 16,
+    borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    zIndex: 9999,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 6,
+    zIndex: 999,
   },
   toastSuccess: {
-    backgroundColor: "#15803d",
+    backgroundColor: "#e8f5e9",
+    borderWidth: 1,
+    borderColor: "#a5d6a7",
   },
   toastError: {
-    backgroundColor: "#dc2626",
+    backgroundColor: "#ffebee",
+    borderWidth: 1,
+    borderColor: "#ef9a9a",
   },
   toastText: {
     fontFamily: "Poppins_500Medium",
     fontSize: 13,
-    color: "#ffffff",
+    color: colors.ink,
     textAlign: "center",
-    lineHeight: 18,
   },
 });

@@ -1,15 +1,11 @@
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import { useRouter, Stack, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HomeHeader } from "../../components/home/HomeHeader";
@@ -31,10 +27,10 @@ interface Category {
 }
 
 const FALLBACK_CATEGORIES: Category[] = [
-  { _id: "cat_soup", name: "Soup", slug: "soup", description: "Warm your soul with our signature broths" },
-  { _id: "cat_salads", name: "Salads", slug: "salads", description: "Fresh and crisp greens tossed with artisanal dressings" },
-  { _id: "cat_maggi", name: "Maggi", slug: "maggi", description: "Your favorite comfort food prepared with a special fusion twist" },
-  { _id: "cat_fries", name: "Fries", slug: "fries", description: "Golden, crispy potato fries tossed in selected spices" },
+  { _id: "cat_soup", name: "Soup", slug: "soup", description: "Warm your soul with our comforting, fresh, and aromatic signature broths." },
+  { _id: "cat_salads", name: "Salads", slug: "salads", description: "Crisp, fresh greens and garden vegetables tossed with light dressings." },
+  { _id: "cat_maggi", name: "Maggi", slug: "maggi", description: "Classic instant comfort noodles prepared with a special fusion twist." },
+  { _id: "cat_fries", name: "Fries", slug: "fries", description: "Golden, crispy potato fries tossed in selected spices and seasonings." },
 ];
 
 const FALLBACK_ITEMS: MenuItem[] = [
@@ -131,14 +127,11 @@ const FALLBACK_ITEMS: MenuItem[] = [
 ];
 
 export default function MenuScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ q?: string }>();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [allItems, setAllItems] = useState<MenuItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState(params.q || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -174,13 +167,6 @@ export default function MenuScreen() {
     };
   }, []);
 
-  // Sync search query from route parameters if it changes
-  useEffect(() => {
-    if (params.q !== undefined) {
-      setSearchQuery(params.q);
-    }
-  }, [params.q]);
-
   const handleRetry = () => {
     setLoading(true);
     setError(null);
@@ -203,19 +189,10 @@ export default function MenuScreen() {
       });
   };
 
-  // Filter products based on selected category or search query
-  const filteredProducts = allItems.filter((item) => {
-    const matchesSearch =
-      searchQuery.trim().length < 2 ||
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.desc || "").toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesCategory =
-      searchQuery.trim().length >= 2 || item.category === selectedCategory;
-
-    return matchesSearch && matchesCategory;
-  });
+  // Filter products based on selected category
+  const filteredProducts = allItems.filter(
+    (item) => item.category === selectedCategory
+  );
 
   const activeCategoryObj = categories.find((c) => c._id === selectedCategory);
 
@@ -223,28 +200,8 @@ export default function MenuScreen() {
     <>
       <MenuHeroSection />
 
-      {/* Search Input Box */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={20} color={colors.muted} />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search for dishes..."
-            placeholderTextColor="#a99c94"
-            style={styles.searchInput}
-            returnKeyType="search"
-          />
-          {searchQuery ? (
-            <Pressable onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={18} color="#a99c94" />
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
-
       {/* Category Tabs Row */}
-      {categories.length > 0 && searchQuery.trim().length < 2 && (
+      {categories.length > 0 && (
         <MenuCategoryTabs
           categories={categories}
           activeId={selectedCategory}
@@ -253,7 +210,7 @@ export default function MenuScreen() {
       )}
 
       {/* Dynamic Category Header */}
-      {activeCategoryObj && searchQuery.trim().length < 2 && (
+      {activeCategoryObj && (
         <View style={styles.categoryHeader}>
           <Text style={styles.categoryTitle}>{activeCategoryObj.name}</Text>
           {activeCategoryObj.description ? (
@@ -300,11 +257,7 @@ export default function MenuScreen() {
               <View style={styles.emptyContainer}>
                 <EmptyState
                   title="Craving something else?"
-                  message={
-                    searchQuery.trim().length >= 2
-                      ? `No items found matching "${searchQuery}".`
-                      : "We are currently updating this category's dishes."
-                  }
+                  message="We are currently updating this category's dishes."
                 />
               </View>
             ) : null
@@ -327,28 +280,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     backgroundColor: "#ffffff",
-  },
-  searchContainer: {
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.cream,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 16,
-    height: 52,
-    paddingHorizontal: 14,
-    gap: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: "Poppins_400Regular",
-    fontSize: 14,
-    color: colors.ink,
   },
   categoryHeader: {
     paddingHorizontal: 16,
