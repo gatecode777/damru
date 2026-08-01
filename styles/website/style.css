@@ -311,7 +311,7 @@
 @media (max-width: 768px) {
 
   .hero {
-    padding-top: clamp(70px, 14vw, 110px);
+    padding-top: clamp(16px, 4vw, 30px);
     padding-bottom: 0;
     padding-left: 20px;
     padding-right: 20px;

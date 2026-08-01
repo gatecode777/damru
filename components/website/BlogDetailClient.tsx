@@ -5,6 +5,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { Search } from "lucide-react";
+
 interface Comment {
   _id: string; name: string; avatar?: string; userId?: string;
   comment: string; parentId?: string | null; createdAt: string;
@@ -80,12 +82,21 @@ export function BlogSidebar({ blogSlug, currentCategoryName }: { blogSlug: strin
   return (
     <>
       {/* Search widget — exact same structure as HTML */}
-      <div className="sb-sidebar__widget" ref={searchRef} style={{ position:"relative" }}>
-        <input type="text" className="sb-sidebar__search" placeholder="Search......"
+      <div className="sb-sidebar__widget" ref={searchRef} style={{ position:"relative", display:"flex", alignItems:"center" }}>
+        <input type="text" className="sb-sidebar__search" placeholder="Search..."
           value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
           onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
           onKeyDown={e => {
             if (e.key === "Enter" && searchQuery.trim()) {
+              router.push(`/blogs?search=${encodeURIComponent(searchQuery.trim())}`);
+              setSearchOpen(false);
+            }
+          }}
+          style={{ paddingRight: "30px", width: "100%" }}
+        />
+        <Search size={18} style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", color: "#888", cursor: "pointer" }}
+          onClick={() => {
+            if (searchQuery.trim()) {
               router.push(`/blogs?search=${encodeURIComponent(searchQuery.trim())}`);
               setSearchOpen(false);
             }
