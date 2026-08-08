@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
 import { getAdminPerms } from "@/lib/adminPermissions";
+import { checkAndAwardFirstOrderReward } from "@/lib/rewardEngine";
+import { evaluateOrderAchievements } from "@/lib/achievementEngine";
+import { evaluateOrderMissions } from "@/lib/missionEngine";
+import { evaluateReferralQualification } from "@/lib/referralEngine";
+import { evaluateLoyaltyTier } from "@/lib/loyaltyEngine";
 
 export async function updateOrderStatus(id: string, status: string) {
   // Check if user has edit permission for orders
@@ -23,6 +28,34 @@ export async function updateOrderStatus(id: string, status: string) {
     if (!activeOrder) {
       const Table = (await import("@/models/Table")).default;
       await Table.findByIdAndUpdate(order.tableId, { status: "available" });
+    }
+  }
+
+  if (order && order.userId && status === "delivered") {
+    try {
+      await checkAndAwardFirstOrderReward(order.userId, order._id);
+    } catch (err) {
+      console.error("First order reward failed:", err);
+    }
+    try {
+      await evaluateOrderAchievements(order.userId);
+    } catch (err) {
+      console.error("Order achievement evaluation failed:", err);
+    }
+    try {
+      await evaluateOrderMissions(order.userId, order._id, order.total);
+    } catch (err) {
+      console.error("Order mission evaluation failed:", err);
+    }
+    try {
+      await evaluateReferralQualification(order.userId, order._id, order.total);
+    } catch (err) {
+      console.error("Referral qualification evaluation failed:", err);
+    }
+    try {
+      await evaluateLoyaltyTier(order.userId, { issueBonus: true });
+    } catch (err) {
+      console.error("Loyalty tier evaluation failed:", err);
     }
   }
 
@@ -47,9 +80,36 @@ export async function cancelOrder(id: string) {
   // Check if user has delete permission for orders (cancelling is a destructive action)
   const perms = await getAdminPerms();
   if (!perms.can("orders", "delete")) throw new Error("Forbidden - You don't have permission to cancel orders.");
-  
+
   await connectDB();
-  const order = await Order.findByIdAndUpdate(id, { status: "cancelled" }, { new: true });
+  // Atomic conditional transition — a second cancel click (or two admin tabs)
+  // on an already-cancelled order is a safe no-op, so the coupon-release and
+  // Damru-restoration effects below can never double-apply for one order.
+  const order = await Order.findOneAndUpdate(
+    { _id: id, status: { $ne: "cancelled" } },
+    { $set: { status: "cancelled" } },
+    { new: true }
+  );
+
+  if (order) {
+    // Release a reserved coupon usage — a cancelled order should not
+    // permanently consume a coupon slot, regardless of payment method. See
+    // docs/PAYMENT_RELIABILITY_REFUNDS.md's Coupon Restoration Policy.
+    if (order.couponCode) {
+      const { releaseCouponUsage } = await import("@/lib/payments/refunds");
+      await releaseCouponUsage(order.couponCode);
+    }
+
+    // Damru restoration for orders that never actually collected payment: COD
+    // (nothing was ever charged) or a Razorpay order that never reached
+    // "paid" (pending/failed). A PAID Razorpay order's Damru is restored only
+    // via an actual refund reaching "processed" — never here; see
+    // lib/payments/refunds.ts and docs/PAYMENT_RELIABILITY_REFUNDS.md.
+    if (order.paymentMethod === "cod" || order.paymentStatus === "pending" || order.paymentStatus === "failed") {
+      const { restoreDamruForOrder } = await import("@/lib/payments/refunds");
+      await restoreDamruForOrder(order._id, order.userId, `cancel_${order._id}`);
+    }
+  }
 
   // If order is cancelled, check if we should free the table
   if (order && order.tableId) {

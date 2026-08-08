@@ -16,6 +16,7 @@ export interface ICoupon extends Document {
   expiryDate:    Date | null;
   isActive:      boolean;
   usedBy:        mongoose.Types.ObjectId[];
+  userId?:       mongoose.Types.ObjectId; // set = private coupon owned by one user (e.g. occasion rewards)
   createdAt:     Date;
   updatedAt:     Date;
 }
@@ -35,6 +36,7 @@ const CouponSchema = new Schema<ICoupon>(
     expiryDate:    { type: Date, default: null },
     isActive:      { type: Boolean, default: true },
     usedBy:        [{ type: Schema.Types.ObjectId, ref: "User" }],
+    userId:        { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
@@ -49,7 +51,6 @@ CouponSchema.virtual("isValid").get(function () {
   return true;
 });
 
-CouponSchema.index({ code: 1 });
 CouponSchema.index({ isActive: 1 });
 CouponSchema.index({ expiryDate: 1 });
 

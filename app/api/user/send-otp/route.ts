@@ -3,11 +3,15 @@ import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import { generateOtp, signOtpToken } from "@/lib/otp";
 import { sendOtpEmail } from "@/lib/email";
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
     const { email } = await req.json();
     if (!email) return NextResponse.json({ error: "Email is required." }, { status: 400 });
+
+    const rl = await checkRateLimit(`send-otp:${getClientIp(req)}:${email.toLowerCase()}`, RATE_LIMITS.sendOtp);
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterSeconds);
 
     await connectDB();
     const user = await User.findOne({ email: email.toLowerCase() });

@@ -27,8 +27,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const branch = await Branch.create(body);
     return NextResponse.json({ branch: JSON.parse(JSON.stringify(branch)) });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed" }, { status: 400 });
+  } catch (e) {
+    console.error("POST admin/branches error:", e);
+    return NextResponse.json({ error: "Failed to create branch." }, { status: 400 });
   }
 }
 
@@ -43,8 +44,9 @@ export async function PATCH(req: NextRequest) {
     const branch = await Branch.findByIdAndUpdate(id, updates, { new: true }).lean();
     if (!branch) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ branch: JSON.parse(JSON.stringify(branch)) });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed" }, { status: 400 });
+  } catch (e) {
+    console.error("PATCH admin/branches error:", e);
+    return NextResponse.json({ error: "Failed to update branch." }, { status: 400 });
   }
 }
 

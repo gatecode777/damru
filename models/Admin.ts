@@ -21,6 +21,7 @@ export interface IAdminPermissions {
   branches:       IPermissionModule;
   banquetBookings:IPermissionModule;
   coupons:        IPermissionModule;
+  rewards:        IPermissionModule;
   analytics:      IPermissionModule;
   settings:       IPermissionModule;
   tables:         IPermissionModule;
@@ -33,6 +34,13 @@ export interface IAdmin extends Document {
   role:        "super_admin" | "admin" | "moderator";
   avatar?:     string;
   isActive:    boolean;
+  /**
+   * Explicit, per-account full-access grant for `role:"admin"` accounts.
+   * `super_admin` always bypasses regardless of this flag. `admin` accounts
+   * without this flag are permission-enforced like `moderator`. Never infer
+   * this from role/email/id — it must be a deliberate, stored decision.
+   */
+  isSuperAdmin: boolean;
   permissions: IAdminPermissions;
   createdBy?:  mongoose.Types.ObjectId;
   lastLogin?:  Date;
@@ -53,6 +61,7 @@ const AdminSchema = new Schema<IAdmin>(
     email:    { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, select: false },
     role:     { type: String, enum: ["super_admin", "admin", "moderator"], default: "admin" },
+    isSuperAdmin: { type: Boolean, default: false },
     avatar:   { type: String },
     isActive: { type: Boolean, default: true },
     permissions: {
@@ -69,6 +78,7 @@ const AdminSchema = new Schema<IAdmin>(
       branches:       { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       banquetBookings:{ type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       coupons:        { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
+      rewards:        { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       analytics:      { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       tables:         { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       // settings:       { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },

@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     "Experience delicious food and an elegant banquet venue at Damru By Namo. Serving authentic Indian cuisine across Mansarovar, Vaishali Nagar, and Pratap Nagar, Jaipur.",
 };
 
+// This page has no dynamic per-request input (no searchParams/cookies used), so Next
+// prerenders it once at build time and serves it statically forever after. That means a
+// newly published blog or a newly added branch would never appear without a full redeploy.
+// A 5-minute ISR revalidation window keeps the same static-speed serving while letting
+// content go stale for at most 5 minutes instead of indefinitely.
+export const revalidate = 300;
+
 export default async function HomePage() {
   // ── Fetch Shakes menu items ──────────────────────────────────
   let shakeItems: { _id: string; name: string; description: string; image: string; basePrice: number }[] = [];
@@ -23,26 +30,35 @@ export default async function HomePage() {
   try {
     await connectDB();
 
-    // Find "Shakes" category (case-insensitive)
-    const shakesCat = await CategoryModel.findOne({ name: /shakes?/i, isActive: true }).lean() as any;
-    if (shakesCat) {
-      const raw = await MenuItemModel.find({ category: shakesCat._id, isActive: true })
+    // The Shakes lookup is inherently two dependent steps (find the category, then its
+    // items), but it doesn't depend on blogs/branches or vice versa — run all three
+    // independent reads in parallel instead of one long sequential chain.
+    const [rawShakeItems, rawBlogs, rawBranches] = await Promise.all([
+      (async () => {
+        const shakesCat = await CategoryModel.findOne({ name: /shakes?/i, isActive: true }).select("_id").lean() as any;
+        if (!shakesCat) return [];
+        return MenuItemModel.find({ category: shakesCat._id, isActive: true })
+          .select("name description image basePrice sortOrder")
+          .sort({ sortOrder: 1 })
+          .limit(4)
+          .lean() as Promise<any[]>;
+      })(),
+      BlogModel.find({ status: "published" })
+        .sort({ publishedAt: -1, createdAt: -1 })
+        .limit(3)
+        .select("title slug excerpt coverImage author readTime publishedAt createdAt category")
+        .populate("category", "name")
+        .lean() as Promise<any[]>,
+      BranchModel.find({ isActive: true })
+        .select("name slug description cardImage cardAlt contact timing sortOrder")
         .sort({ sortOrder: 1 })
-        .limit(4)
-        .lean() as any[];
-      shakeItems = raw.map(i => ({
-        _id: String(i._id), name: i.name, description: i.description || "",
-        image: i.image || "", basePrice: i.basePrice || 0,
-      }));
-    }
+        .lean() as Promise<any[]>,
+    ]);
 
-    // Fetch latest 3 published blogs
-    const rawBlogs = await BlogModel.find({ status: "published" })
-      .sort({ publishedAt: -1, createdAt: -1 })
-      .limit(3)
-      .select("title slug excerpt coverImage author readTime publishedAt createdAt category")
-      .populate("category", "name")
-      .lean() as any[];
+    shakeItems = rawShakeItems.map(i => ({
+      _id: String(i._id), name: i.name, description: i.description || "",
+      image: i.image || "", basePrice: i.basePrice || 0,
+    }));
     blogs = rawBlogs.map(b => ({
       _id: String(b._id), title: b.title, slug: b.slug, excerpt: b.excerpt || "",
       coverImage: b.coverImage || "",
@@ -52,8 +68,6 @@ export default async function HomePage() {
       createdAt: String(b.createdAt),
       category: b.category?.name || "",
     }));
-    // Fetch active branches
-    const rawBranches = await BranchModel.find({ isActive: true }).sort({ sortOrder: 1 }).lean() as any[];
     branches = rawBranches.map(b => ({
       _id: String(b._id), name: b.name, slug: b.slug,
       description: b.description || "",

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Loader2, ChevronDown, MapPin, QrCode,
-  ShoppingBag, CreditCard, Package, CheckCircle, Truck, XCircle, Clock,
+  ShoppingBag, CreditCard, Package, CheckCircle, Truck, XCircle, Clock, RotateCcw, Undo2,
 } from "lucide-react";
 import { updateOrderStatus, updatePaymentStatus, cancelOrder } from "@/app/actions/orders";
 
@@ -29,8 +29,15 @@ const STATUS_COLORS: Record<string, { bg: string; color: string; border: string 
   cancelled:        { bg: "#fef2f2", color: "#b91c1c", border: "#fecaca" },
 };
 
-const PAY_COLORS: Record<string, string> = { pending: "#f59e0b", paid: "#16a34a", failed: "#dc2626" };
-const PAY_METHOD: Record<string, string>  = { cod: "Cash on Delivery", upi: "UPI", card: "Credit Card" };
+const PAY_COLORS: Record<string, string> = {
+  pending: "#f59e0b", paid: "#16a34a", failed: "#dc2626",
+  refund_pending: "#f59e0b", partially_refunded: "#0e7490", refunded: "#6d28d9",
+};
+const PAY_LABELS: Record<string, string> = {
+  pending: "Pending", paid: "Paid", failed: "Failed",
+  refund_pending: "Refund Processing", partially_refunded: "Partially Refunded", refunded: "Refunded",
+};
+const PAY_METHOD: Record<string, string>  = { cod: "Cash on Delivery", upi: "UPI (Razorpay)", card: "Card (Razorpay)" };
 
 const lbl: React.CSSProperties = { fontFamily: "DM Sans,sans-serif", fontSize: "0.72rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 };
 const val: React.CSSProperties = { fontFamily: "DM Sans,sans-serif", fontSize: "0.875rem", color: "#111827", fontWeight: 500 };
@@ -65,6 +72,20 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
   const [showStatus, setShowStatus] = useState(false);
   const [showPay,    setShowPay]    = useState(false);
   const [feedback,   setFeedback]   = useState("");
+
+  // Refund modal
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refundNote, setRefundNote] = useState("");
+  const [refundError, setRefundError] = useState("");
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
+  // One id per refund ATTEMPT (not per click of the input) — reused across
+  // retries of the same submission so a double-click/network-retry can't
+  // create two refunds; cleared once a new modal session starts.
+  const refundRequestIdRef = useRef<string | null>(null);
+
+  const [reconciling, setReconciling] = useState(false);
 
   const statusesToUse = ORDER_STATUSES.filter(s => {
     if (order.tableNumber && s.key === "out_for_delivery") return false;
@@ -114,6 +135,71 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
       notify("Order cancelled");
       router.refresh();
     });
+  }
+
+  const remainingRefundable = order.paymentAmount != null
+    ? Math.max(0, order.paymentAmount - (order.refundedAmount || 0) - (order.pendingRefundAmount || 0))
+    : 0;
+
+  function openRefundModal() {
+    if (!refundRequestIdRef.current) {
+      refundRequestIdRef.current = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `refund-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    setRefundAmount(String(remainingRefundable));
+    setRefundReason("");
+    setRefundNote("");
+    setRefundError("");
+    setShowRefundModal(true);
+  }
+
+  async function submitRefund() {
+    if (!can("delete")) return;
+    const amount = Math.round(Number(refundAmount));
+    if (!amount || amount <= 0) { setRefundError("Enter a valid refund amount."); return; }
+    if (amount > remainingRefundable) { setRefundError(`Cannot exceed the remaining refundable amount (₹${remainingRefundable}).`); return; }
+    if (!refundReason.trim()) { setRefundError("A refund reason is required."); return; }
+
+    setRefundSubmitting(true);
+    setRefundError("");
+    try {
+      const res = await fetch(`/api/admin/orders/${order._id}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount, reason: refundReason.trim(), note: refundNote.trim() || undefined,
+          refundRequestId: refundRequestIdRef.current,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) { setRefundError(data.error); return; }
+
+      refundRequestIdRef.current = null; // this attempt is done — a fresh refund gets a new id
+      setShowRefundModal(false);
+      notify(data.refund?.status === "processed" ? "Refund processed." : "Refund submitted — processing.");
+      router.refresh();
+    } catch {
+      setRefundError("Something went wrong. Please try again.");
+    } finally {
+      setRefundSubmitting(false);
+    }
+  }
+
+  async function handleRecheckPayment() {
+    if (!can("edit") || reconciling) return;
+    setReconciling(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${order._id}/reconcile-payment`, { method: "POST" });
+      const data = await res.json();
+      if (data.error) { notify(data.error); return; }
+      notify(data.outcome || "Checked.");
+      if (data.reconciled) router.refresh();
+    } catch {
+      notify("Could not check payment status. Please try again.");
+    } finally {
+      setReconciling(false);
+    }
   }
 
   const progressIdx   = statusesToUse.findIndex(s => s.key === order.status);
@@ -168,13 +254,16 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
               </div>
             )}
 
-            {/* Payment status dropdown - only if can edit */}
-            {can("edit") && (
+            {/* Payment status dropdown — COD only. For Razorpay orders, paymentStatus
+                is backend-authoritative (verify/webhook/reconciliation/refunds) and
+                must never be hand-typed by an admin; see the Refund/Recheck actions
+                below instead. */}
+            {can("edit") && order.paymentMethod === "cod" && (
               <div style={{ position: "relative" }}>
                 <button onClick={() => setShowPay(v => !v)}
                   style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: PAY_COLORS[order.paymentStatus] ?? "#374151" }}>
                   <CreditCard size={13}/>
-                  {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                  {PAY_LABELS[order.paymentStatus] ?? order.paymentStatus}
                   <ChevronDown size={13}/>
                 </button>
                 {showPay && (
@@ -190,6 +279,24 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Recheck Payment — syncs internal state to Razorpay's own trusted
+                record; never lets the admin directly set "Paid". */}
+            {can("edit") && order.paymentMethod !== "cod" && order.paymentStatus === "pending" && order.razorpayOrderId && (
+              <button onClick={handleRecheckPayment} disabled={reconciling}
+                style={{ background: "#f9fafb", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <RotateCcw size={13} style={reconciling ? { animation: "spin 0.8s linear infinite" } : undefined} />
+                {reconciling ? "Checking…" : "Recheck Payment"}
+              </button>
+            )}
+
+            {/* Refund — only for a Razorpay order with remaining refundable balance */}
+            {can("delete") && order.paymentMethod !== "cod" && remainingRefundable > 0 && (
+              <button onClick={openRefundModal}
+                style={{ background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <Undo2 size={13}/> Refund
+              </button>
             )}
 
             {/* Cancel - only if can delete and order not cancelled/delivered */}
@@ -312,9 +419,45 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
               <div>
                 <span style={lbl}>Status</span>
                 <span style={{ ...val, color: PAY_COLORS[order.paymentStatus] ?? "#374151", fontWeight: 700 }}>
-                  {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                  {PAY_LABELS[order.paymentStatus] ?? order.paymentStatus}
                 </span>
               </div>
+              {order.paymentAmount != null && (
+                <div>
+                  <span style={lbl}>Captured Amount (Razorpay)</span>
+                  <span style={val}>₹{order.paymentAmount}</span>
+                </div>
+              )}
+              {order.refundedAmount > 0 && (
+                <div>
+                  <span style={lbl}>Refunded Amount</span>
+                  <span style={{ ...val, color: "#6d28d9" }}>₹{order.refundedAmount}</span>
+                </div>
+              )}
+              {order.paymentMethod !== "cod" && order.paymentAmount > 0 && (
+                <div>
+                  <span style={lbl}>Remaining Refundable</span>
+                  <span style={val}>₹{remainingRefundable}</span>
+                </div>
+              )}
+              {order.razorpayOrderId && (
+                <div>
+                  <span style={lbl}>Razorpay Order ID</span>
+                  <span style={{ ...val, fontFamily: "monospace", fontSize: "0.78rem" }}>{order.razorpayOrderId}</span>
+                </div>
+              )}
+              {order.razorpayPaymentId && (
+                <div>
+                  <span style={lbl}>Razorpay Payment ID</span>
+                  <span style={{ ...val, fontFamily: "monospace", fontSize: "0.78rem" }}>{order.razorpayPaymentId}</span>
+                </div>
+              )}
+              {order.paidAt && (
+                <div>
+                  <span style={lbl}>Paid At</span>
+                  <span style={val}>{fmtDate(order.paidAt)}</span>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -373,6 +516,58 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
       {/* Click outside to close dropdowns */}
       {(showStatus || showPay) && (
         <div style={{ position: "fixed", inset: 0, zIndex: 998 }} onClick={() => { setShowStatus(false); setShowPay(false); }} />
+      )}
+
+      {/* Refund confirmation modal — high-impact action, requires deliberate confirmation */}
+      {showRefundModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => !refundSubmitting && setShowRefundModal(false)}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 24, width: "100%", maxWidth: 420, boxShadow: "0 20px 50px rgba(0,0,0,0.2)" }}
+            onClick={(e) => e.stopPropagation()}>
+            <p style={{ fontFamily: "DM Sans,sans-serif", fontWeight: 800, fontSize: "1.05rem", color: "#111827", margin: "0 0 4px" }}>Refund Order {order.orderId}</p>
+            <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.8rem", color: "#6b7280", margin: "0 0 16px" }}>
+              Customer: {order.userName} · Captured: ₹{order.paymentAmount} · Already refunded: ₹{order.refundedAmount || 0}
+            </p>
+
+            <label style={{ ...lbl, marginBottom: 6 }}>Refund Amount (max ₹{remainingRefundable})</label>
+            <input type="number" min={1} max={remainingRefundable} value={refundAmount}
+              onChange={(e) => setRefundAmount(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontFamily: "DM Sans,sans-serif", fontSize: "0.9rem", marginBottom: 14 }} />
+
+            <label style={{ ...lbl, marginBottom: 6 }}>Reason</label>
+            <select value={refundReason} onChange={(e) => setRefundReason(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontFamily: "DM Sans,sans-serif", fontSize: "0.9rem", marginBottom: 14 }}>
+              <option value="">Select a reason…</option>
+              <option value="Customer cancellation">Customer cancellation</option>
+              <option value="Item unavailable">Item unavailable</option>
+              <option value="Duplicate payment">Duplicate payment</option>
+              <option value="Service issue">Service issue</option>
+              <option value="Admin correction">Admin correction</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <label style={{ ...lbl, marginBottom: 6 }}>Note (optional)</label>
+            <textarea value={refundNote} onChange={(e) => setRefundNote(e.target.value)} rows={2}
+              style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 8, border: "1px solid #e5e7eb", fontFamily: "DM Sans,sans-serif", fontSize: "0.85rem", resize: "vertical", marginBottom: 14 }} />
+
+            {refundError && (
+              <p style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 12px", fontFamily: "DM Sans,sans-serif", fontSize: "0.8rem", margin: "0 0 14px" }}>
+                {refundError}
+              </p>
+            )}
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowRefundModal(false)} disabled={refundSubmitting}
+                style={{ background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, padding: "9px 16px", fontFamily: "DM Sans,sans-serif", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={submitRefund} disabled={refundSubmitting}
+                style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontFamily: "DM Sans,sans-serif", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", opacity: refundSubmitting ? 0.6 : 1 }}>
+                {refundSubmitting ? "Processing…" : `Refund ₹${refundAmount || 0}`}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -1,12 +1,23 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useFocusEffect } from "expo-router";
 import { get } from "@/lib/api";
 import { colors } from "@/config";
 import type { Order } from "@/types";
 import { EmptyState } from "@/components/ui";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
+
+// Backend-confirmed states only — never inferred from order.status. Mirrors
+// the website's my-profile order detail; see docs/PAYMENT_RELIABILITY_REFUNDS.md.
+const PAYMENT_STATUS_DISPLAY: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: "Payment Pending", color: "#b45309", bg: "#fffbeb" },
+  paid: { label: "Paid", color: "#15803d", bg: "#f0fdf4" },
+  failed: { label: "Payment Failed", color: "#b91c1c", bg: "#fef2f2" },
+  refund_pending: { label: "Refund Processing", color: "#b45309", bg: "#fffbeb" },
+  partially_refunded: { label: "Partially Refunded", color: "#0e7490", bg: "#ecfeff" },
+  refunded: { label: "Refunded", color: "#6d28d9", bg: "#f5f3ff" },
+};
 
 export default function OrdersScreen() {
   const { data, isLoading, isRefetching, error: queryError, refetch } = useQuery({
@@ -15,6 +26,14 @@ export default function OrdersScreen() {
     staleTime: 30 * 1000, // 30 seconds stale time
     select: (res) => res.orders ?? [],
   });
+
+  // Payment/refund status can change server-side (webhook, admin refund)
+  // while this screen isn't focused — always pull fresh state on return.
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const orders = data ?? [];
   const loading = isLoading;
@@ -114,6 +133,19 @@ export default function OrdersScreen() {
                 {item.items?.map((entry) => `${entry.qty}× ${entry.name}`).join(", ") ||
                   "Delicious meal"}
               </Text>
+
+              {item.paymentMethod !== "cod" && item.paymentStatus && PAYMENT_STATUS_DISPLAY[item.paymentStatus] && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { alignSelf: "flex-start", marginBottom: 10, backgroundColor: PAYMENT_STATUS_DISPLAY[item.paymentStatus].bg },
+                  ]}
+                >
+                  <Text style={[styles.statusText, { color: PAYMENT_STATUS_DISPLAY[item.paymentStatus].color }]}>
+                    {PAYMENT_STATUS_DISPLAY[item.paymentStatus].label.toUpperCase()}
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.orderFoot}>
                 <Text style={styles.date}>

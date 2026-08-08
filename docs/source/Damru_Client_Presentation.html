@@ -1,0 +1,473 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Damru Client Presentation</title>
+<link rel="stylesheet" href="doc-style.css">
+<style>
+  @page { @top-right { content: "Client Presentation"; } }
+  @page :first { @top-right { content: ""; } }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="cover-inner">
+    <p class="cover-eyebrow">Restaurant Commerce &amp; Rewards Platform</p>
+    <h1 class="cover-title">DAMRU</h1>
+    <p class="cover-sub">Digital Commerce &amp; Rewards Platform<br>Project Overview &amp; Feature Documentation</p>
+    <div class="cover-tagline">Website &nbsp;+&nbsp; Mobile Application &nbsp;+&nbsp; Admin Platform</div>
+    <div class="cover-meta">
+      <div><strong>Version</strong>1.0</div>
+      <div><strong>Documentation Date</strong>7 August 2026</div>
+      <div><strong>Prepared For</strong>Client &amp; Stakeholders</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 1. EXECUTIVE SUMMARY ============ -->
+<div class="page">
+<h1 class="section-title"><span class="section-num">01</span>Executive Summary</h1>
+<p class="section-intro">What Damru is, and the problem it solves for the business.</p>
+
+<p>Damru is an integrated restaurant commerce and customer-engagement platform built for Damru By Namo. It brings together everyday restaurant commerce — browsing the menu, ordering, and checkout — with a full customer loyalty and rewards experience, all managed from one administration platform.</p>
+
+<p>Customers can discover the menu and branches, place orders for delivery, pickup, or right at their table via QR code, manage their profile and addresses, and track their rewards — all from either the website or the dedicated mobile application. Every part of the experience is backed by the same platform, so a customer's Damru balance, order history, and rewards progress stay consistent no matter which device they use.</p>
+
+<div class="card-grid">
+  <div class="card"><span class="icon">🌐</span><h4>One Website</h4><p>Full commerce &amp; account experience, responsive across devices.</p></div>
+  <div class="card"><span class="icon">📱</span><h4>One Mobile App</h4><p>Native iOS/Android experience with matching functionality.</p></div>
+  <div class="card"><span class="icon">🛠️</span><h4>One Admin Platform</h4><p>Staff manage menu, orders, customers, and rewards from a single dashboard.</p></div>
+</div>
+
+<p>At the center of the customer experience is <strong>Damru</strong> — the platform's own reward currency. Customers earn Damru through everyday actions (placing orders, logging in daily, hitting milestones, referring friends) and redeem it directly against future orders. Every reward is issued and validated by the backend, so the balance a customer sees is always accurate and tamper-proof.</p>
+
+<div class="callout good">
+  <strong>Why this matters for the business</strong>
+  A rewards program built this way turns one-time diners into repeat customers — every reward mechanism (streaks, achievements, missions, referrals) is designed specifically to bring customers back and keep them engaged, without requiring a new app release every time a promotion changes.
+</div>
+</div>
+
+<!-- ============ 2. PLATFORM OVERVIEW ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">02</span>Platform Overview</h1>
+<p class="section-intro">How the three customer- and staff-facing surfaces share one backend.</p>
+
+<div class="arch-wrap">
+  <div class="arch-top">DAMRU</div>
+  <div class="arch-children">
+    <div class="arch-child">🌐 Website</div>
+    <div class="arch-child">📱 Mobile App</div>
+    <div class="arch-child">🛠️ Admin</div>
+  </div>
+</div>
+<div class="flow" style="margin-top:6px;">
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Shared Backend &amp; Business Rules</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Central Database</div>
+</div>
+
+<p>The website and mobile application are two independent front doors into the same platform — they call the same backend, follow the same business rules, and show customers the same account, cart, and rewards state. The admin platform sits on top, giving staff a permission-controlled way to manage everything customers see.</p>
+
+<h2>Why a shared backend matters</h2>
+<div class="card-grid">
+  <div class="card"><h4>Consistency</h4><p>A customer's Damru balance, order history, and coupons look identical whether they check the website or the app.</p></div>
+  <div class="card"><h4>One Source of Truth</h4><p>Reward eligibility and order rules live in one place — not duplicated (and drifting apart) across two codebases.</p></div>
+  <div class="card"><h4>Faster Change</h4><p>A new promotion or reward rule configured once in admin applies everywhere immediately.</p></div>
+</div>
+</div>
+
+<!-- ============ 3. CUSTOMER JOURNEY ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">03</span>Customer Journey</h1>
+<p class="section-intro">The real path a customer follows today, from discovery to repeat purchase.</p>
+
+<div class="flow">
+  <div class="flow-step">Discover Menu, Branches &amp; Offers</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Register / Log In</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Browse Menu &amp; Add to Cart</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Checkout — Address, Coupon, Damru Redemption</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Place Order (Delivery, Pickup, or Table QR)</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Track Order Status</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Earn Damru Rewards on Delivery</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Track Streaks, Achievements, Missions &amp; Referrals</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Repeat Purchase</div>
+</div>
+
+<p class="small center">A customer can also order without creating an account when scanning a table's QR code for dine-in ordering — account creation isn't required for that flow.</p>
+</div>
+
+<!-- ============ 4. CUSTOMER ACCOUNT ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">04</span>Customer Account</h1>
+<p class="section-intro">What a customer can do with their account today.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Registration &amp; Login</h4><p>Email + password registration and login, with an optional referral code field.</p></div>
+  <div class="card"><h4>Forgot Password</h4><p>Email OTP verification followed by a secure password reset.</p></div>
+  <div class="card"><h4>Profile Management</h4><p>Name, phone, city, and avatar photo, editable at any time.</p></div>
+  <div class="card"><h4>Address Book</h4><p>Multiple saved delivery addresses, added and edited from checkout or the profile.</p></div>
+  <div class="card"><h4>Order History</h4><p>Full list of past orders with status and item detail.</p></div>
+  <div class="card"><h4>Damru Rewards Hub</h4><p>Wallet, streak, achievements, missions, referrals, and loyalty tier — all in one profile tab.</p></div>
+</div>
+
+<div class="callout info">
+  <strong>Occasion dates are protected once set</strong>
+  A customer's date of birth and marriage anniversary — used for birthday and anniversary rewards — become locked immediately after being saved. Changing a locked date requires the customer to contact support, so these dates can't be repeatedly edited to farm rewards.
+</div>
+</div>
+
+<!-- ============ 5. PRODUCT & SHOPPING EXPERIENCE ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">05</span>Product &amp; Shopping Experience</h1>
+<p class="section-intro">How customers discover and choose what to order.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Menu Browsing</h4><p>Full menu grouped into categories, with a live category filter bar.</p></div>
+  <div class="card"><h4>Search</h4><p>Site-wide search across menu item names and descriptions.</p></div>
+  <div class="card"><h4>Product Variants</h4><p>Portion size, weight, add-ons, and custom options where a dish supports them.</p></div>
+  <div class="card"><h4>Pricing &amp; Discounts</h4><p>Live pricing per variant, with coupon and Damru discounts applied at checkout.</p></div>
+  <div class="card"><h4>Featured &amp; Suggested Picks</h4><p>Admin-curated featured dishes and automatically computed best-sellers surface when a customer's cart is empty.</p></div>
+  <div class="card"><h4>Dine-In QR Ordering</h4><p>Scanning a table's QR code opens the menu pre-linked to that table for in-restaurant ordering.</p></div>
+</div>
+
+<p class="small">Wishlist and personalized recommendation features are not part of the current implementation.</p>
+</div>
+
+<!-- ============ 6. CART & CHECKOUT ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">06</span>Cart &amp; Checkout</h1>
+<p class="section-intro">From selecting items to placing the order.</p>
+
+<div class="flow-row">
+  <div class="flow-step">Cart</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Address</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Coupon / Damru</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Payment Method</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Order Confirmed</div>
+</div>
+
+<p>The cart lets a customer adjust quantities, apply a coupon code, and see a live price breakdown. Checkout then walks through delivery address selection (skipped entirely for table dine-in orders), an optional Damru redemption against the order total, and a final payment-method choice before the order is placed.</p>
+
+<p>Every price shown to the customer — subtotal, discount, tax, delivery charge, and final total — is independently recalculated and verified on the backend when the order is actually created, so a customer can never be charged an amount the system didn't itself authorize.</p>
+
+<div class="callout warn">
+  <strong>Payment collection today</strong>
+  Cash on Delivery is the fully working payment option today. UPI and Card are presented as selectable methods with their own screens, but neither is yet connected to a live payment processor — both currently show a "coming soon" message and direct the customer to choose Cash on Delivery.
+</div>
+</div>
+
+<!-- ============ 7. ORDER MANAGEMENT ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">07</span>Order Management</h1>
+<p class="section-intro">What happens to an order after it's placed.</p>
+
+<div class="flow-row">
+  <div class="flow-step">Pending</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Confirmed</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Preparing</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Out for Delivery</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Delivered</div>
+</div>
+<p class="center small">An order can be Cancelled by staff at any point before delivery. Dine-in table orders use the same pipeline, with the final step relabeled "Served" and no delivery step.</p>
+
+<p>Customers can follow their order's status from their profile at any time. Reaching the <strong>Delivered</strong> state is the single most important moment in the platform — it's the trusted signal that triggers Damru rewards, achievement progress, mission progress, and referral qualification, all at once.</p>
+</div>
+
+<!-- ============ 8. DAMRU REWARDS SYSTEM ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">08</span>Damru Rewards System</h1>
+<p class="section-intro">The platform's own reward currency, and everything that earns it.</p>
+
+<p><strong>Damru</strong> is the platform's internal reward currency — never referred to as "coins" or points anywhere in the product. Customers earn Damru through a wide range of activities, see it building up in their wallet, and redeem it for real discounts at checkout.</p>
+
+<h2>Implemented reward sources</h2>
+<table>
+<tr><th>Reward</th><th>When it's earned</th></tr>
+<tr><td>Welcome Reward</td><td>Once, on successful registration</td></tr>
+<tr><td>First Order Reward</td><td>When a customer's first order is delivered</td></tr>
+<tr><td>Birthday Reward</td><td>Every year, on the customer's date of birth</td></tr>
+<tr><td>Marriage Anniversary Reward</td><td>Every year, on the customer's anniversary</td></tr>
+<tr><td>Account Anniversary Reward</td><td>Every year, on the anniversary of joining</td></tr>
+<tr><td>Daily Login Reward</td><td>Once per eligible day, amount increases with streak</td></tr>
+<tr><td>Achievement Rewards</td><td>On unlocking a shopping, spending, engagement, or profile milestone</td></tr>
+<tr><td>Mission Rewards</td><td>On completing a daily, weekly, monthly, or campaign challenge</td></tr>
+<tr><td>Referral Rewards</td><td>When a referred friend completes their first qualifying order</td></tr>
+<tr><td>Loyalty Tier Bonus</td><td>Optionally, on upgrading to a higher loyalty tier</td></tr>
+<tr><td>Admin Adjustment</td><td>Manual credit or debit by an authorized staff member, with a recorded reason</td></tr>
+</table>
+
+<div class="callout good">
+  <strong>Every reward passes through one controlled engine</strong>
+  Regardless of the source, every single Damru credit or debit goes through the same backend reward engine, is recorded permanently, and can never be issued twice for the same event — even if a request is accidentally repeated.
+</div>
+</div>
+
+<!-- ============ 9. DAMRU WALLET ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">09</span>Damru Wallet</h1>
+<p class="section-intro">Where a customer sees and spends their Damru.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Available Damru</h4><p>The customer's current, spendable balance.</p></div>
+  <div class="card"><h4>Lifetime Earned</h4><p>Total Damru ever credited to the account.</p></div>
+  <div class="card"><h4>Total Redeemed</h4><p>Total Damru ever spent on orders.</p></div>
+  <div class="card"><h4>Transaction History</h4><p>A full, paginated timeline of every credit and debit, with its source labeled.</p></div>
+</div>
+
+<div class="flow-row">
+  <div class="flow-step">Reward Earned</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Recorded in Ledger</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Wallet Balance Updates</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Available to Redeem at Checkout</div>
+</div>
+
+<p>Every wallet change is backed by a permanent, timestamped record — nothing is ever silently added or removed. This ledger is what powers the transaction history a customer sees, and what lets support staff investigate any balance question with full confidence.</p>
+</div>
+
+<!-- ============ 10. DAILY STREAK ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">10</span>Daily Streak</h1>
+<p class="section-intro">Rewarding customers simply for coming back.</p>
+
+<div class="flow">
+  <div class="flow-step">Daily Visit / Login</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Backend Eligibility Check</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Streak Count Updated</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Damru Reward Credited</div>
+</div>
+
+<p>Customers see their current streak, their longest-ever streak, and exactly what tomorrow's reward will be — encouraging them to keep the chain going. The reward amount for each day in the cycle, what happens after the final configured day (restart, continue, or repeat weekly), and whether a missed day gets a short grace period are all controlled entirely by admin configuration — never hardcoded.</p>
+
+<p class="small">The backend determines eligibility from its own server clock — a customer cannot earn the reward twice by refreshing the page or calling the app repeatedly in one day.</p>
+</div>
+
+<!-- ============ 11. ACHIEVEMENTS ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">11</span>Achievements</h1>
+<p class="section-intro">Longer-term goals that reward genuine engagement.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Shopping</h4><p>Order-count milestones, e.g. 5, 10, 25, 50, 100 orders.</p></div>
+  <div class="card"><h4>Spending</h4><p>Lifetime spend milestones.</p></div>
+  <div class="card"><h4>Engagement</h4><p>Login streak milestones.</p></div>
+  <div class="card"><h4>Profile</h4><p>Completing profile details.</p></div>
+  <div class="card"><h4>Loyalty</h4><p>Account-age milestones.</p></div>
+</div>
+
+<p>Each achievement shows its progress toward the goal (for example, "27 / 50 Orders — 54%"), its Damru reward, and a badge once earned. Rewards and badge names are fully configurable by admin — new achievements can be introduced without any app update.</p>
+</div>
+
+<!-- ============ 12. MISSIONS ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">12</span>Missions</h1>
+<p class="section-intro">Time-bound challenges that drive short-term repeat purchases.</p>
+
+<div class="card">
+  <h4>Example: Monthly Shopper</h4>
+  <p>Place 5 orders this month</p>
+  <p style="margin-top:6px;"><strong>3 / 5 completed</strong></p>
+  <div class="rewards__progress-track" style="background:#f3e6d6;border-radius:8px;height:8px;overflow:hidden;margin:6px 0;"><div style="background:#e67e22;height:100%;width:60%;"></div></div>
+  <p class="small">Reward: 500 Damru · 12 days remaining</p>
+</div>
+
+<p>Missions support daily, weekly, monthly, one-time, and limited-time campaign periods — each tracked toward order count, spending amount, login streak, or profile completion, depending on how admin configures it. Progress always comes from the backend; the app never decides on its own that a mission is complete.</p>
+</div>
+
+<!-- ============ 13. REFERRAL PROGRAM ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">13</span>Referral Program</h1>
+<p class="section-intro">Turning happy customers into a growth channel.</p>
+
+<div class="flow">
+  <div class="flow-step">Existing Customer Shares Their Code</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Friend Registers Using the Code</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Friend Completes a Qualifying First Order</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Referral Qualifies</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Both Customers Rewarded</div>
+</div>
+
+<p>Every customer gets their own short, shareable referral code and a ready-to-send invite link, with one-tap copy and native sharing on both website and mobile. The reward is <strong>not</strong> issued the moment a friend signs up — only after that friend completes a real, qualifying order, which admin defines by a minimum order value and (optionally) verification requirements.</p>
+
+<h2>Built-in abuse protection</h2>
+<ul>
+  <li>A customer cannot refer themselves.</li>
+  <li>Each new customer can only ever be linked to one referrer.</li>
+  <li>Rewards for a single referral can only ever be issued once, even if the same event is somehow processed twice.</li>
+  <li>Admin can cap the number of successful referrals that earn a reward per customer.</li>
+</ul>
+</div>
+
+<!-- ============ 14. LOYALTY TIERS ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">14</span>Loyalty Tiers</h1>
+<p class="section-intro">Recognizing a customer's long-term value.</p>
+
+<p>Loyalty tiers give the platform's most valuable customers a clear status and extra benefits — entirely configured by admin rather than fixed in the app. A tier is defined by a name, a qualifying range (based on lifetime spend, completed orders, or lifetime Damru earned — admin picks one method for the whole ladder), a badge, and its benefits.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Bonus Damru Multiplier</h4><p>Higher tiers can earn Damru faster on qualifying orders.</p></div>
+  <div class="card"><h4>Exclusive Coupons &amp; Early Access</h4><p>Tier-specific offers where configured.</p></div>
+  <div class="card"><h4>Optional Upgrade Bonus</h4><p>A one-time Damru reward the moment a customer reaches a new tier.</p></div>
+</div>
+
+<p>Customers see their current tier, exactly how far they are from the next one, and the full tier ladder — all computed fresh from trusted backend data every time, never estimated on the device.</p>
+</div>
+
+<!-- ============ 15. COUPONS ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">15</span>Coupons</h1>
+<p class="section-intro">Flexible, targeted discounting.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Public Coupons</h4><p>Available to any customer who enters the code.</p></div>
+  <div class="card"><h4>Private Coupons</h4><p>Issued to one specific customer — for example, as a birthday or anniversary reward.</p></div>
+  <div class="card"><h4>Flexible Discounting</h4><p>Flat amount or percentage off, with an optional maximum discount cap.</p></div>
+  <div class="card"><h4>Usage Controls</h4><p>Minimum order value, validity window, and total usage limits.</p></div>
+</div>
+
+<p>A private coupon is only ever visible to the customer it was issued to — it never appears in another customer's coupon list, at checkout, or anywhere else in the product.</p>
+</div>
+
+<!-- ============ 16. MOBILE APPLICATION ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">16</span>Mobile Application</h1>
+<p class="section-intro">A native companion with full feature parity.</p>
+
+<p>The Damru mobile app (built with React Native / Expo) mirrors the website's customer experience closely, screen for screen: home, menu, branches, gallery, and profile as primary tabs, with dedicated screens for authentication, cart, checkout, order history, addresses, and every rewards feature — daily streak, achievements, missions, referrals, and loyalty tier all have their own mobile screens, each with proper loading, error, and pull-to-refresh handling.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Authentication</h4><p>Register, log in, forgot password, referral code entry.</p></div>
+  <div class="card"><h4>Shopping &amp; Checkout</h4><p>Full menu browsing, cart, coupon and Damru redemption, order placement.</p></div>
+  <div class="card"><h4>Rewards</h4><p>Wallet, streak, achievements, missions, referrals, loyalty — each with a dedicated screen.</p></div>
+  <div class="card"><h4>Native Sharing</h4><p>Referral codes and links share through the device's native share sheet.</p></div>
+</div>
+</div>
+
+<!-- ============ 17. ADMIN DASHBOARD ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">17</span>Admin Dashboard</h1>
+<p class="section-intro">One control center for the entire business.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Menu &amp; Categories</h4><p>Full catalog management, including images and pricing variants.</p></div>
+  <div class="card"><h4>Orders</h4><p>Live order pipeline, status and payment updates.</p></div>
+  <div class="card"><h4>Customers</h4><p>Search, view, and manage customer accounts.</p></div>
+  <div class="card"><h4>Coupons</h4><p>Create and manage discount codes.</p></div>
+  <div class="card"><h4>Branches &amp; Tables</h4><p>Restaurant locations and QR-code table management.</p></div>
+  <div class="card"><h4>Reservations &amp; Banquets</h4><p>Table reservation and banquet enquiry management.</p></div>
+  <div class="card"><h4>Content</h4><p>Blogs, gallery, and homepage content.</p></div>
+  <div class="card"><h4>Rewards &amp; Loyalty</h4><p>The full rewards program, detailed next.</p></div>
+  <div class="card"><h4>Staff &amp; Permissions</h4><p>Admin accounts with granular, module-level access control.</p></div>
+</div>
+</div>
+
+<!-- ============ 18. REWARDS ADMINISTRATION ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">18</span>Rewards Administration</h1>
+<p class="section-intro">Full control over the loyalty program, without an app release.</p>
+
+<div class="tree">
+<span class="root">Rewards &amp; Loyalty</span><br>
+<span class="branch">├── Reward Rules</span> <span class="small">(welcome, first order, occasions)</span><br>
+<span class="branch">├── Damru Configuration</span> <span class="small">(redemption rate, limits)</span><br>
+<span class="branch">├── Daily Rewards</span> <span class="small">(streak schedule &amp; behavior)</span><br>
+<span class="branch">├── Achievements</span> <span class="small">(definitions &amp; rewards)</span><br>
+<span class="branch">├── Missions</span> <span class="small">(challenges &amp; periods)</span><br>
+<span class="branch">├── Referrals</span> <span class="small">(qualification &amp; reward rules)</span><br>
+<span class="branch">├── Loyalty Tiers</span> <span class="small">(tier ladder &amp; benefits)</span><br>
+<span class="branch">└── User Rewards</span> <span class="small">(individual customer ledger &amp; manual adjustments)</span>
+</div>
+
+<p>Authorized staff can inspect any customer's full Damru ledger, unlock a locked occasion date on request, and issue a manual credit or debit — always with a required, permanently recorded reason.</p>
+</div>
+
+<!-- ============ 19. SECURITY ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">19</span>Security</h1>
+<p class="section-intro">How customer trust is protected, in plain terms.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Protected Accounts</h4><p>Passwords are never stored in readable form; sessions expire automatically.</p></div>
+  <div class="card"><h4>Server-Verified Rewards</h4><p>Every reward amount and eligibility check happens on the backend — never trusted from the customer's device.</p></div>
+  <div class="card"><h4>Duplicate Protection</h4><p>The same reward can never be issued twice for the same event, even under a repeated or retried request.</p></div>
+  <div class="card"><h4>Secure Redemption</h4><p>Damru redemption is tied to a specific, owned order and validated on the backend before any discount is applied.</p></div>
+  <div class="card"><h4>Private Data Isolation</h4><p>A customer's private coupons and order data are never visible to another customer.</p></div>
+  <div class="card"><h4>Permission-Controlled Admin</h4><p>Every staff action is checked against that staff member's assigned permissions before it's allowed.</p></div>
+</div>
+</div>
+
+<!-- ============ 20. PLATFORM BENEFITS ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">20</span>Platform Benefits</h1>
+<p class="section-intro">Why this architecture pays off for the business.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Customer Retention</h4><p>Streaks, missions, and achievements are purpose-built to bring customers back.</p></div>
+  <div class="card"><h4>Repeat Purchases</h4><p>Damru redemption gives every customer a reason to order again.</p></div>
+  <div class="card"><h4>Personalized Rewards</h4><p>Birthday, anniversary, and milestone rewards feel individually earned.</p></div>
+  <div class="card"><h4>Referral-Led Growth</h4><p>Customers are incentivized to bring in new customers themselves.</p></div>
+  <div class="card"><h4>Controlled Promotions</h4><p>Every reward and coupon rule is adjustable from admin — no engineering request needed.</p></div>
+  <div class="card"><h4>One Platform, Two Front Doors</h4><p>Full web and mobile reach from a single, consistent backend.</p></div>
+</div>
+</div>
+
+<!-- ============ 21. IMPLEMENTATION STATUS ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">21</span>Current Implementation Status</h1>
+<p class="section-intro">An honest snapshot of what's live today.</p>
+
+<table>
+<tr><th>Module</th><th>Website</th><th>Mobile</th><th>Admin</th><th>Status</th></tr>
+<tr><td>Authentication &amp; Profile</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Menu, Branches &amp; Discovery</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Cart &amp; Checkout</td><td>✓</td><td>✓</td><td>Operational views</td><td><span class="badge partial">Implemented — COD only live</span></td></tr>
+<tr><td>Orders</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Coupons</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Damru Wallet</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Daily Streaks</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Achievements</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Missions</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Referrals</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Loyalty Tiers</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge partial">Implemented — needs tier configuration</span></td></tr>
+<tr><td>Reservations &amp; Banquets</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Blogs &amp; Gallery</td><td>✓</td><td>✓</td><td>✓</td><td><span class="badge done">Implemented</span></td></tr>
+<tr><td>Live Payment Processing</td><td>—</td><td>—</td><td>—</td><td><span class="badge no">Not implemented</span></td></tr>
+</table>
+</div>
+
+<!-- ============ 22. FUTURE OPPORTUNITIES ============ -->
+<div class="page page-break">
+<h1 class="section-title"><span class="section-num">22</span>Future Opportunities</h1>
+<p class="section-intro">Realistic next steps — not commitments, not current features.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Live Payment Gateway</h4><p>Connect UPI/Card to a real payment processor.</p></div>
+  <div class="card"><h4>Production Analytics</h4><p>Wire the existing analytics event hooks to a real analytics platform.</p></div>
+  <div class="card"><h4>Automated Testing</h4><p>Broader automated test coverage for continued safe iteration.</p></div>
+  <div class="card"><h4>Richer Notifications</h4><p>Push and in-app notification delivery for reward moments.</p></div>
+  <div class="card"><h4>More Loyalty Benefit Types</h4><p>Expand tier benefits beyond the current set.</p></div>
+</div>
+
+<p class="small center" style="margin-top:20px;">Prepared from the Damru repository implementation as of 7 August 2026. Secrets and personal customer data are intentionally excluded from this document.</p>
+</div>
+
+</body>
+</html>

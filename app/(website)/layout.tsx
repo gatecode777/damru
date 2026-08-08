@@ -4,6 +4,7 @@ import { getSettings } from "@/lib/getSettings";
 import SiteHeader from "@/components/website/SiteHeader";
 import SiteFooter from "@/components/website/SiteFooter";
 import { CartProvider } from "@/lib/CartContext";
+import { RewardsProvider } from "@/lib/rewards/RewardsProvider";
 
 import "@/styles/website/header.css";
 import "@/styles/website/style.css";
@@ -12,6 +13,7 @@ import "@/styles/website/menu.css";
 import "@/styles/website/aboutus.css";
 import "@/styles/website/contactus.css";
 import "@/styles/website/myprofile.css";
+import "@/styles/website/rewards.css";
 import "@/styles/website/banquet.css";
 import "@/styles/website/cart.css";
 import "@/styles/website/checkout.css";
@@ -80,15 +82,17 @@ export default async function WebsiteLayout({ children }: { children: React.Reac
 
       {/* Header */}
       <CartProvider>
-        <SiteHeader />
+        <RewardsProvider>
+          <SiteHeader />
 
-        {/* Page content */}
-        <div className="damru-theme-wrapper">
-          {children}
-        </div>
+          {/* Page content */}
+          <div className="damru-theme-wrapper">
+            {children}
+          </div>
 
-        {/* Footer */}
-        <SiteFooter />
+          {/* Footer */}
+          <SiteFooter />
+        </RewardsProvider>
       </CartProvider>
 
       {/* JS for animations (wheel, sliders etc.) */}

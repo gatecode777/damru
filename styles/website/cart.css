@@ -14,7 +14,7 @@ body {
 
 .cart-page-section {
     font-family: "Inter", sans-serif;
-    background-color: #fcfcfc;
+    background-color: #faf8f5;
     padding: 180px 20px 100px;
     color: #1a1a1a;
     min-height: 100vh;
@@ -41,21 +41,45 @@ body {
     overflow-x: hidden;
 }
 
+.cart-page-section .list-eyebrow {
+    display: block;
+    margin: 0 0 6px 2px;
+    color: #e66a00;
+    font-family: "Poppins", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
 .cart-page-section h2.list-title {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 30px;
+    font-family: "Playfair Display", serif;
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin: 0 0 30px;
 }
 
 .cart-page-section .cart-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 0;
-    border-bottom: 1px solid #eeeeee;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    background: #ffffff;
+    border: 1px solid #f0ece5;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(20, 15, 5, 0.03);
     animation: fadeIn 0.3s ease-in;
     flex-wrap: wrap;
     gap: 15px;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.cart-page-section .cart-item:hover {
+    box-shadow: 0 10px 26px rgba(20, 15, 5, 0.07);
+    border-color: #f3d9b8;
+    transform: translateY(-2px);
 }
 
 @keyframes fadeIn {
@@ -79,18 +103,21 @@ body {
 }
 
 .cart-page-section .item-img {
-    width: 70px;
-    height: 70px;
-    border-radius: 12px;
+    width: 76px;
+    height: 76px;
+    border-radius: 14px;
     object-fit: cover;
     background-color: #eee;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(20, 15, 5, 0.08);
 }
 
 .cart-page-section .item-details h4 {
     margin: 0;
-    font-size: 16px;
+    font-family: "Poppins", sans-serif;
+    font-size: 15.5px;
     font-weight: 600;
+    letter-spacing: 0.01em;
     word-break: break-word;
 }
 
@@ -102,42 +129,54 @@ body {
     word-break: break-word;
 }
 
-/* Quantity Controls */
+/* Quantity Controls — premium segmented stepper */
 .cart-page-section .qty-controls {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0;
     flex-shrink: 0;
+    background: #faf7f3;
+    border: 1px solid #ece5da;
+    border-radius: 999px;
+    padding: 4px;
 }
 
 .cart-page-section .qty-btn {
     cursor: pointer;
-    font-size: 20px;
-    color: #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #6b6357;
     user-select: none;
     width: 28px;
+    height: 28px;
+    border-radius: 50%;
     text-align: center;
-    transition: color 0.2s;
+    background: transparent;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
 .cart-page-section .qty-btn:hover {
-    color: #e66a00;
+    background: #e66a00;
+    color: #fff;
 }
 
 .cart-page-section .qty-num {
-    border: 1px solid #ddd;
-    padding: 5px 12px;
-    border-radius: 4px;
+    border: none;
+    padding: 0;
     font-weight: 600;
     font-size: 14px;
-    min-width: 40px;
+    min-width: 32px;
     text-align: center;
-    background: #fff;
+    background: transparent;
 }
 
 .cart-page-section .item-price {
+    font-family: "Poppins", sans-serif;
     font-weight: 700;
     font-size: 17px;
+    color: #c85a00;
     min-width: 80px;
     text-align: right;
     flex-shrink: 0;
@@ -145,15 +184,22 @@ body {
 
 .cart-page-section .remove-icon {
     cursor: pointer;
-    color: #999;
-    font-size: 22px;
-    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: #b3ab9f;
+    font-size: 18px;
+    line-height: 1;
+    transition: background 0.2s ease, color 0.2s ease;
     flex-shrink: 0;
-    padding: 0 5px;
 }
 
 .cart-page-section .remove-icon:hover {
-    color: #ff0000;
+    background: #fdecec;
+    color: #e0342c;
 }
 
 /* --- RIGHT SIDE: SUMMARY --- */
@@ -165,16 +211,18 @@ body {
 
 .cart-page-section .summary-card {
     background: #fff;
-    border: 1px solid #f0f0f0;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    border: 1px solid #f0ece5;
+    border-radius: 18px;
+    padding: 28px;
+    box-shadow: 0 12px 34px rgba(20, 15, 5, 0.06);
 }
 
 .cart-page-section .summary-card h3 {
     margin: 0 0 20px;
-    font-size: 20px;
-    font-weight: 700;
+    font-family: "Playfair Display", serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
 }
 
 .cart-page-section .promo-box {
@@ -216,30 +264,178 @@ body {
 }
 
 .cart-page-section .checkout-btn {
-    background-color: #e66a00;
+    background: linear-gradient(135deg, #f08a1e, #e66a00);
     color: white;
     border: none;
     width: 100%;
-    padding: 14px;
-    border-radius: 8px;
+    padding: 15px;
+    border-radius: 10px;
+    font-family: "Poppins", sans-serif;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 15px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
     cursor: pointer;
     margin-top: 20px;
+    box-shadow: 0 10px 24px rgba(230, 106, 0, 0.28);
     transition: 0.3s;
 }
 
 .cart-page-section .checkout-btn:hover {
-    background-color: #d15f00;
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #e66a00, #d15f00);
+    box-shadow: 0 14px 30px rgba(230, 106, 0, 0.36);
+    transform: translateY(-2px);
+}
+
+.cart-page-section .checkout-btn:disabled {
+    background: #e5e0d8;
+    color: #a9a096;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.cart-page-section .checkout-btn__hint {
+    margin: 8px 0 0;
+    font-family: "Poppins", sans-serif;
+    font-size: 12px;
+    color: #b3271f;
+    text-align: center;
+}
+
+.cart-page-section .clear-cart-btn {
+    margin-top: 16px;
+    background: transparent;
+    border: 1px solid #e5ddd0;
+    border-radius: 999px;
+    padding: 9px 20px;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: #8a8072;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.cart-page-section .clear-cart-btn:hover {
+    border-color: #e0342c;
+    color: #e0342c;
+    background: #fdecec;
 }
 
 /* Empty State */
-.cart-page-section .empty-msg {
+.cart-page-section .empty-cart {
     text-align: center;
-    padding: 50px 20px;
-    font-size: 18px;
-    color: #999;
+    padding: 40px 10px;
+}
+
+.cart-page-section .empty-cart__title {
+    font-family: "Playfair Display", serif;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 8px;
+}
+
+.cart-page-section .empty-cart__sub {
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    color: #918879;
+    max-width: 420px;
+    margin: 0 auto 28px;
+    line-height: 1.5;
+}
+
+.cart-page-section .empty-cart__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    text-align: left;
+    margin-bottom: 24px;
+}
+
+.cart-page-section .suggest-card {
+    background: #fff;
+    border: 1px solid #f0ece5;
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: 0 2px 10px rgba(20, 15, 5, 0.03);
+}
+
+.cart-page-section .suggest-card__img {
+    width: 100%;
+    height: 100px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #f5f5f5;
+    margin-bottom: 8px;
+}
+
+.cart-page-section .suggest-card__badge {
+    display: inline-block;
+    font-family: "Poppins", sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: #b45309;
+    background: #fff7ed;
+    border: 1px solid #fde3c8;
+    border-radius: 999px;
+    padding: 2px 8px;
+    margin-bottom: 6px;
+}
+
+.cart-page-section .suggest-card__name {
+    font-family: "Poppins", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cart-page-section .suggest-card__price {
+    font-family: "Poppins", sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #c85a00;
+    margin: 0 0 10px;
+}
+
+.cart-page-section .suggest-card__btn {
+    display: block;
+    width: 100%;
+    background: #fff7ed;
+    border: 1px solid #fde3c8;
+    color: #e66a00;
+    border-radius: 8px;
+    padding: 7px 0;
+    font-family: "Poppins", sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.cart-page-section .suggest-card__btn:hover {
+    background: #e66a00;
+    color: #fff;
+}
+
+.cart-page-section .suggest-card__btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.cart-page-section .empty-cart__browse {
+    display: inline-block;
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e66a00;
+    text-decoration: none;
 }
 
 /* ============================================
@@ -271,7 +467,7 @@ body {
 /* Mobile Large (426px - 767px) */
 @media (max-width: 767px) and (min-width: 426px) {
     .cart-page-section {
-        padding: 140px 16px 60px;
+        padding: 32px 16px 60px;
     }
 
     .cart-page-section .container {
@@ -319,7 +515,7 @@ body {
 /* Mobile Medium (376px - 425px) */
 @media (max-width: 425px) and (min-width: 376px) {
     .cart-page-section {
-        padding: 130px 14px 50px;
+        padding: 28px 14px 50px;
     }
 
     .cart-page-section .container {
@@ -390,7 +586,7 @@ body {
 /* Mobile Small (320px - 375px) */
 @media (max-width: 375px) and (min-width: 320px) {
     .cart-page-section {
-        padding: 120px 12px 40px;
+        padding: 24px 12px 40px;
     }
 
     .cart-page-section .container {
@@ -481,16 +677,19 @@ body {
         font-size: 14px;
     }
 
-    .cart-page-section .empty-msg {
-        font-size: 16px;
-        padding: 40px 20px;
+    .cart-page-section .empty-cart__title {
+        font-size: 20px;
+    }
+
+    .cart-page-section .empty-cart__sub {
+        font-size: 13px;
     }
 }
 
 /* Mobile Extra Small (below 320px) */
 @media (max-width: 319px) {
     .cart-page-section {
-        padding: 110px 10px 30px;
+        padding: 20px 10px 30px;
     }
 
     .cart-page-section .container {

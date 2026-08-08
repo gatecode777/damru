@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { checkApiPerm } from "@/lib/checkApiPerm";
 import { connectDB } from "@/lib/mongodb";
 import SiteSettings from "@/models/SiteSettings";
 
 // GET — load settings (creates default doc if none exists)
 export async function GET() {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const deny = await checkApiPerm("settings", "view");
+  if (deny) return deny;
   try {
     await connectDB();
     let settings = await SiteSettings.findOne().lean();
@@ -23,8 +23,8 @@ export async function GET() {
 
 // PATCH — update settings
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const deny = await checkApiPerm("settings", "edit");
+  if (deny) return deny;
   try {
     const body = await req.json();
     await connectDB();

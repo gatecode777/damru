@@ -3,8 +3,7 @@ import { checkApiPerm } from "@/lib/checkApiPerm";
 import { connectDB } from "@/lib/mongodb";
 import Table from "@/models/Table";
 import jwt from "jsonwebtoken";
-
-const SECRET = process.env.AUTH_SECRET || "damru-secret-key";
+import { getRequiredSecret } from "@/lib/env";
 
 export async function GET(
   req: NextRequest,
@@ -19,8 +18,9 @@ export async function GET(
     const table = await Table.findById(id).lean();
     if (!table) return NextResponse.json({ error: "Table not found" }, { status: 404 });
     return NextResponse.json({ table: JSON.parse(JSON.stringify(table)) });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed" }, { status: 500 });
+  } catch (e) {
+    console.error("GET admin/tables/[id] error:", e);
+    return NextResponse.json({ error: "Failed to load table." }, { status: 500 });
   }
 }
 
@@ -42,7 +42,7 @@ export async function PUT(
 
     if (body.regenerateToken) {
       // Regenerate secure token & QR
-      const qrToken = jwt.sign({ id: table._id }, SECRET);
+      const qrToken = jwt.sign({ id: table._id }, getRequiredSecret("AUTH_SECRET"));
       const menuUrl = `${host}/menu?t=${qrToken}`;
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(menuUrl)}`;
 
@@ -67,8 +67,9 @@ export async function PUT(
     }
 
     return NextResponse.json({ success: true, table: JSON.parse(JSON.stringify(table)) });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to update table" }, { status: 400 });
+  } catch (e) {
+    console.error("PUT admin/tables/[id] error:", e);
+    return NextResponse.json({ error: "Failed to update table." }, { status: 400 });
   }
 }
 
@@ -85,7 +86,8 @@ export async function DELETE(
     const table = await Table.findByIdAndDelete(id);
     if (!table) return NextResponse.json({ error: "Table not found" }, { status: 404 });
     return NextResponse.json({ success: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to delete table" }, { status: 500 });
+  } catch (e) {
+    console.error("DELETE admin/tables/[id] error:", e);
+    return NextResponse.json({ error: "Failed to delete table." }, { status: 500 });
   }
 }

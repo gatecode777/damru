@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
+import { uploadedImageUrl } from "@/lib/imageUrl";
 
 interface Variant { label: string; price: number }
 
@@ -177,10 +178,11 @@ export default function MenuItemCard({
         <div className="menu-img-box">
           {image ? (
             <Image
-              src={`/uploads/menu-items/${image}`}
+              src={uploadedImageUrl("menu-items", image)}
               alt={name}
               width={360}
               height={270}
+              sizes="(max-width: 640px) 45vw, 220px"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (

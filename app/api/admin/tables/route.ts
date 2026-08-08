@@ -3,8 +3,7 @@ import { checkApiPerm } from "@/lib/checkApiPerm";
 import { connectDB } from "@/lib/mongodb";
 import Table from "@/models/Table";
 import jwt from "jsonwebtoken";
-
-const SECRET = process.env.AUTH_SECRET || "damru-secret-key";
+import { getRequiredSecret } from "@/lib/env";
 
 export async function GET() {
   const deny = await checkApiPerm("tables", "view");
@@ -14,8 +13,9 @@ export async function GET() {
     await connectDB();
     const tables = await Table.find().sort({ tableNumber: 1 }).lean();
     return NextResponse.json({ tables: JSON.parse(JSON.stringify(tables)) });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to fetch tables" }, { status: 500 });
+  } catch (e) {
+    console.error("GET admin/tables error:", e);
+    return NextResponse.json({ error: "Failed to fetch tables." }, { status: 500 });
   }
 }
 
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         });
 
         // Generate actual token & QR
-        const qrToken = jwt.sign({ id: table._id }, SECRET);
+        const qrToken = jwt.sign({ id: table._id }, getRequiredSecret("AUTH_SECRET"));
         const menuUrl = `${host}/menu?t=${qrToken}`;
         const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(menuUrl)}`;
 
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Generate actual token & QR
-      const qrToken = jwt.sign({ id: table._id }, SECRET);
+      const qrToken = jwt.sign({ id: table._id }, getRequiredSecret("AUTH_SECRET"));
       const menuUrl = `${host}/menu?t=${qrToken}`;
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(menuUrl)}`;
 
@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ success: true, table: JSON.parse(JSON.stringify(table)) });
     }
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to create table" }, { status: 400 });
+  } catch (e) {
+    console.error("POST admin/tables error:", e);
+    return NextResponse.json({ error: "Failed to create table." }, { status: 400 });
   }
 }

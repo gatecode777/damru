@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
 
 export async function GET() {
-  const deny = await checkApiPerm("settings", "view");
+  const deny = await checkApiPerm("tables", "view");
   if (deny) return deny;
 
   try {
@@ -24,7 +24,8 @@ export async function GET() {
     }
 
     return NextResponse.json({ counts });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to fetch active orders count" }, { status: 500 });
+  } catch (e) {
+    console.error("GET admin/tables/orders error:", e);
+    return NextResponse.json({ error: "Failed to fetch active orders count." }, { status: 500 });
   }
 }

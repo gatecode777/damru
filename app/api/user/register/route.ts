@@ -3,10 +3,16 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import { signUserSession } from "@/lib/userSession";
+import { checkAndAwardWelcomeReward } from "@/lib/rewardEngine";
+import { validateReferralCodeForRegistration, createReferralRelationship, getOrCreateReferralCode } from "@/lib/referralEngine";
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, phone, password } = await req.json();
+    const rl = await checkRateLimit(`register:${getClientIp(req)}`, RATE_LIMITS.register);
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterSeconds);
+
+    const { name, email, phone, password, referralCode } = await req.json();
 
     if (!name?.trim())     return NextResponse.json({ error: "Name is required."          }, { status: 400 });
     if (!email?.trim())    return NextResponse.json({ error: "Email is required."         }, { status: 400 });
@@ -24,6 +30,15 @@ export async function POST(req: NextRequest) {
     const exists = await User.findOne({ email: email.toLowerCase() });
     if (exists) return NextResponse.json({ error: "Email already registered." }, { status: 409 });
 
+    // Validate an optional referral code BEFORE creating the account — an invalid code
+    // is a clear error, not silently ignored.
+    let referrerUserId = null;
+    if (referralCode?.trim()) {
+      const check = await validateReferralCodeForRegistration(referralCode);
+      if (!check.valid) return NextResponse.json({ error: check.error }, { status: 400 });
+      referrerUserId = check.referrerUserId;
+    }
+
     const hashed = await bcrypt.hash(password, 10);
     const user   = await User.create({
       name: name.trim(),
@@ -32,6 +47,26 @@ export async function POST(req: NextRequest) {
       password: hashed,
       status: "active",
     });
+
+    try {
+      await checkAndAwardWelcomeReward(user._id);
+    } catch (err) {
+      console.error("Welcome reward failed:", err);
+    }
+
+    try {
+      await getOrCreateReferralCode(user._id);
+    } catch (err) {
+      console.error("Referral code generation failed:", err);
+    }
+
+    if (referrerUserId) {
+      try {
+        await createReferralRelationship(referrerUserId, user._id, referralCode);
+      } catch (err) {
+        console.error("Referral relationship creation failed:", err);
+      }
+    }
 
     // Set session cookie
     const res = NextResponse.json({

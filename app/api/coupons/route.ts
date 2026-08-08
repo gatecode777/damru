@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Coupon from "@/models/Coupon";
+import { getUserFromCookie } from "@/lib/userSession";
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
 
 // ── GET /api/coupons — list all currently valid coupons ──────
 // Used to show available coupons to the user
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const now = new Date();
+    const sessionUser = getUserFromCookie(req);
     const coupons = await Coupon.find({
       isActive:   true,
       startDate:  { $lte: now },
       $or: [
         { expiryDate: null },
         { expiryDate: { $gt: now } },
+      ],
+      $and: [
+        { $or: [{ userId: null }, { userId: sessionUser?.id || null }] },
       ],
     })
       .select("code description type value maxDiscount minOrderValue usageLimit usedCount")
@@ -37,6 +43,9 @@ export async function GET() {
 // Returns: { valid, discount, message, coupon? }
 export async function POST(req: NextRequest) {
   try {
+    const rl = await checkRateLimit(`coupon-validate:${getClientIp(req)}`, RATE_LIMITS.couponValidate);
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterSeconds);
+
     const { code, cartTotal } = await req.json();
     if (!code) return NextResponse.json({ valid: false, message: "Enter a coupon code." });
 
@@ -45,6 +54,12 @@ export async function POST(req: NextRequest) {
     const coupon = await Coupon.findOne({ code: code.trim().toUpperCase() });
 
     if (!coupon) return NextResponse.json({ valid: false, message: "Invalid coupon code." });
+    if (coupon.userId) {
+      const sessionUser = getUserFromCookie(req);
+      if (!sessionUser || String(coupon.userId) !== sessionUser.id) {
+        return NextResponse.json({ valid: false, message: "This coupon is not valid for your account." });
+      }
+    }
     if (!coupon.isActive) return NextResponse.json({ valid: false, message: "This coupon is not active." });
     if (coupon.startDate && now < coupon.startDate) return NextResponse.json({ valid: false, message: "This coupon is not yet active." });
     if (coupon.expiryDate && now > coupon.expiryDate) return NextResponse.json({ valid: false, message: "This coupon has expired." });

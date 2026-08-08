@@ -1,9 +1,29 @@
 "use client";
 
-import { fmtDateLong } from "@/lib/formatDate";
+import { fmtDateLong, fmtINR } from "@/lib/formatDate";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
+import { useRewards } from "@/lib/rewards/RewardsProvider";
+import { trackRewardEvent } from "@/lib/rewards/rewardAnalytics";
+
+// Minimal shape of the global Razorpay Checkout constructor loaded via the
+// external checkout.js script — not the full SDK, just what this page uses.
+interface RazorpayCheckoutInstance {
+  open: () => void;
+  on: (event: "payment.failed", handler: () => void) => void;
+}
+interface RazorpayCheckoutOptions {
+  key: string; amount: number; currency: string; name: string; description: string; order_id: string;
+  handler: (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void;
+  modal: { ondismiss: () => void };
+  theme: { color: string };
+}
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => RazorpayCheckoutInstance;
+  }
+}
 
 interface Address {
   _id: string; label: string; fullName: string; phone: string;
@@ -19,6 +39,8 @@ const emptyForm = {
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalPrice, clearCart, isLoggedIn } = useCart();
+  const { dashboard: rewardsDashboard, redeem: redeemDamru } = useRewards();
+  const [requestedDamru, setRequestedDamru] = useState("");
   const [taxRate, setTaxRate] = useState(5);
   const [freeAbove, setFreeAbove] = useState(500);
   const [deliveryCharge, setDeliveryCharge] = useState(50);
@@ -45,11 +67,133 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [placing, setPlacing] = useState(false);
   const [orderError, setOrderError] = useState("");
-  const [placedOrder, setPlacedOrder] = useState<{ orderId: string; total: number } | null>(null);
+  const [paymentError, setPaymentError] = useState("");
+  const [placedOrder, setPlacedOrder] = useState<{
+    orderId: string; internalOrderId: string; total: number;
+    redeemedAmount?: number; redeemedDiscount?: number; redeemError?: string;
+    // Only meaningful for non-COD orders — COD's paymentStatus stays undefined,
+    // which the success screen below treats identically to "paid".
+    paymentStatus?: "paid" | "pending" | "failed";
+  } | null>(null);
+
+  // Loads Razorpay's Checkout script on demand — never globally, only when an
+  // online payment is actually about to start.
+  function loadRazorpayScript(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (window.Razorpay) { resolve(true); return; }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  }
+
+  // Backend determines and freezes the payable amount (order.total net of any
+  // Damru already redeemed for this order) — this only ever opens Razorpay
+  // Checkout for that server-returned amount, never a frontend-computed one.
+  async function startRazorpayPayment(internalOrderId: string) {
+    setPaymentError("");
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
+      setPaymentError("Could not load the payment gateway. Please retry, or choose Cash on Delivery.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/payments/razorpay/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: internalOrderId }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
+        setPaymentError(data.error);
+        return;
+      }
+
+      // Coupon/Damru covered the order entirely — backend already finalized
+      // it as paid; never open a gateway popup for ₹0.
+      if (data.zeroPayable) {
+        setPlacedOrder(prev => prev && { ...prev, paymentStatus: "paid" });
+        return;
+      }
+
+      if (!window.Razorpay) {
+        setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
+        setPaymentError("Could not load the payment gateway. Please retry, or choose Cash on Delivery.");
+        return;
+      }
+      const rzp = new window.Razorpay({
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: "Damru By Namo",
+        description: `Order ${placedOrder?.orderId ?? ""}`,
+        order_id: data.razorpayOrderId,
+        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+          try {
+            const verifyRes = await fetch("/api/payments/razorpay/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orderId: internalOrderId,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              setPlacedOrder(prev => prev && { ...prev, paymentStatus: "paid" });
+            } else {
+              setPaymentError(verifyData.error || "Payment verification failed.");
+              setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
+            }
+          } catch {
+            // The verify call itself failed (e.g. lost connection) — the payment
+            // may still have gone through. Don't claim failure here; the
+            // Razorpay webhook reconciles this asynchronously either way.
+            setPaymentError("We couldn't confirm your payment right away. Check My Orders shortly — it updates automatically once confirmed.");
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
+            setPaymentError("Payment was cancelled.");
+          },
+        },
+        theme: { color: "#e67e22" },
+      });
+      rzp.on("payment.failed", () => {
+        setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
+        setPaymentError("Payment failed. You can retry below.");
+      });
+      rzp.open();
+    } catch {
+      setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
+      setPaymentError("Unable to start payment. Please try again.");
+    }
+  }
 
   // ── Coupon from cart (passed via sessionStorage) ──────────
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
+
+  useEffect(() => {
+    // Real tax/delivery config so the preview total matches what /api/orders will
+    // actually charge — falls back to the existing hardcoded defaults on failure.
+    fetch("/api/checkout/config")
+      .then(r => r.json())
+      .then(cfg => {
+        if (typeof cfg.taxRate === "number") setTaxRate(cfg.taxRate);
+        if (typeof cfg.freeDeliveryAbove === "number") setFreeAbove(cfg.freeDeliveryAbove);
+        if (typeof cfg.deliveryCharge === "number") setDeliveryCharge(cfg.deliveryCharge);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Check for dine-in table session
@@ -129,7 +273,11 @@ export default function CheckoutPage() {
   async function handlePlaceOrder() {
     if (!isDineIn && !selectedAddr) { setOrderError("Please select a delivery address."); return; }
     if (items.length === 0) { setOrderError("Your cart is empty."); return; }
-    setPlacing(true); setOrderError("");
+    if (payMethod !== "cod" && !isLoggedIn) {
+      setOrderError("Online payment requires login. Please log in, or choose Cash on Delivery.");
+      return;
+    }
+    setPlacing(true); setOrderError(""); setPaymentError("");
     try {
       const body: any = {
         paymentMethod: payMethod,
@@ -161,30 +309,112 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (data.error) { setOrderError(data.error); return; }
-      
+
       sessionStorage.removeItem("appliedCoupon");
       sessionStorage.removeItem("dinein_table");
 
-      setPlacedOrder({ orderId: data.order.orderId, total: data.order.total });
+      const result: {
+        orderId: string; internalOrderId: string; total: number;
+        redeemedAmount?: number; redeemedDiscount?: number; redeemError?: string;
+        paymentStatus?: "paid" | "pending" | "failed";
+      } = {
+        orderId: data.order.orderId, internalOrderId: data.order._id, total: data.order.total,
+      };
+
+      const damruAmount = Number(requestedDamru);
+      if (isLoggedIn && damruAmount > 0) {
+        const redeemResult = await redeemDamru(data.order._id, damruAmount);
+        if (redeemResult.success) {
+          result.redeemedAmount = damruAmount;
+          result.redeemedDiscount = redeemResult.discount;
+          trackRewardEvent("damru_redeemed", { amount: damruAmount });
+        } else {
+          result.redeemError = redeemResult.error || "Redemption failed.";
+        }
+      }
+
       await clearCart();
+
+      if (payMethod === "cod") {
+        setPlacedOrder(result);
+      } else {
+        // Damru redemption (if any) has already been recorded above, so the
+        // Razorpay amount computed next already nets it out.
+        setPlacedOrder({ ...result, paymentStatus: "pending" });
+        await startRazorpayPayment(data.order._id);
+      }
     } catch { setOrderError("Something went wrong. Please try again."); }
     finally { setPlacing(false); }
   }
 
-  // ── Order success screen ──────────────────────────────────
+  // ── Order success / payment-pending screen ─────────────────
   if (placedOrder) {
+    // Non-COD order whose Razorpay payment hasn't been confirmed yet — do NOT
+    // show "Order Placed!" until backend verification succeeds (webhook or
+    // client verify). Failed/cancelled attempts get a Retry action using the
+    // same internal order — no duplicate order is created.
+    if (placedOrder.paymentStatus === "pending" || placedOrder.paymentStatus === "failed") {
+      const failed = placedOrder.paymentStatus === "failed";
+      return (
+        <div className="checkout-container">
+          <div style={{ textAlign: "center", padding: "60px 20px", fontFamily: "Poppins, sans-serif" }}>
+            <div style={{ fontSize: "4rem", marginBottom: 16 }}>{failed ? "⚠️" : "⏳"}</div>
+            <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "1.8rem", color: "#111", marginBottom: 8 }}>
+              {failed ? "Payment Not Completed" : "Processing Payment…"}
+            </h2>
+            <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "#e67e22", marginBottom: 4 }}>Order ID: {placedOrder.orderId}</p>
+            <p style={{ color: "#666", marginBottom: 4 }}>
+              {failed
+                ? "Your order was saved but payment didn't go through. Your Damru balance wasn't affected."
+                : "Confirming your payment — this only takes a moment."}
+            </p>
+            {paymentError && (
+              <p style={{ background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 16px", display: "inline-block", margin: "12px 0", fontSize: 13, maxWidth: 420 }}>
+                {paymentError}
+              </p>
+            )}
+            <div style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              {failed && (
+                <button onClick={() => startRazorpayPayment(placedOrder.internalOrderId)}
+                  style={{ background: "#e67e22", color: "#fff", border: "none", borderRadius: 10, padding: "12px 32px", fontFamily: "Poppins,sans-serif", fontSize: "1rem", fontWeight: 600, cursor: "pointer" }}>
+                  Retry Payment
+                </button>
+              )}
+              <button onClick={() => router.push("/my-profile?tab=orders")}
+                style={{ background: "#f5f5f5", color: "#333", border: "none", borderRadius: 10, padding: "12px 32px", fontFamily: "Poppins,sans-serif", fontSize: "1rem", fontWeight: 600, cursor: "pointer" }}>
+                View My Orders
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="checkout-container">
         <div style={{ textAlign: "center", padding: "60px 20px", fontFamily: "Poppins, sans-serif" }}>
           <div style={{ fontSize: "4rem", marginBottom: 16 }}>🎉</div>
           <h2 style={{ fontFamily: "Playfair Display, serif", fontSize: "1.8rem", color: "#111", marginBottom: 8 }}>Order Placed!</h2>
           <p style={{ color: "#666", marginBottom: 4 }}>
-            {isDineIn && tableInfo 
+            {isDineIn && tableInfo
               ? `Your order has been sent directly to Table ${tableInfo.tableNumber}.`
               : "Your order has been confirmed."}
           </p>
           <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "#e67e22", marginBottom: 4 }}>Order ID: {placedOrder.orderId}</p>
-          <p style={{ color: "#666", marginBottom: 32 }}>Total: ₹{placedOrder.total} · Payment: {payMethod === "cod" ? (isDineIn ? "Pay at Counter / Cash" : "Cash on Delivery") : payMethod.toUpperCase()}</p>
+          <p style={{ color: "#666", marginBottom: 16 }}>Total: ₹{placedOrder.total} · Payment: {payMethod === "cod" ? (isDineIn ? "Pay at Counter / Cash" : "Cash on Delivery") : `${payMethod.toUpperCase()} (Paid via Razorpay)`}</p>
+
+          {placedOrder.redeemedAmount != null && (
+            <p style={{ background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 16px", display: "inline-block", marginBottom: 12, fontSize: 14 }}>
+              🪙 {placedOrder.redeemedAmount} Damru Redeemed → {fmtINR(placedOrder.redeemedDiscount || 0)} discount recorded
+            </p>
+          )}
+          {placedOrder.redeemError && (
+            <p style={{ background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 16px", display: "inline-block", marginBottom: 12, fontSize: 13, maxWidth: 420 }}>
+              Damru redemption didn&apos;t go through: {placedOrder.redeemError}. Your balance wasn&apos;t affected.
+            </p>
+          )}
+          <p style={{ color: "#999", fontSize: 13, marginBottom: 32 }}>🎁 Damru from qualifying orders is credited once your order is delivered.</p>
+
           <button onClick={() => router.push("/menu")}
             style={{ background: "#e67e22", color: "#fff", border: "none", borderRadius: 10, padding: "12px 32px", fontFamily: "Poppins,sans-serif", fontSize: "1rem", fontWeight: 600, cursor: "pointer" }}>
             Order More Items
@@ -345,6 +575,23 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* Redeem Damru */}
+              {isLoggedIn && rewardsDashboard && rewardsDashboard.damruBalance > 0 && (
+                <div className="rewards__redeem-box">
+                  <p className="rewards__redeem-title">🪙 Redeem Damru — Available: {rewardsDashboard.damruBalance}</p>
+                  <input
+                    type="number"
+                    min={0}
+                    max={rewardsDashboard.damruBalance}
+                    value={requestedDamru}
+                    onChange={e => setRequestedDamru(e.target.value)}
+                    placeholder="0"
+                    style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontFamily: "Poppins,sans-serif", fontSize: 13, boxSizing: "border-box" }}
+                  />
+                  <p className="rewards__redeem-note">The exact discount is confirmed once your order is placed.</p>
+                </div>
+              )}
+
               {/* Notes */}
               <div style={{ marginTop: 14 }}>
                 <label style={{ fontFamily: "Poppins,sans-serif", fontSize: 13, color: "#666", display: "block", marginBottom: 4 }}>Order notes (optional)</label>
@@ -391,11 +638,14 @@ export default function CheckoutPage() {
                     <div className="upi-item"><img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" />Google Pay</div>
                     <div className="upi-item"><img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/phonepe-logo-icon.png" alt="PhonePe" />PhonePe</div>
                     <div className="upi-item"><img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" />Paytm</div>
-                    <p><strong>Note:</strong> UPI payment integration coming soon. Please use COD for now.</p>
+                    <p><strong>Note:</strong> You&apos;ll choose your UPI app inside the secure Razorpay payment window.</p>
                   </div>
+                  {orderError && <p style={{ color: "#dc2626", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>⚠ {orderError}</p>}
                   <div className="btn-row">
                     {!isDineIn && <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>}
-                    <button className="btn btn-next" disabled>Pay via UPI</button>
+                    <button className="btn btn-next" onClick={handlePlaceOrder} disabled={placing}>
+                      {placing ? "Placing…" : "Pay via UPI"}
+                    </button>
                   </div>
                 </div>
               )}
@@ -414,10 +664,13 @@ export default function CheckoutPage() {
                   <div className="input-group"><input type="text" placeholder="Card Number" style={{ background: "none", border: "1px solid #eee" }} /></div>
                   <div className="input-group"><input type="text" placeholder="Exp Date" style={{ background: "none", border: "1px solid #eee" }} /></div>
                   <div className="input-group"><input type="text" placeholder="CVV" style={{ background: "none", border: "1px solid #eee" }} /></div>
-                  <p style={{ color: "#aaa", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>Card payment integration coming soon. Please use COD for now.</p>
+                  <p style={{ color: "#aaa", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>Card details are entered securely inside the Razorpay payment window — nothing above is sent to us.</p>
+                  {orderError && <p style={{ color: "#dc2626", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>⚠ {orderError}</p>}
                   <div className="btn-row">
                     {!isDineIn && <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>}
-                    <button className="btn btn-next" disabled>Pay</button>
+                    <button className="btn btn-next" onClick={handlePlaceOrder} disabled={placing}>
+                      {placing ? "Placing…" : "Pay"}
+                    </button>
                   </div>
                 </div>
               )}

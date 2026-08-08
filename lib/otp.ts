@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { getRequiredSecret } from "@/lib/env";
 
-const SECRET = process.env.JWT_SECRET || "damru-otp-secret";
 const OTP_EXPIRY_MINUTES = 10;
 
 /** Generate a 6-digit OTP */
@@ -13,14 +13,14 @@ export function generateOtp(): string {
 export function signOtpToken(email: string, otp: string): string {
   return jwt.sign(
     { email: email.toLowerCase(), otp, purpose: "user-otp" },
-    SECRET,
+    getRequiredSecret("JWT_SECRET"),
     { expiresIn: `${OTP_EXPIRY_MINUTES}m` }
   );
 }
 
 /** Verify an OTP token — returns email if valid, throws otherwise */
 export function verifyOtpToken(token: string, submittedOtp: string): string {
-  const payload = jwt.verify(token, SECRET) as {
+  const payload = jwt.verify(token, getRequiredSecret("JWT_SECRET")) as {
     email: string;
     otp:   string;
     purpose: string;
@@ -34,14 +34,14 @@ export function verifyOtpToken(token: string, submittedOtp: string): string {
 export function signResetToken(email: string): string {
   return jwt.sign(
     { email: email.toLowerCase(), purpose: "password-reset" },
-    SECRET,
+    getRequiredSecret("JWT_SECRET"),
     { expiresIn: "15m" }
   );
 }
 
 /** Verify a reset token */
 export function verifyResetToken(token: string): string {
-  const payload = jwt.verify(token, SECRET) as { email: string; purpose: string };
+  const payload = jwt.verify(token, getRequiredSecret("JWT_SECRET")) as { email: string; purpose: string };
   if (payload.purpose !== "password-reset") throw new Error("Invalid token");
   return payload.email;
 }

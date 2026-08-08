@@ -50,7 +50,6 @@ const GalleryTabSchema = new Schema<IGalleryTab>(
   { timestamps: true }
 );
 
-GalleryTabSchema.index({ tabKey: 1 });
 GalleryTabSchema.index({ sortOrder: 1 });
 
 const GalleryTab: Model<IGalleryTab> =

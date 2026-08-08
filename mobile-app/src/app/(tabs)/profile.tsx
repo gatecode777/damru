@@ -30,6 +30,7 @@ import { PaymentMethodCard } from "@/components/profile/PaymentMethodCard";
 import { CouponCard } from "@/components/profile/CouponCard";
 import { LoadingSkeleton } from "@/components/profile/LoadingSkeleton";
 import { HelpSupportSection } from "@/components/profile/HelpSupportSection";
+import { RewardsSection } from "@/components/profile/RewardsSection";
 
 export default function ProfileScreen() {
   const { user, setUser, ready } = useApp();
@@ -178,6 +179,12 @@ export default function ProfileScreen() {
                     </Pressable>
                   </View>
                 </ScrollView>
+              )}
+
+              {activeTab === "rewards" && (
+                <View style={{ flex: 1 }}>
+                  <RewardsSection onToast={(msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); }} />
+                </View>
               )}
 
               {activeTab === "address" && (

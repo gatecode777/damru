@@ -24,15 +24,15 @@ export async function POST(req: NextRequest) {
       guestCount: guestCount || "", message: message || "",
     });
     return NextResponse.json({ success: true, booking: JSON.parse(JSON.stringify(booking)) });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed to submit." }, { status: 500 });
+  } catch (e) {
+    console.error("POST banquet-bookings error:", e);
+    return NextResponse.json({ error: "Failed to submit. Please try again." }, { status: 500 });
   }
 }
 
 // GET — admin only
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const deny = await checkApiPerm("banquetBookings", "view"); if (deny) return deny;
   try {
     await connectDB();
     const { searchParams } = req.nextUrl;
@@ -58,8 +58,9 @@ export async function PATCH(req: NextRequest) {
     if (adminNote !== undefined) updates.adminNote = adminNote;
     const booking = await BanquetBooking.findByIdAndUpdate(id, updates, { new: true }).lean();
     return NextResponse.json({ booking: JSON.parse(JSON.stringify(booking)) });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 400 });
+  } catch (e) {
+    console.error("PATCH banquet-bookings error:", e);
+    return NextResponse.json({ error: "Failed to update booking." }, { status: 400 });
   }
 }
 

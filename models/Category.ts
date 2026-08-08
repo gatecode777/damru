@@ -23,6 +23,9 @@ const CategorySchema = new Schema<ICategory>(
   { timestamps: true }
 );
 
+// Matches the dominant customer-facing query: find({isActive}).sort({sortOrder}).
+CategorySchema.index({ isActive: 1, sortOrder: 1 });
+
 const Category: Model<ICategory> =
   mongoose.models.Category ||
   mongoose.model<ICategory>("Category", CategorySchema);

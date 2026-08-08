@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/rewards/run-scheduler",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/internal/payments/reconcile",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

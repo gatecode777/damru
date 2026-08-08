@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/mongodb";
 import Table from "@/models/Table";
-
-const SECRET = process.env.AUTH_SECRET || "damru-secret-key";
+import { getRequiredSecret } from "@/lib/env";
 
 export interface ValidatedTable {
   tableId: string;
@@ -20,7 +19,7 @@ export async function verifyTableToken(token: string): Promise<ValidatedTable | 
   if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, SECRET) as { id?: string };
+    const decoded = jwt.verify(token, getRequiredSecret("AUTH_SECRET")) as { id?: string };
     if (!decoded || !decoded.id) return null;
 
     await connectDB();

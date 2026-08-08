@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyOtpToken, signResetToken } from "@/lib/otp";
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = await checkRateLimit(`verify-otp:${getClientIp(req)}`, RATE_LIMITS.verifyOtp);
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterSeconds);
+
     const { otpToken, otp } = await req.json();
 
     if (!otpToken || !otp)

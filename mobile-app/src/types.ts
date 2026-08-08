@@ -106,6 +106,9 @@ export type Order = {
   orderNumber?: string;
   status: string;
   paymentMethod: string;
+  paymentStatus?: string;
+  paymentAmount?: number;
+  refundedAmount?: number;
   total: number;
   subtotal?: number;
   discount?: number;

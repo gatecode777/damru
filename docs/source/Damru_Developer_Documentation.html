@@ -1,0 +1,641 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Damru Developer Documentation</title>
+<link rel="stylesheet" href="doc-style.css">
+<style>
+  @page { @top-right { content: "Developer Technical Documentation"; } }
+  @page :first { @top-right { content: ""; } }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="cover-inner">
+    <p class="cover-eyebrow">Restaurant Commerce &amp; Rewards Platform</p>
+    <h1 class="cover-title">DAMRU</h1>
+    <p class="cover-sub">Developer Technical Documentation<br>Website + Backend + React Native</p>
+    <div class="cover-tagline">Architecture &nbsp;+&nbsp; Data Models &nbsp;+&nbsp; APIs &nbsp;+&nbsp; Reward Engines &nbsp;+&nbsp; Operations</div>
+    <div class="cover-meta">
+      <div><strong>Version</strong>1.0</div>
+      <div><strong>Documentation Date</strong>7 August 2026</div>
+      <div><strong>Scope</strong>Current repository implementation</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TABLE OF CONTENTS ============ -->
+<div class="page page-break">
+<h1 class="section-title">Table of Contents</h1>
+<p class="section-intro">Thirty sections covering architecture, data, APIs, reward engines, and operations.</p>
+<ul class="toc-list">
+  <li><span class="toc-num">01</span><span class="toc-label">Project Overview</span></li>
+  <li><span class="toc-num">02</span><span class="toc-label">Technology Stack</span></li>
+  <li><span class="toc-num">03</span><span class="toc-label">Repository Structure</span></li>
+  <li><span class="toc-num">04</span><span class="toc-label">Runtime Architecture</span></li>
+  <li><span class="toc-num">05</span><span class="toc-label">Authentication Architecture</span></li>
+  <li><span class="toc-num">06</span><span class="toc-label">Core Data Models</span></li>
+  <li><span class="toc-num">07</span><span class="toc-label">API Inventory</span></li>
+  <li><span class="toc-num">08</span><span class="toc-label">Validation and Error Handling</span></li>
+  <li><span class="toc-num">09</span><span class="toc-label">Damru Reward Architecture</span></li>
+  <li><span class="toc-num">10</span><span class="toc-label">Reward Event Map</span></li>
+  <li><span class="toc-num">11</span><span class="toc-label">Daily Streaks</span></li>
+  <li><span class="toc-num">12</span><span class="toc-label">Achievements</span></li>
+  <li><span class="toc-num">13</span><span class="toc-label">Missions</span></li>
+  <li><span class="toc-num">14</span><span class="toc-label">Referrals</span></li>
+  <li><span class="toc-num">15</span><span class="toc-label">Loyalty Tiers</span></li>
+  <li><span class="toc-num">16</span><span class="toc-label">Checkout and Order Lifecycle</span></li>
+  <li><span class="toc-num">17</span><span class="toc-label">Website Architecture</span></li>
+  <li><span class="toc-num">18</span><span class="toc-label">Mobile Architecture</span></li>
+  <li><span class="toc-num">19</span><span class="toc-label">Admin Architecture and Permissions</span></li>
+  <li><span class="toc-num">20</span><span class="toc-label">Email and Scheduled Work</span></li>
+  <li><span class="toc-num">21</span><span class="toc-label">Security Properties</span></li>
+  <li><span class="toc-num">22</span><span class="toc-label">Environment Variables</span></li>
+  <li><span class="toc-num">23</span><span class="toc-label">Local Development</span></li>
+  <li><span class="toc-num">24</span><span class="toc-label">Build and Deployment</span></li>
+  <li><span class="toc-num">25</span><span class="toc-label">Testing and Known Issues</span></li>
+  <li><span class="toc-num">26</span><span class="toc-label">Common Extension Workflows</span></li>
+  <li><span class="toc-num">27</span><span class="toc-label">Troubleshooting</span></li>
+  <li><span class="toc-num">28</span><span class="toc-label">Production Checklist</span></li>
+  <li><span class="toc-num">29</span><span class="toc-label">Developer Onboarding Checklist</span></li>
+</ul>
+</div>
+
+<!-- ============ 1. PROJECT OVERVIEW ============ -->
+<div class="page page-break" id="sec-01">
+<h1 class="section-title"><span class="section-num">01</span>Project Overview</h1>
+<p class="section-intro">What this repository is, and how its pieces fit together.</p>
+
+<p>Damru is a TypeScript monorepository-style project containing a Next.js website, a Next.js route-handler backend, an administration interface, an Expo/React Native mobile application, Mongoose models, and business services. MongoDB is the persistent store.</p>
+
+<p>The website and mobile client are two independent front doors that share the same backend endpoints. The backend owns authentication, commerce validation, reward eligibility, progress tracking, and redemption — none of that logic is duplicated or re-implemented on either client.</p>
+
+<div class="callout info">
+  <strong>Reading this document</strong>
+  Each section describes confirmed repository structure and behavior as implemented today. Where a detail could not be confirmed from the codebase or committed configuration, it is called out explicitly rather than assumed.
+</div>
+</div>
+
+<!-- ============ 2. TECHNOLOGY STACK ============ -->
+<div class="page page-break" id="sec-02">
+<h1 class="section-title"><span class="section-num">02</span>Technology Stack</h1>
+<p class="section-intro">Core languages, frameworks, and libraries in the current repository.</p>
+
+<table>
+<tr><th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th></tr>
+<tr><td>Web / backend</td><td>Next.js</td><td>16.2.4</td><td>App Router, server actions, route handlers</td></tr>
+<tr><td>Web UI</td><td>React / React DOM</td><td>19.2.4</td><td>Website and admin rendering</td></tr>
+<tr><td>Language</td><td>TypeScript</td><td>5.x root / 6.0 mobile</td><td>Static typing</td></tr>
+<tr><td>Database</td><td>MongoDB + Mongoose</td><td>Mongoose 9.5.0</td><td>Persistence and schemas</td></tr>
+<tr><td>Authentication</td><td>NextAuth beta + custom customer sessions</td><td>5.0.0-beta.31</td><td>Admin and customer authentication patterns</td></tr>
+<tr><td>Mobile</td><td>Expo</td><td>57.0.10</td><td>React Native application runtime</td></tr>
+<tr><td>Mobile UI</td><td>React Native</td><td>0.86.2</td><td>Native screens</td></tr>
+<tr><td>Mobile routing</td><td>Expo Router</td><td>57.0.10</td><td>File-based navigation</td></tr>
+<tr><td>Mobile data</td><td>TanStack Query</td><td>5.101.4</td><td>Query caching and retry policy</td></tr>
+<tr><td>Email</td><td>Nodemailer / Resend</td><td>7.0.13 / 6.18.1</td><td>Transactional messages</td></tr>
+<tr><td>Passwords</td><td>bcryptjs</td><td>3.0.3</td><td>Password hashing</td></tr>
+<tr><td>Tokens</td><td>jsonwebtoken</td><td>9.0.3</td><td>Signed token support</td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>Resend is installed but not the live email path</strong>
+  Nodemailer/SMTP is the transactional email path actually used by <code>lib/email.ts</code>. The Resend dependency is present in <code>package.json</code> but not wired into the send path — confirm before relying on it.
+</div>
+</div>
+
+<!-- ============ 3. REPOSITORY STRUCTURE ============ -->
+<div class="page page-break" id="sec-03">
+<h1 class="section-title"><span class="section-num">03</span>Repository Structure</h1>
+<p class="section-intro">Top-level layout of the maintained source tree.</p>
+
+<div class="tree">
+<span class="root">damru/</span><br>
+<span class="branch">├── app/</span> <span class="small">Next.js pages, admin, APIs, server actions</span><br>
+<span class="branch">├── components/</span> <span class="small">Website and admin components</span><br>
+<span class="branch">├── lib/</span> <span class="small">Database, auth, rewards, and business services</span><br>
+<span class="branch">├── models/</span> <span class="small">Mongoose models</span><br>
+<span class="branch">├── public/</span> <span class="small">Static website assets</span><br>
+<span class="branch">├── scripts/</span> <span class="small">Seeds, schedulers, reconciliation utilities</span><br>
+<span class="branch">├── styles/</span> <span class="small">Website stylesheets</span><br>
+<span class="branch">├── docs/source/</span> <span class="small">Documentation sources</span><br>
+<span class="branch">├── mobile-app/src/app/</span> <span class="small">Expo Router screens</span><br>
+<span class="branch">├── mobile-app/src/components/</span> <span class="small">Mobile UI</span><br>
+<span class="branch">├── mobile-app/src/lib/</span> <span class="small">API/query/analytics helpers</span><br>
+<span class="branch">├── mobile-app/src/services/</span> <span class="small">Backend API clients</span><br>
+<span class="branch">├── mobile-app/src/types/</span> <span class="small">Mobile response types</span><br>
+<span class="branch">├── auth.ts</span> <span class="small">Admin authentication integration</span><br>
+<span class="branch">├── proxy.ts</span> <span class="small">Request proxy/middleware behaviour</span><br>
+<span class="branch">├── next.config.ts, package.json</span><br>
+<span class="branch">└── tsconfig.json</span>
+</div>
+
+<p>Generated directories such as <code>node_modules</code>, <code>.next</code>, native build output, and Git internals are not part of the maintained source inventory and are not scanned or documented here.</p>
+</div>
+
+<!-- ============ 4. RUNTIME ARCHITECTURE ============ -->
+<div class="page page-break" id="sec-04">
+<h1 class="section-title"><span class="section-num">04</span>Runtime Architecture</h1>
+<p class="section-intro">How the website, mobile app, and admin UI reach the same backend.</p>
+
+<div class="arch-wrap">
+  <div class="arch-top">Next.js Route Handlers / Server Actions</div>
+  <div class="arch-children">
+    <div class="arch-child">Next.js Website</div>
+    <div class="arch-child">React Native App</div>
+    <div class="arch-child">Admin UI</div>
+  </div>
+</div>
+<div class="flow" style="margin-top:6px;">
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Auth and Validation</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Business Engines</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Mongoose Models → MongoDB</div>
+</div>
+
+<p>The mobile app calls the same <code>/api/...</code> surface exposed to the website — there is no separate mobile-only backend. Server-only modules connect to MongoDB through <code>lib/mongodb.ts</code>. Business engines sit between event sources (route handlers, server actions) and models so reward rules are defined once and never duplicated in either client.</p>
+</div>
+
+<!-- ============ 5. AUTHENTICATION ARCHITECTURE ============ -->
+<div class="page page-break" id="sec-05">
+<h1 class="section-title"><span class="section-num">05</span>Authentication Architecture</h1>
+<p class="section-intro">Two separate identity systems: customer sessions and admin auth.</p>
+
+<p>Customer endpoints cover registration, OTP sending and verification, login, logout, current-user lookup/update, and password reset. Customer route handlers obtain the authenticated user through the established customer-session helper and return <code>401</code> when absent. Admin authentication uses the project's NextAuth configuration and permission helpers.</p>
+
+<div class="callout warn">
+  <strong>Password and verification flows must remain server-owned</strong>
+  Secrets must never be returned to clients. OTP values are handled entirely server-side as part of the verification flow.
+</div>
+
+<h2>Relevant routes</h2>
+<p>
+<code>/api/user/register</code> · <code>/api/user/login</code> · <code>/api/user/logout</code> · <code>/api/user/me</code> · <code>/api/user/send-otp</code> · <code>/api/user/verify-otp</code> · <code>/api/user/reset-password</code> · <code>/api/auth/[...nextauth]</code>
+</p>
+</div>
+
+<!-- ============ 6. CORE DATA MODELS ============ -->
+<div class="page page-break" id="sec-06">
+<h1 class="section-title"><span class="section-num">06</span>Core Data Models</h1>
+<p class="section-intro">Every Mongoose model in the repository and what it's responsible for.</p>
+
+<table>
+<tr><th>Model</th><th>Responsibility</th><th>Important constraints / indexes</th></tr>
+<tr><td>User</td><td>Identity, profile, wallet totals, occasions, streak, referral, loyalty state</td><td>Unique email; sparse unique referral code; loyalty tier reference</td></tr>
+<tr><td>Order</td><td>Items, totals, payment and fulfilment state</td><td>Unique human order ID; user/status/date indexes</td></tr>
+<tr><td>Cart</td><td>Customer cart state</td><td>Customer association</td></tr>
+<tr><td>MenuItem / Category</td><td>Sellable menu and grouping</td><td>Application-level validation</td></tr>
+<tr><td>Coupon</td><td>Public/private discounts and reward coupons</td><td>Code and customer eligibility constraints</td></tr>
+<tr><td>DamruTransaction</td><td>Financial reward ledger</td><td>Unique idempotency key; user/date index</td></tr>
+<tr><td>RewardRule</td><td>Configured base rewards</td><td>Category configuration</td></tr>
+<tr><td>DamruConfig</td><td>Redemption and legacy reward settings</td><td>Singleton-style access service</td></tr>
+<tr><td>DailyStreakConfig</td><td>Daily reward sequence and recovery policy</td><td>Normalised configuration</td></tr>
+<tr><td>Achievement / UserAchievement</td><td>Achievement definitions and per-user state</td><td>Definition code and user progress uniqueness</td></tr>
+<tr><td>Mission / UserMission / MissionEvent</td><td>Mission definitions, user state, event deduplication</td><td>Deterministic period/event identity</td></tr>
+<tr><td>ReferralConfig / Referral</td><td>Referral policy and lifecycle</td><td>Referral identity/status controls</td></tr>
+<tr><td>LoyaltyTier</td><td>Configurable tier ladder</td><td>Unique code and rank; validated ranges</td></tr>
+<tr><td>Address</td><td>Saved customer delivery addresses</td><td>User ownership</td></tr>
+<tr><td>Admin</td><td>Staff identity, role, permissions</td><td>Administrative authentication fields</td></tr>
+<tr><td>Branch / Table</td><td>Restaurant locations and table operations</td><td>Operational identifiers</td></tr>
+<tr><td>Reservation / BanquetBooking</td><td>Booking requests</td><td>Lifecycle fields</td></tr>
+<tr><td>Blog / BlogCategory / BlogComment</td><td>Content publishing</td><td>Slug/category relationships</td></tr>
+<tr><td>GalleryTab / SiteSettings</td><td>Site-managed content</td><td>Configuration records</td></tr>
+<tr><td>Complaint</td><td>Customer support cases</td><td>Customer ownership/status</td></tr>
+</table>
+</div>
+
+<!-- ============ 7. API INVENTORY ============ -->
+<div class="page page-break" id="sec-07">
+<h1 class="section-title"><span class="section-num">07</span>API Inventory</h1>
+<p class="section-intro">Every route group, organized by domain.</p>
+
+<h2>Customer and commerce</h2>
+<table>
+<tr><th>Method family</th><th>Endpoint</th><th>Purpose</th></tr>
+<tr><td>GET/POST/PATCH/DELETE</td><td><code>/api/address</code></td><td>Saved-address operations</td></tr>
+<tr><td>GET/POST/PATCH/DELETE</td><td><code>/api/cart</code>, <code>/api/cart/item</code></td><td>Cart state and items</td></tr>
+<tr><td>GET/POST</td><td><code>/api/orders</code></td><td>Customer order list and creation</td></tr>
+<tr><td>GET</td><td><code>/api/menu</code>, <code>/api/home-menu</code>, <code>/api/menu/suggestions</code></td><td>Menu discovery</td></tr>
+<tr><td>GET</td><td><code>/api/search</code></td><td>Site search</td></tr>
+<tr><td>GET/POST</td><td><code>/api/coupons</code></td><td>Coupon validation/listing patterns</td></tr>
+<tr><td>GET/POST/PATCH</td><td><code>/api/reservations</code>, <code>/api/reservations/[id]</code></td><td>Reservations</td></tr>
+<tr><td>GET/POST</td><td><code>/api/banquet-bookings</code></td><td>Banquet enquiries</td></tr>
+<tr><td>GET/POST/PATCH</td><td><code>/api/complaints</code>, <code>/api/complaints/[id]</code></td><td>Support complaints</td></tr>
+</table>
+
+<h2>Content</h2>
+<p><code>/api/branches</code> · <code>/api/blogs/[slug]</code> · <code>/api/blog-search</code> · <code>/api/blog-categories</code> · <code>/api/blog-comments</code> · <code>/api/gallery</code> · <code>/api/homepage-blogs</code> · <code>/api/upload</code> support published content and media workflows.</p>
+
+<h2>Customer rewards</h2>
+<table>
+<tr><th>Method</th><th>Endpoint</th><th>Purpose</th></tr>
+<tr><td>GET</td><td><code>/api/rewards/dashboard</code></td><td>Lightweight wallet and programme summaries</td></tr>
+<tr><td>GET</td><td><code>/api/rewards/history</code></td><td>Paginated ledger history</td></tr>
+<tr><td>GET</td><td><code>/api/rewards/coupons</code></td><td>Eligible reward coupons</td></tr>
+<tr><td>GET</td><td><code>/api/rewards/upcoming</code></td><td>Occasion and legacy summary data</td></tr>
+<tr><td>POST</td><td><code>/api/rewards/redeem</code></td><td>Order-bound Damru redemption</td></tr>
+<tr><td>GET</td><td><code>/api/rewards/achievements</code></td><td>Authoritative progress</td></tr>
+<tr><td>GET</td><td><code>/api/rewards/missions</code></td><td>Authoritative mission state</td></tr>
+<tr><td>GET</td><td><code>/api/rewards/referrals</code></td><td>Referral code, summary, and history</td></tr>
+<tr><td>GET</td><td><code>/api/rewards/loyalty</code></td><td>Current tier, progress, benefits, ladder</td></tr>
+</table>
+
+<h2>Rewards administration</h2>
+<p>Administration routes under <code>/api/admin/rewards</code> cover rules, global configuration, daily rewards, achievements, missions, referral configuration/history, loyalty tiers, user search/detail, occasion unlocks, and reason-recorded adjustments. They call <code>checkApiPerm("rewards", "view" | "edit")</code> rather than creating a separate authorisation mechanism.</p>
+</div>
+
+<!-- ============ 8. VALIDATION AND ERROR HANDLING ============ -->
+<div class="page page-break" id="sec-08">
+<h1 class="section-title"><span class="section-num">08</span>Validation and Error Handling</h1>
+<p class="section-intro">The layered checks every request passes through.</p>
+
+<ol>
+  <li>Route handlers validate request shapes, numeric ranges, enum membership, dates, and object identity.</li>
+  <li>Authentication helpers establish customer/admin identity.</li>
+  <li>Permission helpers authorise administrative capabilities.</li>
+  <li>Business services recompute eligibility and do not trust frontend progress.</li>
+  <li>Mongoose schemas enforce required values, enums, bounds, and unique indexes.</li>
+  <li>Conditional atomic updates and unique idempotency keys protect financial operations.</li>
+</ol>
+
+<p>Route handlers generally return JSON errors with appropriate <code>400</code>, <code>401</code>, <code>403</code>, <code>404</code>, or <code>500</code> status codes. Website and mobile callers show safe messages. TanStack Query retries transient failures once but avoids retrying 4xx failures.</p>
+</div>
+
+<!-- ============ 9. DAMRU REWARD ARCHITECTURE ============ -->
+<div class="page page-break" id="sec-09">
+<h1 class="section-title"><span class="section-num">09</span>Damru Reward Architecture</h1>
+<p class="section-intro">The single controlled path every Damru credit or debit travels.</p>
+
+<div class="flow">
+  <div class="flow-step">Business Event</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Backend Eligibility / Configuration</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">awardDamru()</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Unique Idempotency Key</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">DamruTransaction Credit</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-step">Atomic User Wallet Increment</div>
+</div>
+
+<p><code>lib/rewardEngine.ts</code> is the central issuer. <code>awardDamru()</code> creates the ledger record, atomically increments <code>damruBalance</code> and <code>damruTotalEarned</code>, patches <code>balanceAfter</code>, optionally creates a private coupon, and attempts a notification email. Duplicate transaction keys return a duplicate result without another balance change.</p>
+
+<p><code>redeemDamru()</code> validates the order and redemption policy, conditionally decrements the wallet, and writes an order-bound debit. <code>adjustDamru()</code> records the acting administrator and required reason.</p>
+
+<div class="callout gap">
+  <strong>Never introduce a direct wallet write</strong>
+  Direct wallet writes must not be introduced outside these controlled primitives — every new reward-producing feature must call <code>awardDamru()</code>, <code>redeemDamru()</code>, or <code>adjustDamru()</code>.
+</div>
+</div>
+
+<!-- ============ 10. REWARD EVENT MAP ============ -->
+<div class="page page-break" id="sec-10">
+<h1 class="section-title"><span class="section-num">10</span>Reward Event Map</h1>
+<p class="section-intro">Which trusted backend events fan out into which reward effects.</p>
+
+<div class="tree">
+<span class="root">Registration</span><br>
+<span class="branch">├── Welcome reward</span><br>
+<span class="branch">└── Referral registration association</span>
+</div>
+
+<div class="tree">
+<span class="root">Login / authenticated activity</span><br>
+<span class="branch">├── Daily login reward</span><br>
+<span class="branch">├── Streak update</span><br>
+<span class="branch">├── Streak achievement evaluation</span><br>
+<span class="branch">└── Streak mission evaluation</span>
+</div>
+
+<div class="tree">
+<span class="root">Profile activity</span><br>
+<span class="branch">├── Profile achievement evaluation</span><br>
+<span class="branch">└── Profile mission evaluation</span>
+</div>
+
+<div class="tree">
+<span class="root">Order delivered</span><br>
+<span class="branch">├── First-order reward</span><br>
+<span class="branch">├── Order/spend achievements</span><br>
+<span class="branch">├── Order/spend missions</span><br>
+<span class="branch">├── Referral qualification</span><br>
+<span class="branch">└── Loyalty tier evaluation and optional upgrade bonus</span>
+</div>
+</div>
+
+<!-- ============ 11. DAILY STREAKS ============ -->
+<div class="page page-break" id="sec-11">
+<h1 class="section-title"><span class="section-num">11</span>Daily Streaks</h1>
+<p class="section-intro">Server-authoritative streak calculation and reward issuance.</p>
+
+<p><code>lib/dailyStreak.ts</code> contains pure date/projection logic. <code>lib/getDailyStreakConfig.ts</code> loads normalised configuration. <code>checkAndAwardDailyLogin()</code> uses a server date string, a conditional user update, and a <code>daily-login:{userId}:{date}</code> transaction key. Cycle behavior and grace-period decisions remain fully admin-configurable rather than hardcoded.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>lib/dailyStreak.ts</h4><p>Pure streak projection and reward-day resolution logic.</p></div>
+  <div class="card"><h4>lib/getDailyStreakConfig.ts</h4><p>Loads and normalises the admin-configured day-reward schedule.</p></div>
+  <div class="card"><h4>Idempotency key</h4><p><code>daily-login:{userId}:{date}</code> — one credit per eligible calendar day.</p></div>
+</div>
+</div>
+
+<!-- ============ 12. ACHIEVEMENTS ============ -->
+<div class="page page-break" id="sec-12">
+<h1 class="section-title"><span class="section-num">12</span>Achievements</h1>
+<p class="section-intro">Long-term progress milestones evaluated by a shared engine.</p>
+
+<p><code>lib/achievementEngine.ts</code> resolves progress for <code>ORDER_COUNT</code>, <code>LIFETIME_SPEND</code>, <code>LOGIN_STREAK</code>, <code>PROFILE_COMPLETE</code>, and <code>ACCOUNT_AGE_DAYS</code> conditions. Definitions are stored in <code>Achievement</code>; per-user state is stored in <code>UserAchievement</code>. Unlock rewards use the central reward engine and a deterministic idempotency identity, so re-evaluating an already-unlocked achievement never double-pays.</p>
+</div>
+
+<!-- ============ 13. MISSIONS ============ -->
+<div class="page page-break" id="sec-13">
+<h1 class="section-title"><span class="section-num">13</span>Missions</h1>
+<p class="section-intro">Time-bound challenges with event-level deduplication.</p>
+
+<p><code>lib/missionPeriod.ts</code> calculates period boundaries. <code>lib/missionEngine.ts</code> updates applicable missions for <code>ORDER_COUNT</code>, <code>SPENDING_AMOUNT</code>, <code>LOGIN_STREAK</code>, and <code>PROFILE_COMPLETE</code> conditions. <code>MissionEvent</code> prevents a repeated source event from incrementing progress twice — this is a separate dedup layer from mission-completion idempotency itself.</p>
+
+<p>Supported periods: <span class="badge tag">ONE_TIME</span> <span class="badge tag">DAILY</span> <span class="badge tag">WEEKLY</span> <span class="badge tag">MONTHLY</span> <span class="badge tag">CAMPAIGN</span></p>
+</div>
+
+<!-- ============ 14. REFERRALS ============ -->
+<div class="page page-break" id="sec-14">
+<h1 class="section-title"><span class="section-num">14</span>Referrals</h1>
+<p class="section-intro">Code generation, qualification, and dual-sided reward issuance.</p>
+
+<p><code>lib/referralEngine.ts</code>, <code>lib/referralCode.ts</code>, <code>ReferralConfig</code>, and <code>Referral</code> together implement code generation, registration association, first eligible/delivered-order qualification, referral limits, verification checks, reward delay policy, and duplicate-safe reward issuance for both sides of a referral. Referral API output masks or omits sensitive referred-user information.</p>
+</div>
+
+<!-- ============ 15. LOYALTY TIERS ============ -->
+<div class="page page-break" id="sec-15">
+<h1 class="section-title"><span class="section-num">15</span>Loyalty Tiers</h1>
+<p class="section-intro">Configurable tier ladder with trusted, backend-computed qualification.</p>
+
+<p><code>LoyaltyTier</code> stores name, code, rank, qualification type, min/max range, multiplier, benefits, badge, an optional upgrade bonus, and an activation flag. Active tiers must share a single qualification type; invalid and overlapping ranges are rejected at the model/admin layer. Only the highest tier may omit a maximum.</p>
+
+<p><code>lib/loyaltyEngine.ts</code> loads the active ladder, calculates trusted qualification from delivered orders or lifetime Damru totals, resolves the current and next tier, returns progress and benefits, persists tier identity on the user, and optionally issues an upgrade bonus through <code>awardDamru()</code> with the idempotency key <code>loyalty-tier:{userId}:{tierId}</code>.</p>
+
+<p>Multipliers are centralised in <code>getLoyaltyRewardMultiplier()</code> and currently apply only when the caller explicitly identifies <code>ORDER_REWARD</code>. <code>applyLoyaltyMultiplier()</code> uses integer rounding. Birthday, anniversary, login, achievement, mission, referral, admin-adjustment, and redemption transactions are <strong>not</strong> multiplied by default.</p>
+
+<div class="callout info">
+  <strong>Reconciliation script</strong>
+  <code>scripts/recalculate-loyalty-tiers.ts</code> is rerunnable, reports only aggregate counts, and deliberately sets <code>issueBonus: false</code> so re-running it never re-pays upgrade bonuses.
+</div>
+
+<div class="callout warn">
+  <strong>Known debugging note</strong>
+  A standalone loyalty helper runner was observed to block/hang during Mongoose module initialisation in this execution environment during documentation research; no database write occurred. Investigate module-level side effects if a future script exhibits the same symptom.
+</div>
+</div>
+
+<!-- ============ 16. CHECKOUT AND ORDER LIFECYCLE ============ -->
+<div class="page page-break" id="sec-16">
+<h1 class="section-title"><span class="section-num">16</span>Checkout and Order Lifecycle</h1>
+<p class="section-intro">From cart to delivery, and the trusted transition that triggers rewards.</p>
+
+<div class="flow-row">
+  <div class="flow-step">Cart</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Address</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Coupon / Damru</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Payment Selection</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Order</div>
+</div>
+
+<p>Backend routes validate ownership and recompute sensitive totals server-side. Order states are <code>pending</code>, <code>confirmed</code>, <code>preparing</code>, <code>out_for_delivery</code>, <code>delivered</code>, and <code>cancelled</code>; payment states are <code>pending</code>, <code>paid</code>, and <code>failed</code>.</p>
+
+<div class="callout good">
+  <strong>The delivered transition is the trusted reward trigger</strong>
+  The delivered transition in <code>app/actions/orders.ts</code> invokes the reward engines (first-order, achievements, missions, referral qualification, loyalty evaluation). Individual engines remain idempotent so a replayed transition never duplicates a financial reward.
+</div>
+</div>
+
+<!-- ============ 17. WEBSITE ARCHITECTURE ============ -->
+<div class="page page-break" id="sec-17">
+<h1 class="section-title"><span class="section-num">17</span>Website Architecture</h1>
+<p class="section-intro">App Router structure and where rewards UI lives.</p>
+
+<p>The App Router website is under <code>app/(website)</code>. Customer rewards are integrated into <code>my-profile/page.tsx</code> and supported by <code>lib/rewards</code> types, API wrappers, provider state, and analytics event names. CSS lives under <code>styles/website</code>. Client components handle browser interaction while route handlers and server actions retain protected, server-only logic.</p>
+</div>
+
+<!-- ============ 18. MOBILE ARCHITECTURE ============ -->
+<div class="page page-break" id="sec-18">
+<h1 class="section-title"><span class="section-num">18</span>Mobile Architecture</h1>
+<p class="section-intro">Expo Router structure and the shared-API pattern.</p>
+
+<p>The Expo app uses <code>mobile-app/src/app</code> for routes. <code>services/rewardsApi.ts</code> wraps the shared reward endpoints; <code>types/rewards.ts</code> defines response contracts; <code>queryClient.ts</code> owns retry/cache defaults. Rewards include dashboard/profile integration plus dedicated history, achievement, mission, referral, and loyalty screens, each with loading, retry, error, and pull-to-refresh handling.</p>
+</div>
+
+<!-- ============ 19. ADMIN ARCHITECTURE AND PERMISSIONS ============ -->
+<div class="page page-break" id="sec-19">
+<h1 class="section-title"><span class="section-num">19</span>Admin Architecture and Permissions</h1>
+<p class="section-intro">One dashboard, module-level permission gating.</p>
+
+<p>Admin routes and pages are grouped under <code>app/admin</code>. The rewards page contains tabs for reward rules, Damru config, daily rewards, achievements, missions, referrals, loyalty tiers, and individual customer rewards. <code>getAdminPerms()</code> supports server actions and <code>checkApiPerm()</code> protects route handlers. Manager role/permission editing reuses the same permission model.</p>
+
+<div class="callout gap">
+  <strong>Known permission gap</strong>
+  <code>role === "admin"</code> bypasses all permission checks in the current implementation — only the <code>moderator</code> role is actually restricted by granular permissions. <code>checkApiPerm</code> also has no null-check on the admin lookup, and an inactive admin (<code>isActive: false</code>) is never enforced at the permission layer. These are documented findings, not yet remediated.
+</div>
+</div>
+
+<!-- ============ 20. EMAIL AND SCHEDULED WORK ============ -->
+<div class="page page-break" id="sec-20">
+<h1 class="section-title"><span class="section-num">20</span>Email and Scheduled Work</h1>
+<p class="section-intro">Transactional messages and the rewards scheduler.</p>
+
+<p><code>lib/email.ts</code> centralises transactional email behaviour over Nodemailer/SMTP. The rewards scheduler endpoint is <code>/api/internal/rewards/run-scheduler</code>; its deployment schedule is configured in <code>vercel.json</code>. Scheduler access must remain secret-protected. The code supports verification/reset and reward-related message flows without placing provider secrets in client code.</p>
+</div>
+
+<!-- ============ 21. SECURITY PROPERTIES ============ -->
+<div class="page page-break" id="sec-21">
+<h1 class="section-title"><span class="section-num">21</span>Security Properties</h1>
+<p class="section-intro">What's already enforced, confirmed directly from the code.</p>
+
+<div class="card-grid">
+  <div class="card"><h4>Hashed passwords</h4><p>Protected verification/token material, never stored or returned in readable form.</p></div>
+  <div class="card"><h4>Authenticated APIs</h4><p>Customer endpoints require a valid session and enforce ownership checks.</p></div>
+  <div class="card"><h4>Permission-gated admin</h4><p>Administrative routes are checked against assigned module permissions.</p></div>
+  <div class="card"><h4>Reward idempotency</h4><p>Unique keys guarantee a reward can never be issued twice for the same event.</p></div>
+  <div class="card"><h4>Atomic wallet updates</h4><p>Balance changes use conditional atomic operations with full ledger history.</p></div>
+  <div class="card"><h4>Order-bound redemption</h4><p>Damru redemption is tied to a specific, owned order and re-validated server-side.</p></div>
+  <div class="card"><h4>Private coupon isolation</h4><p>Customer-specific coupons are never visible to another customer.</p></div>
+  <div class="card"><h4>Backend-authoritative progress</h4><p>Reward and loyalty progress is always computed server-side, never trusted from a client.</p></div>
+  <div class="card"><h4>Safe reconciliation output</h4><p>Reconciliation scripts report aggregate counts only, no personal data.</p></div>
+</div>
+
+<div class="callout gap">
+  <strong>Known gaps (documented, not remediated in this pass)</strong>
+  No rate limiting exists anywhere in the current implementation. OTP values are carried inside a signed-but-not-encrypted JWT rather than being encrypted at rest. Coupon <code>perUserLimit</code>/<code>usedBy</code> fields exist on the schema but are not enforced or updated by any route, and coupon <code>usageLimit</code> has a TOCTOU race under concurrent redemption. See also the admin permission gap noted in Section 19.
+</div>
+</div>
+
+<!-- ============ 22. ENVIRONMENT VARIABLES ============ -->
+<div class="page page-break" id="sec-22">
+<h1 class="section-title"><span class="section-num">22</span>Environment Variables</h1>
+<p class="section-intro">Expected configuration categories — names only, never values.</p>
+
+<div class="callout gap">
+  <strong>Never copy values into documentation</strong>
+  Variable names must be taken from code and deployment configuration before production setup. Never copy values from <code>.env.local</code> into documentation, commits, logs, or client bundles.
+</div>
+
+<p>Expected categories, based on how the codebase consumes configuration:</p>
+<ul>
+  <li>MongoDB connection string</li>
+  <li>Authentication / session secrets</li>
+  <li>Public application URL</li>
+  <li>Mobile API base URL</li>
+  <li>Email provider credentials (SMTP)</li>
+  <li>Scheduler protection secret (for <code>/api/internal/rewards/run-scheduler</code>)</li>
+  <li>Any payment provider credentials used by the deployed environment</li>
+</ul>
+</div>
+
+<!-- ============ 23. LOCAL DEVELOPMENT ============ -->
+<div class="page page-break" id="sec-23">
+<h1 class="section-title"><span class="section-num">23</span>Local Development</h1>
+<p class="section-intro">Getting the website, backend, and mobile app running locally.</p>
+
+<pre class="mono-block"># Website/backend
+npm install
+npm run dev
+
+# Static validation
+npx tsc --noEmit
+npm run lint
+
+# Mobile
+cd mobile-app
+npm install
+npm start
+npm run android
+npm run typecheck</pre>
+
+<p>Configure required environment variables locally before starting. The root <code>seed</code> script runs <code>npx tsx scripts/seed.ts</code>. Do not point seed or reconciliation commands at production without explicit operational review.</p>
+</div>
+
+<!-- ============ 24. BUILD AND DEPLOYMENT ============ -->
+<div class="page page-break" id="sec-24">
+<h1 class="section-title"><span class="section-num">24</span>Build and Deployment</h1>
+<p class="section-intro">What's confirmed about how this ships.</p>
+
+<p>The website uses <code>npm run build</code> and <code>npm start</code>. <code>vercel.json</code> supplies the discovered deployment scheduling configuration; hosting assumptions beyond committed configuration are not confirmed. Expo/EAS configuration under <code>mobile-app</code> governs native build profiles.</p>
+
+<p>Production requires: a reachable API URL, database, authentication secrets, email setup, scheduler secret, configured admin permissions, and seeded reward/tier configuration.</p>
+</div>
+
+<!-- ============ 25. TESTING AND KNOWN ISSUES ============ -->
+<div class="page page-break" id="sec-25">
+<h1 class="section-title"><span class="section-num">25</span>Testing and Known Issues</h1>
+<p class="section-intro">Confirmed validation status as of 7 August 2026.</p>
+
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td>Root <code>npx tsc --noEmit</code></td><td><span class="badge done">Passes</span></td></tr>
+<tr><td>Mobile <code>npx tsc --noEmit</code></td><td><span class="badge done">Passes</span></td></tr>
+<tr><td>Targeted lint</td><td><span class="badge partial">Existing strict-rule issues in large rewards/profile files and admin handlers</span></td></tr>
+<tr><td>Mobile Expo lint</td><td><span class="badge partial">Known <code>eslint-config-expo/flat</code> environment issue</span></td></tr>
+<tr><td>Database-backed integration test harness</td><td><span class="badge no">Not found</span></td></tr>
+<tr><td>Automated test infrastructure (general)</td><td><span class="badge no">Not found anywhere in the repository</span></td></tr>
+<tr><td>CI/CD pipeline</td><td><span class="badge no">Not found</span></td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>No unrelated dependency was installed to mask the Expo lint issue</strong>
+  A pure loyalty helper runner was also observed to block/hang during Mongoose module initialisation in the current execution environment; no database write occurred as a result.
+</div>
+</div>
+
+<!-- ============ 26. COMMON EXTENSION WORKFLOWS ============ -->
+<div class="page page-break" id="sec-26">
+<h1 class="section-title"><span class="section-num">26</span>Common Extension Workflows</h1>
+<p class="section-intro">Repeatable patterns for extending the platform safely.</p>
+
+<h2>Add an API</h2>
+<p>Create a route handler under <code>app/api</code>, authenticate first, validate input, call an existing service/model pattern, return safe JSON, and add web/mobile types where consumed.</p>
+
+<h2>Add a reward safely</h2>
+<ol>
+  <li>Define the trusted backend trigger.</li>
+  <li>Load server-side configuration and validate eligibility.</li>
+  <li>Generate a deterministic idempotency key.</li>
+  <li>Call <code>awardDamru()</code>; never increment balance directly.</li>
+  <li>Attach useful non-sensitive transaction metadata.</li>
+  <li>Add administration configuration only if required.</li>
+  <li>Extend API and client display types.</li>
+  <li>Test the same event twice.</li>
+</ol>
+
+<h2>Add an achievement or mission</h2>
+<p>Extend the model enum and engine calculation, integrate only at an existing trusted event, add admin/customer labels, and verify progress plus duplicate-event behaviour.</p>
+
+<h2>Add a mobile rewards screen</h2>
+<p>Add an Expo Router file, a typed service function, loading/error/retry/refresh states, query invalidation where mutations occur, and a navigation entry from the rewards profile section.</p>
+</div>
+
+<!-- ============ 27. TROUBLESHOOTING ============ -->
+<div class="page page-break" id="sec-27">
+<h1 class="section-title"><span class="section-num">27</span>Troubleshooting</h1>
+<p class="section-intro">Symptom-first lookup for common issues.</p>
+
+<table>
+<tr><th>Symptom</th><th>Checks</th></tr>
+<tr><td>Database connection failure</td><td>Confirm Mongo URI name/value locally, network access, and database availability</td></tr>
+<tr><td>Customer appears logged out</td><td>Inspect customer session cookie/token expiry and <code>/api/user/me</code> response</td></tr>
+<tr><td>Admin receives forbidden response</td><td>Inspect assigned rewards/resource permissions and the <code>checkApiPerm</code> action</td></tr>
+<tr><td>Damru not credited</td><td>Inspect rule activation, event eligibility, idempotency key, and ledger record</td></tr>
+<tr><td>Duplicate reward skipped</td><td>Expected when the same deterministic key already exists</td></tr>
+<tr><td>Loyalty tier absent</td><td>Configure at least one valid active tier and run reconciliation for existing users</td></tr>
+<tr><td>Wrong loyalty progress</td><td>Confirm all active tiers share qualification type and delivered-order data is correct</td></tr>
+<tr><td>Coupon unavailable</td><td>Check activation window, usage limits, ownership, and minimum order value</td></tr>
+<tr><td>Mobile API failure</td><td>Confirm mobile API base URL, device network reachability, and authentication state</td></tr>
+<tr><td>Expo lint failure</td><td>Verify the known <code>eslint-config-expo/flat</code> environment issue before changing app code</td></tr>
+</table>
+</div>
+
+<!-- ============ 28. PRODUCTION CHECKLIST ============ -->
+<div class="page page-break" id="sec-28">
+<h1 class="section-title"><span class="section-num">28</span>Production Checklist</h1>
+<p class="section-intro">Confirm before pointing this at real traffic.</p>
+
+<ul class="checklist">
+  <li>Production environment variable names and values configured securely</li>
+  <li>Production MongoDB indexes created and reviewed</li>
+  <li>Customer and admin authentication verified</li>
+  <li>Email sender/domain verified</li>
+  <li>Payment behaviour tested with production-safe credentials</li>
+  <li>Reward rules, streaks, achievements, missions, referrals, and loyalty tiers reviewed</li>
+  <li>Scheduler endpoint protected and schedule verified</li>
+  <li>Admin permissions assigned by least privilege</li>
+  <li>Website build and both TypeScript checks pass</li>
+  <li>Mobile API URL and native build profiles verified</li>
+  <li>Reward replay/idempotency scenarios tested against a staging database</li>
+  <li>Backup, monitoring, and incident ownership established</li>
+</ul>
+</div>
+
+<!-- ============ 29. DEVELOPER ONBOARDING CHECKLIST ============ -->
+<div class="page page-break" id="sec-29">
+<h1 class="section-title"><span class="section-num">29</span>Developer Onboarding Checklist</h1>
+<p class="section-intro">A first week on this codebase.</p>
+
+<ul class="checklist">
+  <li>Clone and install root/mobile dependencies</li>
+  <li>Configure local environment without committing secrets</li>
+  <li>Run website and mobile applications</li>
+  <li>Test customer and admin login</li>
+  <li>Review <code>Order</code>, <code>User</code>, <code>DamruTransaction</code>, and <code>rewardEngine.ts</code></li>
+  <li>Trace the delivered-order reward event map</li>
+  <li>Review admin permission checks</li>
+  <li>Run root and mobile TypeScript</li>
+  <li>Read known lint/test limitations</li>
+  <li>Use deterministic keys for every new reward-producing event</li>
+</ul>
+
+<p class="small" style="margin-top:24px;">This document describes confirmed repository structure and implementation as of 7 August 2026. Where operational deployment details are not committed, they are explicitly not assumed. No secret values or customer records are included.</p>
+</div>
+
+</body>
+</html>

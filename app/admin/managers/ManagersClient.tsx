@@ -19,7 +19,7 @@ const ROLE_CONFIG = {
 
 const MODULES = [
   "dashboard","users","orders","reservations","complaints",
-  "categories","menu","blogs","blogCategories","gallery","branches","banquetBookings","coupons","analytics",
+  "categories","menu","blogs","blogCategories","gallery","branches","banquetBookings","coupons","rewards","analytics",
 ];
 
 function permCount(admin: Admin) {
@@ -257,7 +257,7 @@ export function PermTable({ permissions, readonly }: { permissions: any; readonl
     dashboard:"Dashboard", users:"Users", orders:"Orders", reservations:"Reservations",
     complaints:"Complaints", categories:"Categories", menu:"Menu Items", blogs:"Blogs",
     blogCategories:"Blog Categories", gallery:"Gallery", branches:"Branches",
-    banquetBookings:"Banquet Bookings", coupons:"Coupons", analytics:"Analytics",
+    banquetBookings:"Banquet Bookings", coupons:"Coupons", rewards:"Rewards & Loyalty", analytics:"Analytics",
   };
   const ACTIONS = ["view","create","edit","delete"];
   return (

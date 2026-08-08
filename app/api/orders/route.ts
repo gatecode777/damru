@@ -63,10 +63,14 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    // ── Fetch order items ──────────────────────────────────────
+    // ── Fetch cart/items and delivery address in parallel — neither depends on the other ──
+    const [cart, address] = await Promise.all([
+      user ? Cart.findOne({ userId: user.id }) : Promise.resolve(null),
+      (!isDineIn && addressId) ? Address.findOne({ _id: addressId, userId: user?.id }) : Promise.resolve(null),
+    ]);
+
     let orderItems: any[] = [];
     if (user) {
-      const cart = await Cart.findOne({ userId: user.id });
       if (!cart || cart.items.length === 0) {
         return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
       }
@@ -79,11 +83,8 @@ export async function POST(req: NextRequest) {
       orderItems = bodyItems;
     }
 
-    // ── Fetch address if not dine-in ───────────────────────────
-    let address = null;
-    if (!isDineIn && addressId) {
-      address = await Address.findOne({ _id: addressId, userId: user?.id });
-      if (!address) return NextResponse.json({ error: "Address not found." }, { status: 404 });
+    if (!isDineIn && addressId && !address) {
+      return NextResponse.json({ error: "Address not found." }, { status: 404 });
     }
 
     // ── Calculate totals ──────────────────────────────────────
@@ -106,10 +107,27 @@ export async function POST(req: NextRequest) {
               (subtotal * coupon.value) / 100,
               coupon.maxDiscount !== null ? coupon.maxDiscount : Infinity
             );
-        discount   = Math.round(discount);
-        couponUsed = coupon.code;
-        // Increment usedCount
-        await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usedCount: 1 } });
+        // Atomically re-check + increment usedCount so two concurrent orders can't both
+        // slip past the usageLimit check above and oversell a limited coupon.
+        const reserved = await Coupon.findOneAndUpdate(
+          {
+            _id: coupon._id,
+            $or: [
+              { usageLimit: null },
+              { $expr: { $lt: ["$usedCount", "$usageLimit"] } },
+            ],
+          },
+          { $inc: { usedCount: 1 } }
+        );
+        if (reserved) {
+          discount   = Math.round(discount);
+          couponUsed = coupon.code;
+        } else {
+          // Lost the race against usageLimit (or coupon was deactivated/deleted
+          // between the read above and now) — proceed with no discount rather
+          // than oversell a limited coupon.
+          discount = 0;
+        }
       }
     }
 
@@ -170,16 +188,15 @@ export async function POST(req: NextRequest) {
 
     const order = await Order.create(orderData);
 
-    // If it is a dine-in table order, set the table status to occupied
-    if (isDineIn && tableId) {
-      const Table = (await import("@/models/Table")).default;
-      await Table.findByIdAndUpdate(tableId, { status: "occupied" });
-    }
-
-    // ── Clear cart for logged-in user ─────────────────────────
-    if (user) {
-      await Cart.findOneAndUpdate({ userId: user.id }, { items: [] });
-    }
+    // Post-creation side effects are independent of each other — run concurrently.
+    await Promise.all([
+      isDineIn && tableId
+        ? import("@/models/Table").then(({ default: Table }) => Table.findByIdAndUpdate(tableId, { status: "occupied" }))
+        : Promise.resolve(),
+      user
+        ? Cart.findOneAndUpdate({ userId: user.id }, { items: [] })
+        : Promise.resolve(),
+    ]);
 
     return NextResponse.json({
       success: true,

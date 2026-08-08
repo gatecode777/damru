@@ -1,0 +1,376 @@
+/* Damru Rewards — used inside the My Rewards profile tab, navbar pill, and checkout redemption box */
+
+.rewards__wallet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.rewards__wallet-stat {
+  background: #fff7ed;
+  border: 1px solid #fde3c8;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.rewards__wallet-stat-label {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.72rem;
+  color: #9a7b52;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rewards__wallet-stat-value {
+  font-family: "Poppins", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #e67e22;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.rewards__progress-track {
+  background: #f3e6d6;
+  border-radius: 8px;
+  height: 8px;
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+
+.rewards__progress-fill {
+  background: #e67e22;
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.3s ease;
+}
+
+.rewards__section-title {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #222;
+  margin: 28px 0 12px;
+}
+
+.rewards__tx-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f0eb;
+  gap: 12px;
+}
+
+.rewards__tx-row:last-child { border-bottom: none; }
+
+.rewards__tx-desc {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0 0 2px;
+}
+
+.rewards__tx-date {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.75rem;
+  color: #aaa;
+  margin: 0;
+}
+
+.rewards__tx-amount {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.rewards__tx-amount--credit { color: #16a34a; }
+.rewards__tx-amount--debit { color: #dc2626; }
+
+.rewards__upcoming-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.rewards__upcoming-card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.rewards__occasion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f3f0eb;
+}
+
+.rewards__occasion-row:last-child { border-bottom: none; }
+
+.rewards__occasion-warning {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.78rem;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 8px;
+}
+
+.rewards__streak-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.rewards__streak-current {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #e67e22;
+  margin: 0;
+}
+
+.rewards__streak-next {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #16a34a;
+  margin: 0;
+}
+
+.rewards__streak-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rewards__streak-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: #f7f5f2;
+  border: 1px solid #eee;
+  font-family: "Poppins", sans-serif;
+}
+
+.rewards__streak-dot span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #888;
+}
+
+.rewards__streak-dot small {
+  font-size: 0.65rem;
+  color: #aaa;
+}
+
+.rewards__streak-dot--done {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.rewards__streak-dot--done span,
+.rewards__streak-dot--done small { color: #16a34a; }
+
+.rewards__streak-dot--next {
+  background: #fff7ed;
+  border-color: #fde3c8;
+}
+
+.rewards__streak-dot--next span,
+.rewards__streak-dot--next small { color: #e67e22; }
+
+.rewards__achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.rewards__achievement-card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.rewards__achievement-card--done {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.rewards__achievement-name {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0 0 4px;
+}
+
+.rewards__achievement-card--done .rewards__achievement-name { color: #16a34a; }
+
+.rewards__achievement-desc {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.76rem;
+  color: #999;
+  margin: 0 0 8px;
+}
+
+.rewards__achievement-progress {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.78rem;
+  color: #888;
+  margin: 0 0 4px;
+}
+
+.rewards__achievement-reward {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #16a34a;
+  margin: 0;
+}
+
+.rewards__achievement-reward-hint {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.72rem;
+  color: #e67e22;
+  margin: 6px 0 0;
+}
+
+.rewards__mission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rewards__mission-card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.rewards__mission-card--done {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.rewards__mission-card--expired {
+  background: #fafafa;
+  border-color: #eee;
+  opacity: 0.65;
+}
+
+.rewards__mission-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.rewards__mission-name {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0;
+}
+
+.rewards__mission-card--done .rewards__mission-name { color: #16a34a; }
+
+.rewards__mission-time {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #e67e22;
+  white-space: nowrap;
+}
+
+.rewards__mission-time--expired { color: #9ca3af; }
+
+.rewards__mission-desc {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.76rem;
+  color: #999;
+  margin: 0 0 8px;
+}
+
+.rewards__referral-code-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rewards__referral-code {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  color: #e67e22;
+  background: #fff7ed;
+  border: 1px dashed #fde3c8;
+  border-radius: 10px;
+  padding: 8px 16px;
+}
+
+.rewards__nav-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff7ed;
+  border: 1px solid #fde3c8;
+  color: #e67e22;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rewards__redeem-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #fde3c8;
+  background: #fffdf9;
+  border-radius: 10px;
+}
+
+.rewards__redeem-title {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+.rewards__redeem-note {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.75rem;
+  color: #aaa;
+  margin: 6px 0 0;
+}
+
+@media (max-width: 640px) {
+  .rewards__wallet-grid { grid-template-columns: repeat(2, 1fr); }
+}

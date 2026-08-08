@@ -1,0 +1,416 @@
+/* ============================================================
+   Shared print stylesheet — Damru documentation PDFs
+   ============================================================ */
+
+@page {
+  size: A4;
+  margin: 2.1cm 1.7cm 1.9cm 1.7cm;
+}
+
+@page :first {
+  margin: 0;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #2a2118;
+  font-size: 10.6px;
+  line-height: 1.55;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ---------- Brand tokens ---------- */
+:root {
+  --orange: #e67e22;
+  --orange-dark: #c3641a;
+  --ink: #241a10;
+  --muted: #8a7d70;
+  --line: #ece3d6;
+  --cream: #fdf8f2;
+  --green: #16a34a;
+  --red: #dc2626;
+  --blue: #2563eb;
+}
+
+/* ---------- Cover page ---------- */
+.cover {
+  height: 297mm;
+  width: 210mm;
+  position: relative;
+  background: linear-gradient(160deg, #241a10 0%, #3a2712 55%, #6b3f14 100%);
+  color: #fff;
+  page-break-after: always;
+  overflow: hidden;
+}
+.cover::before {
+  content: "";
+  position: absolute;
+  top: -120px; right: -120px;
+  width: 420px; height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(230,126,34,0.35) 0%, rgba(230,126,34,0) 70%);
+}
+.cover::after {
+  content: "";
+  position: absolute;
+  bottom: -160px; left: -160px;
+  width: 480px; height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(230,126,34,0.22) 0%, rgba(230,126,34,0) 70%);
+}
+.cover-inner {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 22mm;
+}
+.cover-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #f3c98d;
+  margin: 0 0 18px;
+  font-weight: 600;
+}
+.cover-title {
+  font-size: 64px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin: 0 0 6px;
+  color: #ffffff;
+}
+.cover-sub {
+  font-size: 19px;
+  color: #f6ead9;
+  margin: 0 0 30px;
+  font-weight: 300;
+}
+.cover-tagline {
+  display: inline-block;
+  font-size: 12.5px;
+  color: #241a10;
+  background: #f3a94e;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 60px;
+  width: fit-content;
+}
+.cover-meta {
+  border-top: 1px solid rgba(255,255,255,0.22);
+  padding-top: 18px;
+  font-size: 11px;
+  color: #d8c6ac;
+  display: flex;
+  gap: 30px;
+}
+.cover-meta strong { color: #fff; display: block; font-size: 12px; margin-bottom: 2px; }
+
+/* ---------- Body pages ---------- */
+.page {
+  padding-top: 4px;
+}
+.page-break { page-break-before: always; }
+.avoid-break { page-break-inside: avoid; }
+
+h1.section-title {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 4px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--orange);
+}
+.section-num {
+  display: inline-block;
+  color: var(--orange);
+  font-weight: 800;
+  margin-right: 8px;
+}
+.section-intro {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 8px 0 18px;
+}
+
+h2 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 22px 0 8px;
+}
+h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orange-dark);
+  margin: 14px 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+p { margin: 0 0 9px; }
+ul, ol { margin: 0 0 10px; padding-left: 18px; }
+li { margin-bottom: 4px; }
+strong { color: var(--ink); }
+code, .mono {
+  font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+  font-size: 9.6px;
+  background: #f3ede3;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: #7a4a12;
+}
+pre.mono-block {
+  font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+  font-size: 9.3px;
+  background: #201811;
+  color: #f2e6d3;
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  margin: 8px 0 14px;
+}
+a { color: var(--orange-dark); }
+
+/* ---------- Cards / grids ---------- */
+.card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0 16px;
+}
+.card {
+  flex: 1 1 30%;
+  min-width: 140px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px 13px;
+}
+.card h4 {
+  margin: 0 0 4px;
+  font-size: 11.5px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.card p { margin: 0; font-size: 9.8px; color: #5c5147; }
+.card .icon { font-size: 18px; margin-bottom: 6px; display: block; }
+
+.callout {
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 10px 0 16px;
+  font-size: 10px;
+  border-left: 4px solid var(--orange);
+  background: #fff6ea;
+}
+.callout.info { border-color: var(--blue); background: #eef4ff; }
+.callout.good { border-color: var(--green); background: #eefbf1; }
+.callout.warn { border-color: #d97706; background: #fff8e8; }
+.callout.gap  { border-color: var(--red); background: #fdeeee; }
+.callout strong { display: block; margin-bottom: 3px; font-size: 10.4px; }
+
+/* ---------- Tables ---------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 16px;
+  font-size: 9.6px;
+}
+table.wide-only { font-size: 9.1px; }
+th {
+  background: var(--ink);
+  color: #fff;
+  text-align: left;
+  padding: 7px 9px;
+  font-weight: 600;
+  font-size: 9.3px;
+}
+td {
+  padding: 6px 9px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+tr:nth-child(even) td { background: #faf6ef; }
+
+/* ---------- Status badges/pills ---------- */
+.badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 8.8px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.badge.done { background: #e6f7ea; color: #14813d; }
+.badge.partial { background: #fff3da; color: #a15c00; }
+.badge.no { background: #fbe9e9; color: #b91c1c; }
+.badge.future { background: #eef0fb; color: #3f4bb3; }
+.badge.tag { background: #f3ede3; color: #6b5b40; }
+
+/* ---------- Flow diagram (vertical) ---------- */
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 14px 0 18px;
+}
+.flow-step {
+  background: #fff;
+  border: 1.5px solid var(--orange);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 10.2px;
+  font-weight: 600;
+  text-align: center;
+  min-width: 200px;
+}
+.flow-arrow {
+  color: var(--orange);
+  font-size: 14px;
+  line-height: 1;
+  margin: 2px 0;
+}
+
+/* ---------- Flow diagram (horizontal row) ---------- */
+.flow-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 14px 0 18px;
+  flex-wrap: wrap;
+}
+.flow-row .flow-step { min-width: 0; padding: 8px 12px; }
+.flow-row .flow-arrow { margin: 0; }
+
+/* ---------- Org / architecture diagram ---------- */
+.arch-wrap { text-align: center; margin: 16px 0 20px; }
+.arch-top {
+  display: inline-block;
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 30px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.arch-children {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 22px;
+  position: relative;
+}
+.arch-children::before {
+  content: "";
+  position: absolute;
+  top: -14px; left: 16%; right: 16%;
+  border-top: 2px solid #d8c4a3;
+}
+.arch-child {
+  background: #fff;
+  border: 1.5px solid var(--orange);
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-weight: 700;
+  font-size: 10.5px;
+  color: var(--ink);
+  position: relative;
+}
+.arch-child::before {
+  content: "";
+  position: absolute;
+  top: -14px; left: 50%;
+  border-left: 2px solid #d8c4a3;
+  height: 14px;
+}
+
+/* ---------- Tree module diagram ---------- */
+.tree {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px 16px;
+  margin: 10px 0 16px;
+  font-family: "Consolas", monospace;
+  font-size: 10px;
+  line-height: 1.85;
+}
+.tree .root { color: var(--orange-dark); font-weight: 700; }
+.tree .branch { color: #5c5147; }
+
+/* ---------- Page number counters (footer/header handled via headless print margin boxes is unreliable for custom text mid-body; we emit our own footer bar per printed page is not possible in pure CSS print without JS. We rely on @page margin boxes below.) ---------- */
+@page {
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 8.3px;
+    color: #a99a86;
+  }
+  @bottom-left {
+    content: "DAMRU";
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 8.3px;
+    color: #a99a86;
+    letter-spacing: 0.04em;
+  }
+  @top-right {
+    content: "Confidential";
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 8.3px;
+    color: #a99a86;
+    letter-spacing: 0.04em;
+  }
+}
+@page :first {
+  @bottom-center { content: ""; }
+  @bottom-left { content: ""; }
+  @top-right { content: ""; }
+}
+
+/* ---------- TOC ---------- */
+.toc-list { list-style: none; padding: 0; margin: 0; }
+.toc-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dotted var(--line);
+  font-size: 10.6px;
+}
+.toc-list .toc-num { color: var(--orange-dark); font-weight: 700; width: 26px; flex-shrink: 0; }
+.toc-list .toc-label { flex: 1; }
+.toc-list.sub li { font-size: 9.8px; color: #5c5147; padding-left: 20px; border-bottom: none; padding-top: 2px; padding-bottom: 2px; }
+
+/* ---------- Checklist ---------- */
+.checklist { list-style: none; padding: 0; margin: 8px 0 16px; }
+.checklist li {
+  padding: 5px 0 5px 22px;
+  position: relative;
+  font-size: 10px;
+}
+.checklist li::before {
+  content: "\2610";
+  position: absolute;
+  left: 0;
+  color: var(--orange);
+  font-size: 12px;
+}
+
+/* ---------- Small print / footnote style ---------- */
+.small { font-size: 9px; color: var(--muted); }
+.center { text-align: center; }
+.mt-0 { margin-top: 0; }

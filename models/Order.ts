@@ -2,7 +2,10 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export type OrderStatus = "pending" | "confirmed" | "preparing" | "out_for_delivery" | "delivered" | "cancelled";
 export type PaymentMethod = "cod" | "upi" | "card";
-export type PaymentStatus = "pending" | "paid" | "failed";
+// "refund_pending" | "partially_refunded" | "refunded" are Razorpay-only —
+// see docs/PAYMENT_RELIABILITY_REFUNDS.md for the full state machine. A COD
+// order's paymentStatus never leaves "pending"/"paid"/"failed".
+export type PaymentStatus = "pending" | "paid" | "failed" | "refund_pending" | "partially_refunded" | "refunded";
 
 export interface IOrderItem {
   menuItemId?: mongoose.Types.ObjectId;
@@ -45,6 +48,26 @@ export interface IOrder extends Document {
   paymentStatus:   PaymentStatus;
   status:          OrderStatus;
   notes:           string;
+  // Razorpay — all optional; only ever set for non-COD payment methods.
+  razorpayOrderId?:   string;
+  razorpayPaymentId?: string;
+  // Frozen at Razorpay-order-creation time: order.total net of any Damru
+  // discount already redeemed for this order. This — not order.total — is
+  // the amount actually charged/verified through the gateway. COD orders
+  // never set this; their existing behavior (full order.total collected,
+  // Damru shown as a separately-recorded rebate) is unchanged.
+  paymentAmount?:     number;
+  paymentVerifiedAt?: Date;
+  paymentFailedAt?:   Date;
+  paidAt?:            Date;
+  // Refunds — see docs/PAYMENT_RELIABILITY_REFUNDS.md. `refundedAmount` only
+  // ever counts refunds that have actually reached PaymentRefund's "processed"
+  // state; `pendingRefundAmount` is a reservation held while exactly one
+  // refund is in flight (a second refund request is rejected while it's > 0),
+  // preventing two concurrent admin refund clicks from both claiming the same
+  // remaining balance.
+  refundedAmount:        number;
+  pendingRefundAmount:   number;
   createdAt:       Date;
   updatedAt:       Date;
 }
@@ -94,17 +117,26 @@ const OrderSchema = new Schema<IOrder>(
     shipping:        { type: Number, default: 0 },
     total:           { type: Number, required: true },
     paymentMethod:   { type: String, enum: ["cod", "upi", "card"], default: "cod" },
-    paymentStatus:   { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
+    paymentStatus:   { type: String, enum: ["pending", "paid", "failed", "refund_pending", "partially_refunded", "refunded"], default: "pending" },
     status:          { type: String, enum: ["pending","confirmed","preparing","out_for_delivery","delivered","cancelled"], default: "pending" },
     notes:           { type: String, default: "" },
+    razorpayOrderId:    { type: String },
+    razorpayPaymentId:  { type: String },
+    paymentAmount:      { type: Number },
+    paymentVerifiedAt:  { type: Date },
+    paymentFailedAt:    { type: Date },
+    paidAt:             { type: Date },
+    refundedAmount:      { type: Number, default: 0 },
+    pendingRefundAmount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
 OrderSchema.index({ userId: 1 });
-OrderSchema.index({ orderId: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ createdAt: -1 });
+// Reconciliation scheduler's query shape: stale, gateway-paid, still-pending orders.
+OrderSchema.index({ paymentStatus: 1, paymentMethod: 1, createdAt: 1 });
 
 // Force delete any cached (stale) model to ensure new schema is always used
 if (mongoose.models.Order) { delete (mongoose.models as Record<string, unknown>).Order; }

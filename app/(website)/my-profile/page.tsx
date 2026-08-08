@@ -1,16 +1,31 @@
 "use client";
 
-import { fmtDate, fmtDateFull } from "@/lib/formatDate";
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { fmtDate, fmtDateFull, fmtDateTime, todayISO } from "@/lib/formatDate";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useRewards } from "@/lib/rewards/RewardsProvider";
+import * as rewardApi from "@/lib/rewards/rewardApi";
+import { trackRewardEvent } from "@/lib/rewards/rewardAnalytics";
+import type { RewardTransaction, RewardCoupon, RewardsUpcoming, AchievementsResponse, MissionsResponse, ReferralsResponse } from "@/lib/rewards/rewardTypes";
 
 interface UserInfo { id?: string; name: string; email: string; phone: string; city: string; avatar: string; createdAt?: string }
 interface Address { _id: string; label: string; fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string; isDefault: boolean }
 interface OrderItem { name: string; custom: string; price: number; qty: number; image?: string }
-interface Order { _id: string; orderId: string; status: string; paymentMethod: string; total: number; subtotal: number; discount: number; couponCode: string; tax: number; shipping: number; items: OrderItem[]; deliveryAddress: { fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string }; createdAt: string; tableNumber?: string; tableName?: string }
+interface Order { _id: string; orderId: string; status: string; paymentMethod: string; paymentStatus?: string; paymentAmount?: number; refundedAmount?: number; total: number; subtotal: number; discount: number; couponCode: string; tax: number; shipping: number; items: OrderItem[]; deliveryAddress: { fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string }; createdAt: string; tableNumber?: string; tableName?: string }
+
+// Backend-confirmed states only — never inferred from order.status. See
+// docs/PAYMENT_RELIABILITY_REFUNDS.md's Payment State Machine.
+const PAYMENT_STATUS_DISPLAY: Record<string, { label: string; color: string; bg: string }> = {
+  pending:            { label: "Payment Pending",     color: "#b45309", bg: "#fffbeb" },
+  paid:               { label: "Paid",                color: "#16a34a", bg: "#f0fdf4" },
+  failed:             { label: "Payment Failed",      color: "#dc2626", bg: "#fef2f2" },
+  refund_pending:     { label: "Refund Processing",   color: "#b45309", bg: "#fffbeb" },
+  partially_refunded: { label: "Partially Refunded",  color: "#0e7490", bg: "#ecfeff" },
+  refunded:           { label: "Refunded",            color: "#6d28d9", bg: "#f5f3ff" },
+};
 interface Coupon { _id: string; code: string; description: string; type: string; value: number; maxDiscount: number | null; minOrderValue: number; expiryDate: string | null; usageLimit: number | null; usedCount: number }
-type Section = "overview" | "address" | "orders" | "payment" | "coupons" | "settings" | "help";
+type Section = "overview" | "rewards" | "address" | "orders" | "payment" | "coupons" | "settings" | "help";
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; icon: string }> = {
   pending:          { bg:"#fffbeb", color:"#b45309", icon:"fa-regular fa-clock" },
@@ -431,8 +446,10 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   </>);
 }
 
-export default function MyProfilePage() {
+function MyProfileContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { dashboard: rewardsDashboard } = useRewards();
   const [section,setSection]  = useState<Section>("overview");
   const [user,setUser]        = useState<UserInfo|null>(null);
   const [loading,setLoading]  = useState(true);
@@ -457,6 +474,29 @@ export default function MyProfilePage() {
   const [pwForm,setPwForm]           = useState({current:"",newPw:"",confirm:""});
   const [pwSaving,setPwSaving]       = useState(false);
   const [showPw,setShowPw]           = useState({current:false,newPw:false,confirm:false});
+
+  // ── Damru Rewards ─────────────────────────────────────────
+  const [rewardsHistory,setRewardsHistory]           = useState<RewardTransaction[]>([]);
+  const [rewardsHistoryPage,setRewardsHistoryPage]   = useState(1);
+  const [rewardsHistoryPages,setRewardsHistoryPages] = useState(1);
+  const [rewardsHistoryLoading,setRewardsHistoryLoading] = useState(false);
+  const [rewardsCoupons,setRewardsCoupons]           = useState<RewardCoupon[]>([]);
+  const [rewardsCouponsLoaded,setRewardsCouponsLoaded]=useState(false);
+  const [rewardsUpcoming,setRewardsUpcoming]         = useState<RewardsUpcoming|null>(null);
+  const [rewardsLoaded,setRewardsLoaded]             = useState(false);
+  const [achievementsData,setAchievementsData]       = useState<AchievementsResponse|null>(null);
+  const [achievementsLoading,setAchievementsLoading] = useState(false);
+  const [missionsData,setMissionsData]               = useState<MissionsResponse|null>(null);
+  const [missionsLoading,setMissionsLoading]         = useState(false);
+  const [referralsData,setReferralsData]             = useState<ReferralsResponse|null>(null);
+  const [referralsLoading,setReferralsLoading]       = useState(false);
+  const [referralCopied,setReferralCopied]           = useState<""|"code"|"link">("");
+  const [dobInput,setDobInput]       = useState("");
+  const [dobSaving,setDobSaving]     = useState(false);
+  const [dobError,setDobError]       = useState("");
+  const [annivInput,setAnnivInput]   = useState("");
+  const [annivSaving,setAnnivSaving] = useState(false);
+  const [annivError,setAnnivError]   = useState("");
 
   function showToast(msg:string){setToast(msg);setTimeout(()=>setToast(""),3200);}
 
@@ -488,14 +528,136 @@ export default function MyProfilePage() {
     setCoupons(d.coupons||[]);setCouponsLoaded(true);
   }
 
+  async function loadRewardsHistoryPage(page:number){
+    setRewardsHistoryLoading(true);
+    try{
+      const d=await rewardApi.getHistory(page);
+      if(!("error" in d && d.error)){
+        setRewardsHistory(d.transactions||[]);
+        setRewardsHistoryPage(d.page||1);
+        setRewardsHistoryPages(d.totalPages||1);
+      }
+    }finally{setRewardsHistoryLoading(false);}
+  }
+
+  async function loadRewardsUpcoming(){
+    const d=await rewardApi.getUpcoming();
+    if(!("error" in d && d.error))setRewardsUpcoming(d);
+  }
+
+  async function loadAchievements(){
+    setAchievementsLoading(true);
+    trackRewardEvent("achievements_viewed");
+    try{
+      const d=await rewardApi.getAchievements();
+      if(!("error" in d && d.error))setAchievementsData(d);
+    }finally{setAchievementsLoading(false);}
+  }
+
+  async function loadMissions(){
+    setMissionsLoading(true);
+    trackRewardEvent("missions_viewed");
+    try{
+      const d=await rewardApi.getMissions();
+      if(!("error" in d && d.error))setMissionsData(d);
+    }finally{setMissionsLoading(false);}
+  }
+
+  async function loadReferrals(){
+    setReferralsLoading(true);
+    trackRewardEvent("referral_screen_viewed");
+    try{
+      const d=await rewardApi.getReferrals();
+      if(!("error" in d && d.error))setReferralsData(d);
+    }finally{setReferralsLoading(false);}
+  }
+
+  async function copyReferral(kind:"code"|"link"){
+    if(!referralsData)return;
+    const text=kind==="code"?referralsData.referralCode:referralsData.share.link;
+    await navigator.clipboard.writeText(text);
+    setReferralCopied(kind);
+    trackRewardEvent(kind==="code"?"referral_code_copied":"referral_link_copied");
+    setTimeout(()=>setReferralCopied(""),2000);
+  }
+
+  async function shareReferral(){
+    if(!referralsData)return;
+    trackRewardEvent("referral_shared");
+    if(typeof navigator!=="undefined" && "share" in navigator){
+      try{ await (navigator as unknown as {share:(d:{title:string;text:string;url:string})=>Promise<void>}).share({title:"Join Damru By Namo",text:referralsData.share.message,url:referralsData.share.link}); return; }catch{ /* user cancelled or unsupported — fall back to copy */ }
+    }
+    await copyReferral("link");
+  }
+
+  const expiryWarningTrackedRef=useRef(false);
+  useEffect(()=>{
+    const amount=rewardsDashboard?.expiry?.expiringSoonAmount??0;
+    if(section==="rewards"&&amount>0&&!expiryWarningTrackedRef.current){
+      expiryWarningTrackedRef.current=true;
+      trackRewardEvent("expiry_warning_viewed");
+    }
+    if(amount<=0)expiryWarningTrackedRef.current=false;
+  },[section,rewardsDashboard?.expiry?.expiringSoonAmount]);
+
+  async function loadRewardsExtras(){
+    trackRewardEvent("rewards_viewed");
+    if(rewardsLoaded)return;
+    setRewardsLoaded(true);
+    await Promise.all([
+      loadRewardsHistoryPage(1),
+      rewardApi.getCoupons().then(d=>{setRewardsCoupons(d.coupons||[]);setRewardsCouponsLoaded(true);}),
+      loadRewardsUpcoming(),
+      loadAchievements(),
+      loadMissions(),
+      loadReferrals(),
+    ]);
+  }
+
+  async function handleSaveDob(){
+    if(!dobInput){setDobError("Please select a date.");return;}
+    setDobSaving(true);setDobError("");
+    const res=await rewardApi.updateDateOfBirth(dobInput);
+    setDobSaving(false);
+    if(!res.success){setDobError(res.error||"Could not save.");return;}
+    trackRewardEvent("birthday_added");
+    await loadRewardsUpcoming();
+    showToast("Date of birth saved!");
+  }
+
+  async function handleSaveAnniversary(){
+    if(!annivInput){setAnnivError("Please select a date.");return;}
+    setAnnivSaving(true);setAnnivError("");
+    const res=await rewardApi.updateMarriageAnniversary(annivInput);
+    setAnnivSaving(false);
+    if(!res.success){setAnnivError(res.error||"Could not save.");return;}
+    trackRewardEvent("anniversary_added");
+    await loadRewardsUpcoming();
+    showToast("Anniversary date saved!");
+  }
+
+  function copyRewardCoupon(code:string){
+    copyCoupon(code);
+    trackRewardEvent("coupon_copied");
+  }
+
   function switchSection(s:Section){
     setSection(s);setViewOrder(null);
     if(s==="orders")loadOrders();
     if(s==="coupons")loadCoupons();
+    if(s==="rewards")loadRewardsExtras();
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
+
+  // Deep-link: /my-profile?tab=rewards
+  useEffect(()=>{
+    const tab=searchParams.get("tab");
+    if(tab!=="rewards")return;
+    Promise.resolve().then(()=>{ switchSection("rewards"); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[searchParams]);
 
   async function handleLogout(){await fetch("/api/user/logout",{method:"POST"});window.location.href="/";}
 
@@ -561,48 +723,7 @@ export default function MyProfilePage() {
     navigator.clipboard.writeText(code).then(()=>{setCopiedCode(code);setTimeout(()=>setCopiedCode(""),2000);showToast(`"${code}" copied to clipboard!`);});
   }
 
-  if (loading) {
-    return (
-      <div 
-        className="profile" 
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "70vh",
-          paddingTop: "160px",
-          paddingBottom: "80px",
-          width: "100%",
-        }}
-      >
-        <div style={{
-          width: 50,
-          height: 50,
-          borderRadius: "50%",
-          border: "3px solid rgba(230, 126, 34, 0.1)",
-          borderTopColor: "#e67e22",
-          animation: "damru-spin 1s linear infinite",
-          marginBottom: 20
-        }} />
-        <p style={{
-          fontFamily: "Poppins, sans-serif",
-          color: "#764208",
-          fontSize: "1.05rem",
-          fontWeight: 500,
-          letterSpacing: "0.5px",
-          margin: 0
-        }}>
-          Loading your profile...
-        </p>
-        <style>{`
-          @keyframes damru-spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
+  if (loading) return <ProfileSkeleton />;
   if(!user) return null;
 
   const initials=user.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
@@ -610,7 +731,7 @@ export default function MyProfilePage() {
   return(
     <div className="profile">
       <aside className="profile__sidebar">
-        {([["overview","fa-regular fa-user","My Profile"],["address","fa-solid fa-book","Address Book"],["orders","fa-solid fa-bag-shopping","My Orders"],["payment","fa-regular fa-credit-card","Payment Methods"],["coupons","fa-solid fa-tag","Offers & Coupons"],["settings","fa-solid fa-gear","Account Settings"],["help","fa-solid fa-circle-dollar-to-slot","Help & Support"]] as [Section,string,string][]).map(([id,icon,label])=>(
+        {([["overview","fa-regular fa-user","My Profile"],["rewards","fa-solid fa-coins","Damru Rewards"],["address","fa-solid fa-book","Address Book"],["orders","fa-solid fa-bag-shopping","My Orders"],["payment","fa-regular fa-credit-card","Payment Methods"],["coupons","fa-solid fa-tag","Offers & Coupons"],["settings","fa-solid fa-gear","Account Settings"],["help","fa-solid fa-circle-dollar-to-slot","Help & Support"]] as [Section,string,string][]).map(([id,icon,label])=>(
           <div key={id} className={`profile__nav-item${section===id?" active":""}`} onClick={()=>switchSection(id)}>
             <i className={icon}></i> {label}
           </div>
@@ -641,6 +762,20 @@ export default function MyProfilePage() {
                 </button>
               </div>
             </div>
+            {rewardsDashboard && (
+              <div className="profile__card" style={{cursor:"pointer"}} onClick={()=>switchSection("rewards")}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:"1.6rem"}}>🪙</span>
+                    <div>
+                      <p style={{fontFamily:"Poppins,sans-serif",fontWeight:700,fontSize:"1.1rem",color:"#e67e22",margin:0}}>{rewardsDashboard.damruBalance} Damru</p>
+                      <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#aaa",margin:0,textTransform:"capitalize"}}>{rewardsDashboard.loyaltyLevel} member</p>
+                    </div>
+                  </div>
+                  <span className="profile__view-all">View Rewards &gt;</span>
+                </div>
+              </div>
+            )}
             <div className="profile__overview-grid">
               <div className="profile__overview-card">
                 <div className="profile__overview-card-title">Address Book</div>
@@ -680,6 +815,360 @@ export default function MyProfilePage() {
                 ))}
                 {!couponsLoaded&&<p style={{fontSize:13,color:"#aaa",fontFamily:"Poppins,sans-serif"}}>Loading…</p>}
                 {couponsLoaded&&coupons.length===0&&<p style={{fontSize:13,color:"#aaa",fontFamily:"Poppins,sans-serif"}}>No coupons available.</p>}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* DAMRU REWARDS */}
+        {section==="rewards"&&(
+          <section className="profile__section active">
+            <h1 className="profile__page-title">Damru Rewards</h1>
+            <p className="profile__page-subtitle">Your Damru wallet, coupons, and upcoming rewards</p>
+
+            {!rewardsDashboard ? (
+              <div className="profile__card"><p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading your wallet…</p></div>
+            ) : (
+              <div className="profile__card">
+                <div className="rewards__wallet-grid">
+                  <div className="rewards__wallet-stat">
+                    <p className="rewards__wallet-stat-label">Available Damru</p>
+                    <p className="rewards__wallet-stat-value">{rewardsDashboard.damruBalance}</p>
+                  </div>
+                  <div className="rewards__wallet-stat">
+                    <p className="rewards__wallet-stat-label">Lifetime Earned</p>
+                    <p className="rewards__wallet-stat-value">{rewardsDashboard.damruTotalEarned}</p>
+                  </div>
+                  <div className="rewards__wallet-stat">
+                    <p className="rewards__wallet-stat-label">Redeemed</p>
+                    <p className="rewards__wallet-stat-value">{rewardsDashboard.damruTotalRedeemed}</p>
+                  </div>
+                  <div className="rewards__wallet-stat">
+                    <p className="rewards__wallet-stat-label">Current Tier</p>
+                    <p className="rewards__wallet-stat-value">{rewardsDashboard.loyalty?.currentTier?.badgeIcon} {rewardsDashboard.loyalty?.currentTier?.name || rewardsDashboard.loyaltyLevel}</p>
+                  </div>
+                </div>
+                {rewardsDashboard.loyalty?.nextTier && (
+                  <div>
+                    <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",margin:"0 0 4px"}}>
+                      {rewardsDashboard.loyalty.remainingValue.toLocaleString("en-IN")} {rewardsDashboard.loyalty.currentTier?.code ? "qualification points" : "Damru"} to reach <span style={{fontWeight:600}}>{rewardsDashboard.loyalty.nextTier.name}</span>
+                    </p>
+                    <div className="rewards__progress-track">
+                      <div className="rewards__progress-fill" style={{width:`${rewardsDashboard.loyalty.progressPercentage}%`}} />
+                    </div>
+                  </div>
+                )}
+                {rewardsDashboard.expiry?.expiringSoonAmount>0 && (
+                  <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#e67e22",margin:"10px 0 0"}}>
+                    ⚠ {rewardsDashboard.expiry.expiringSoonAmount} Damru expiring within {rewardsDashboard.expiry.warningDays} days
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Expiring Soon */}
+            {rewardsDashboard && rewardsDashboard.expiry && rewardsDashboard.expiry.expiringSoonAmount>0 && (
+              <>
+                <div className="rewards__section-title">Expiring Soon</div>
+                <div className="profile__card" style={{background:"#fffbeb",border:"1px solid #fde68a"}}>
+                  <p style={{fontFamily:"Poppins,sans-serif",fontWeight:700,fontSize:15,color:"#92400e",margin:"0 0 4px"}}>
+                    ⚠ {rewardsDashboard.expiry.expiringSoonAmount} Damru expiring soon
+                  </p>
+                  {rewardsDashboard.expiry.nearestExpiryDate&&(
+                    <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#92400e",margin:"0 0 10px"}}>
+                      Expires by {fmtDateFull(rewardsDashboard.expiry.nearestExpiryDate)}
+                    </p>
+                  )}
+                  <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#92400e",margin:"0 0 12px"}}>Use your Damru before they expire.</p>
+                  <Link href="/menu" className="profile__update-btn" style={{textDecoration:"none",display:"inline-block"}} onClick={()=>trackRewardEvent("shop_from_expiry_warning")}>Shop Now</Link>
+                </div>
+              </>
+            )}
+
+            {/* Daily Streak */}
+            {rewardsDashboard?.streak?.isActive && (
+              <>
+                <div className="rewards__section-title">Daily Streak 🔥</div>
+                <div className="profile__card">
+                  <div className="rewards__streak-row">
+                    <div>
+                      <p className="rewards__streak-current">{rewardsDashboard.streak.currentStreak} Day{rewardsDashboard.streak.currentStreak===1?"":"s"}</p>
+                      <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",margin:"2px 0 0"}}>
+                        Longest streak: {rewardsDashboard.streak.longestStreak} day{rewardsDashboard.streak.longestStreak===1?"":"s"}
+                      </p>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",margin:"0 0 2px"}}>
+                        {rewardsDashboard.streak.claimedToday ? "Next reward" : "Check in today for"}
+                      </p>
+                      <p className="rewards__streak-next">+{rewardsDashboard.streak.nextRewardAmount} Damru</p>
+                    </div>
+                  </div>
+                  <div className="rewards__streak-dots">
+                    {rewardsDashboard.streak.days.map(d=>{
+                      const cyclePos = ((rewardsDashboard.streak!.currentStreak-1)%Math.max(1,rewardsDashboard.streak!.cycleLength))+1;
+                      const isToday = rewardsDashboard.streak!.claimedToday && d.day===cyclePos;
+                      const isNext = !rewardsDashboard.streak!.claimedToday && d.day===rewardsDashboard.streak!.nextRewardDay;
+                      return (
+                        <div key={d.day} className={`rewards__streak-dot${isToday?" rewards__streak-dot--done":""}${isNext?" rewards__streak-dot--next":""}`}>
+                          <span>{d.day}</span>
+                          <small>{d.amount}</small>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {rewardsDashboard.streak.claimedToday
+                    ? <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#16a34a",margin:"10px 0 0"}}>✓ Today&apos;s streak reward has been credited.</p>
+                    : <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",margin:"10px 0 0"}}>Visit again tomorrow to keep your streak alive.</p>}
+                </div>
+              </>
+            )}
+
+            {/* Missions */}
+            <div className="rewards__section-title">Missions</div>
+            <div className="profile__card">
+              {missionsLoading && !missionsData ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading missions…</p>
+              ) : !missionsData || missionsData.missions.length===0 ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>No missions available right now.</p>
+              ) : (<>
+                <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#888",margin:"0 0 14px"}}>
+                  {missionsData.summary.active} Active{missionsData.summary.completed>0?` · ${missionsData.summary.completed} Completed`:""}
+                </p>
+                <div className="rewards__mission-list">
+                  {missionsData.missions.map(m=>{
+                    const done=m.status==="CLAIMED"||m.status==="COMPLETED";
+                    const expired=m.status==="EXPIRED";
+                    const daysLeft=m.timeRemaining!==null?Math.ceil(m.timeRemaining/86400000):null;
+                    return (
+                      <div key={`${m.id}`} className={`rewards__mission-card${done?" rewards__mission-card--done":""}${expired?" rewards__mission-card--expired":""}`}>
+                        <div className="rewards__mission-head">
+                          <p className="rewards__mission-name">{done?"✓ ":""}{m.name}</p>
+                          {!done && !expired && daysLeft!==null && <span className="rewards__mission-time">{daysLeft<=0?"Ends today":`${daysLeft} day${daysLeft===1?"":"s"} left`}</span>}
+                          {expired && <span className="rewards__mission-time rewards__mission-time--expired">Expired</span>}
+                        </div>
+                        <p className="rewards__mission-desc">{m.description}</p>
+                        {done ? (
+                          <p className="rewards__achievement-reward">{m.reward.damruAmount} Damru Earned</p>
+                        ) : (
+                          <>
+                            <p className="rewards__achievement-progress">{m.progress} / {m.target} · {m.progressPercentage}%</p>
+                            <div className="rewards__progress-track">
+                              <div className="rewards__progress-fill" style={{width:`${m.progressPercentage}%`}} />
+                            </div>
+                            {m.reward.damruAmount>0 && <p className="rewards__achievement-reward-hint">Reward: {m.reward.damruAmount} Damru</p>}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>)}
+            </div>
+
+            {/* Achievements */}
+            <div className="rewards__section-title">Achievements</div>
+            <div className="profile__card">
+              {achievementsLoading && !achievementsData ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading achievements…</p>
+              ) : !achievementsData || achievementsData.achievements.length===0 ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>No achievements available right now.</p>
+              ) : (<>
+                <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#888",margin:"0 0 14px"}}>
+                  {achievementsData.summary.unlocked} / {achievementsData.summary.total} Unlocked
+                </p>
+                <div className="rewards__achievement-grid">
+                  {achievementsData.achievements.map(a=>{
+                    const done=a.status==="CLAIMED"||a.status==="COMPLETED";
+                    return (
+                      <div key={a.id} className={`rewards__achievement-card${done?" rewards__achievement-card--done":""}`}>
+                        <p className="rewards__achievement-name">{done?"✓ ":""}{a.name}</p>
+                        <p className="rewards__achievement-desc">{a.description}</p>
+                        {done ? (
+                          <p className="rewards__achievement-reward">{a.reward.damruAmount>0?`${a.reward.damruAmount} Damru Earned`:""}{a.badgeName?` · ${a.badgeName}`:""}</p>
+                        ) : (
+                          <>
+                            <p className="rewards__achievement-progress">{a.progress} / {a.target} · {a.progressPercentage}%</p>
+                            <div className="rewards__progress-track">
+                              <div className="rewards__progress-fill" style={{width:`${a.progressPercentage}%`}} />
+                            </div>
+                            {a.reward.damruAmount>0 && <p className="rewards__achievement-reward-hint">Reward: {a.reward.damruAmount} Damru{a.badgeName?` + ${a.badgeName} badge`:""}</p>}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>)}
+            </div>
+
+            {/* Invite & Earn */}
+            <div className="rewards__section-title">Invite &amp; Earn</div>
+            <div className="profile__card">
+              {referralsLoading && !referralsData ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading…</p>
+              ) : !referralsData ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Referrals aren&apos;t available right now.</p>
+              ) : (<>
+                <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",margin:"0 0 6px"}}>Your Code</p>
+                <div className="rewards__referral-code-row">
+                  <span className="rewards__referral-code">{referralsData.referralCode}</span>
+                  <button className="profile__btn-reorder" onClick={()=>copyReferral("code")}>{referralCopied==="code"?"Copied!":"Copy Code"}</button>
+                  <button className="profile__btn-reorder" onClick={()=>copyReferral("link")}>{referralCopied==="link"?"Copied!":"Copy Link"}</button>
+                  <button className="profile__update-btn" onClick={shareReferral}>Share</button>
+                </div>
+                <div className="rewards__wallet-grid" style={{marginTop:16}}>
+                  <div className="rewards__wallet-stat">
+                    <p className="rewards__wallet-stat-label">Successful</p>
+                    <p className="rewards__wallet-stat-value">{referralsData.summary.successful}</p>
+                  </div>
+                  <div className="rewards__wallet-stat">
+                    <p className="rewards__wallet-stat-label">Pending</p>
+                    <p className="rewards__wallet-stat-value">{referralsData.summary.pending}</p>
+                  </div>
+                  <div className="rewards__wallet-stat">
+                    <p className="rewards__wallet-stat-label">Damru Earned</p>
+                    <p className="rewards__wallet-stat-value">{referralsData.summary.totalDamruEarned}</p>
+                  </div>
+                </div>
+                {referralsData.referrals.length>0 && (
+                  <div style={{marginTop:18}}>
+                    {referralsData.referrals.map(r=>(
+                      <div key={r.id} className="rewards__tx-row">
+                        <div>
+                          <p className="rewards__tx-desc">{r.referredName||"Referral"} — {r.status.replace(/_/g," ").toLowerCase()}</p>
+                          <p className="rewards__tx-date">{fmtDate(r.registeredAt)}</p>
+                        </div>
+                        {r.status==="REWARDED" && <span className="rewards__tx-amount rewards__tx-amount--credit">+{r.rewardAmount} Damru</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>)}
+            </div>
+
+            {/* Upcoming Rewards */}
+            <div className="rewards__section-title">Upcoming Rewards</div>
+            <div className="profile__card">
+              {!rewardsUpcoming ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading…</p>
+              ) : (
+                <div className="rewards__upcoming-grid">
+                  <div className="rewards__upcoming-card">
+                    <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#aaa",margin:"0 0 4px"}}>🎂 Birthday</p>
+                    {rewardsUpcoming.birthdayDaysLeft!==null
+                      ? <p style={{fontFamily:"Poppins,sans-serif",fontWeight:700,margin:0}}>{rewardsUpcoming.birthdayDaysLeft} Days Left</p>
+                      : <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#e67e22",margin:0,cursor:"pointer"}} onClick={()=>document.getElementById("rewards-occasion-form")?.scrollIntoView({behavior:"smooth"})}>Add your birthday to unlock rewards →</p>}
+                  </div>
+                  <div className="rewards__upcoming-card">
+                    <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#aaa",margin:"0 0 4px"}}>💍 Marriage Anniversary</p>
+                    {rewardsUpcoming.anniversaryDaysLeft!==null
+                      ? <p style={{fontFamily:"Poppins,sans-serif",fontWeight:700,margin:0}}>{rewardsUpcoming.anniversaryDaysLeft} Days Left</p>
+                      : <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#e67e22",margin:0,cursor:"pointer"}} onClick={()=>document.getElementById("rewards-occasion-form")?.scrollIntoView({behavior:"smooth"})}>Add your anniversary to unlock rewards →</p>}
+                  </div>
+                  <div className="rewards__upcoming-card">
+                    <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#aaa",margin:"0 0 4px"}}>⭐ Next Loyalty Level</p>
+                    <p style={{fontFamily:"Poppins,sans-serif",fontWeight:700,margin:0}}>
+                      {rewardsUpcoming.nextLoyaltyLevel ? `${rewardsUpcoming.damruToNextLevel} Damru Remaining` : "Top tier reached"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Active Coupons */}
+            <div className="rewards__section-title">Active Coupons</div>
+            <div className="profile__card">
+              {!rewardsCouponsLoaded ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading…</p>
+              ) : rewardsCoupons.length===0 ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>No active coupons right now.</p>
+              ) : rewardsCoupons.map(c=>(
+                <div key={c._id} className="profile__coupon-row">
+                  <i className="fa-solid fa-tag profile__coupon-icon"></i>
+                  <div className="profile__coupon-info">
+                    <div className="profile__coupon-name">{c.code}</div>
+                    <div className="profile__coupon-detail">{c.description||(c.type==="flat"?`₹${c.value} off`:`${c.value}% off${c.maxDiscount?` (max ₹${c.maxDiscount})`:""}`)} {c.minOrderValue>0?`· Min ₹${c.minOrderValue}`:""}</div>
+                    {c.expiryDate&&<div className="profile__coupon-validity">Valid till: {fmtDate(c.expiryDate)}</div>}
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    <button className="profile__btn-reorder" style={{fontSize:12,padding:"6px 12px",whiteSpace:"nowrap"}} onClick={()=>copyRewardCoupon(c.code)}>
+                      {copiedCode===c.code?"Copied!":"Copy"}
+                    </button>
+                    <Link href="/menu" className="profile__btn-reorder" style={{fontSize:12,padding:"6px 12px",whiteSpace:"nowrap",textDecoration:"none"}} onClick={()=>trackRewardEvent("coupon_used")}>
+                      Shop Now
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Reward History */}
+            <div className="rewards__section-title">Reward History</div>
+            <div className="profile__card">
+              {rewardsHistoryLoading ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading…</p>
+              ) : rewardsHistory.length===0 ? (
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>No Damru activity yet.</p>
+              ) : (<>
+                {rewardsHistory.map(tx=>(
+                  <div key={tx._id} className="rewards__tx-row">
+                    <div>
+                      <p className="rewards__tx-desc">{tx.description||tx.category}</p>
+                      <p className="rewards__tx-date">{fmtDateTime(tx.createdAt)}</p>
+                      {tx.type==="credit"&&tx.expiresAt&&<p className="rewards__tx-date">Expires {fmtDate(tx.expiresAt)}</p>}
+                    </div>
+                    <span className={`rewards__tx-amount rewards__tx-amount--${tx.type}`}>{tx.type==="credit"?"+":"−"}{tx.amount} Damru</span>
+                  </div>
+                ))}
+                {rewardsHistoryPages>1&&(
+                  <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:14}}>
+                    <button className="profile__btn-reorder" disabled={rewardsHistoryPage<=1} onClick={()=>loadRewardsHistoryPage(rewardsHistoryPage-1)}>Prev</button>
+                    <span style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#888",alignSelf:"center"}}>Page {rewardsHistoryPage} of {rewardsHistoryPages}</span>
+                    <button className="profile__btn-reorder" disabled={rewardsHistoryPage>=rewardsHistoryPages} onClick={()=>loadRewardsHistoryPage(rewardsHistoryPage+1)}>Next</button>
+                  </div>
+                )}
+              </>)}
+            </div>
+
+            {/* Occasion Profile */}
+            <div className="rewards__section-title" id="rewards-occasion-form">Occasion Profile</div>
+            <div className="profile__card">
+              <div className="rewards__occasion-row">
+                <div>
+                  <p style={{fontFamily:"Poppins,sans-serif",fontWeight:600,fontSize:14,margin:"0 0 2px"}}>🎂 Date of Birth</p>
+                  {rewardsUpcoming?.birthdayDaysLeft!==null&&rewardsUpcoming!==null
+                    ? <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#888",margin:0}}><i className="fa-solid fa-lock" style={{marginRight:6}}></i>{rewardsUpcoming.dateOfBirth?fmtDateFull(rewardsUpcoming.dateOfBirth):"Set"} — contact support to change</p>
+                    : (
+                      <div style={{marginTop:6}}>
+                        <input type="date" value={dobInput} max={todayISO()} onChange={e=>{setDobInput(e.target.value);setDobError("");}}
+                          style={{border:"1px solid #eee",borderRadius:8,padding:"7px 10px",fontFamily:"Poppins,sans-serif",fontSize:13}}/>
+                        <p className="rewards__occasion-warning">After saving this date, future changes require support approval.</p>
+                        {dobError&&<p style={{color:"#dc2626",fontSize:12,fontFamily:"Poppins,sans-serif",margin:"6px 0 0"}}>{dobError}</p>}
+                      </div>
+                    )}
+                </div>
+                {(rewardsUpcoming===null||rewardsUpcoming.birthdayDaysLeft===null)&&(
+                  <button className="profile__update-btn" onClick={handleSaveDob} disabled={dobSaving}>{dobSaving?"Saving…":"Save"}</button>
+                )}
+              </div>
+              <div className="rewards__occasion-row">
+                <div>
+                  <p style={{fontFamily:"Poppins,sans-serif",fontWeight:600,fontSize:14,margin:"0 0 2px"}}>💍 Marriage Anniversary</p>
+                  {rewardsUpcoming?.anniversaryDaysLeft!==null&&rewardsUpcoming!==null
+                    ? <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#888",margin:0}}><i className="fa-solid fa-lock" style={{marginRight:6}}></i>{rewardsUpcoming.marriageAnniversary?fmtDateFull(rewardsUpcoming.marriageAnniversary):"Set"} — contact support to change</p>
+                    : (
+                      <div style={{marginTop:6}}>
+                        <input type="date" value={annivInput} max={todayISO()} onChange={e=>{setAnnivInput(e.target.value);setAnnivError("");}}
+                          style={{border:"1px solid #eee",borderRadius:8,padding:"7px 10px",fontFamily:"Poppins,sans-serif",fontSize:13}}/>
+                        <p className="rewards__occasion-warning">After saving this date, future changes require support approval.</p>
+                        {annivError&&<p style={{color:"#dc2626",fontSize:12,fontFamily:"Poppins,sans-serif",margin:"6px 0 0"}}>{annivError}</p>}
+                      </div>
+                    )}
+                </div>
+                {(rewardsUpcoming===null||rewardsUpcoming.anniversaryDaysLeft===null)&&(
+                  <button className="profile__update-btn" onClick={handleSaveAnniversary} disabled={annivSaving}>{annivSaving?"Saving…":"Save"}</button>
+                )}
               </div>
             </div>
           </section>
@@ -742,7 +1231,26 @@ export default function MyProfilePage() {
           <section className="profile__section active">
             <div className="profile__order-detail-back" onClick={()=>setViewOrder(null)}><i className="fa-solid fa-arrow-left"></i> Back to Orders</div>
             <h1 className="profile__page-title">{viewOrder.orderId}</h1>
-            <p className="profile__page-subtitle">{fmtDate(viewOrder.createdAt)} · {viewOrder.paymentMethod.toUpperCase()}</p>
+            <p className="profile__page-subtitle">
+              {fmtDate(viewOrder.createdAt)} · {viewOrder.paymentMethod.toUpperCase()}
+              {viewOrder.paymentMethod !== "cod" && viewOrder.paymentStatus && PAYMENT_STATUS_DISPLAY[viewOrder.paymentStatus] && (
+                <span style={{
+                  marginLeft: 8, fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
+                  color: PAYMENT_STATUS_DISPLAY[viewOrder.paymentStatus].color,
+                  background: PAYMENT_STATUS_DISPLAY[viewOrder.paymentStatus].bg,
+                }}>
+                  {PAYMENT_STATUS_DISPLAY[viewOrder.paymentStatus].label}
+                </span>
+              )}
+            </p>
+            {viewOrder.paymentMethod !== "cod" && (viewOrder.paymentStatus === "refund_pending" || viewOrder.paymentStatus === "partially_refunded" || viewOrder.paymentStatus === "refunded") && (
+              <p style={{ fontSize: 13, color: "#6b7280", marginTop: -4, marginBottom: 12 }}>
+                {viewOrder.paymentStatus === "refund_pending"
+                  ? "A refund has been initiated for this order."
+                  : `₹${viewOrder.refundedAmount || 0} refunded${(viewOrder.paymentAmount ?? 0) > (viewOrder.refundedAmount ?? 0) ? ` of ₹${viewOrder.paymentAmount}` : ""}.`}
+                {" "}Bank/payment-provider settlement timing can differ from this status.
+              </p>
+            )}
             {/* ── Order Status Pipeline ── */}
             <div className="profile__card" style={{marginBottom:16}}>
               <div className="profile__cart-section-title" style={{marginBottom:16}}>Order Status</div>
@@ -1044,6 +1552,56 @@ export default function MyProfilePage() {
       )}
 
       <div className={`profile__toast${toast?" show":""}`}>{toast}</div>
+    </div>
+  );
+}
+
+export default function MyProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <MyProfileContent />
+    </Suspense>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <div className="profile profile--loading" aria-busy="true" aria-label="Loading your profile">
+      <aside className="profile__sidebar profile-skeleton__sidebar" aria-hidden="true">
+        {Array.from({ length: 8 }, (_, index) => (
+          <div className={`profile-skeleton__nav${index === 0 ? " profile-skeleton__nav--active" : ""}`} key={index}>
+            <span className="profile-skeleton profile-skeleton__nav-icon" />
+            <span className="profile-skeleton profile-skeleton__nav-label" />
+          </div>
+        ))}
+        <div className="profile-skeleton__logout" />
+      </aside>
+      <main className="profile__main profile-skeleton__main">
+        <div className="profile-skeleton profile-skeleton__title" />
+        <div className="profile-skeleton profile-skeleton__subtitle" />
+        <div className="profile__card profile-skeleton__card">
+          <div className="profile-skeleton__user-row">
+            <div className="profile-skeleton profile-skeleton__avatar" />
+            <div className="profile-skeleton__user-copy">
+              <div className="profile-skeleton profile-skeleton__name" />
+              <div className="profile-skeleton profile-skeleton__email" />
+            </div>
+            <div className="profile-skeleton profile-skeleton__button" />
+          </div>
+        </div>
+        <div className="profile-skeleton__grid">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div className="profile__card profile-skeleton__mini-card" key={index}>
+              <div className="profile-skeleton profile-skeleton__mini-icon" />
+              <div>
+                <div className="profile-skeleton profile-skeleton__mini-label" />
+                <div className="profile-skeleton profile-skeleton__mini-value" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <span className="profile-skeleton__status" role="status">Preparing your profile</span>
+      </main>
     </div>
   );
 }

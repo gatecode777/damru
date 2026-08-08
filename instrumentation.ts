@@ -7,6 +7,14 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { validateProductionEnv } = await import("@/lib/env");
+    const missing = validateProductionEnv();
+    if (missing.length > 0) {
+      // Names only — never values. Fail loudly rather than serving requests
+      // with an incomplete production configuration.
+      throw new Error(`Missing required production environment variables: ${missing.join(", ")}`);
+    }
+
     try {
       // Importing the module triggers the eager connection at the bottom of mongodb.ts
       await import("@/lib/mongodb");

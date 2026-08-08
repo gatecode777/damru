@@ -1,5 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+export type LoyaltyLevel = "bronze" | "silver" | "gold" | "platinum";
+
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -9,6 +11,22 @@ export interface IUser extends Document {
   totalSpend: number;
   avatar?: string;
   loginTokens?: string[]; // For session management (optional)
+  damruBalance: number;
+  damruTotalEarned: number;
+  damruTotalRedeemed: number;
+  loyaltyLevel: LoyaltyLevel;
+  loyaltyTierId?: mongoose.Types.ObjectId;
+  loyaltyTierCode?: string;
+  loyaltyTierUpdatedAt?: Date;
+  dateOfBirth?: Date;
+  dobLocked: boolean;
+  marriageAnniversary?: Date;
+  anniversaryLocked: boolean;
+  currentStreak: number;
+  longestStreak: number;
+  lastEligibleActivityDate: string | null;
+  lastStreakRewardDate: string | null;
+  referralCode?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +45,22 @@ const UserSchema = new Schema<IUser>(
     totalSpend: { type: Number, default: 0 },
     avatar: { type: String },
     loginTokens: { type: [String] },
+    damruBalance: { type: Number, default: 0 },
+    damruTotalEarned: { type: Number, default: 0 },
+    damruTotalRedeemed: { type: Number, default: 0 },
+    loyaltyLevel: { type: String, enum: ["bronze", "silver", "gold", "platinum"], default: "bronze" },
+    loyaltyTierId: { type: Schema.Types.ObjectId, ref: "LoyaltyTier", index: true },
+    loyaltyTierCode: { type: String },
+    loyaltyTierUpdatedAt: { type: Date },
+    dateOfBirth: { type: Date },
+    dobLocked: { type: Boolean, default: false },
+    marriageAnniversary: { type: Date },
+    anniversaryLocked: { type: Boolean, default: false },
+    currentStreak: { type: Number, default: 0 },
+    longestStreak: { type: Number, default: 0 },
+    lastEligibleActivityDate: { type: String, default: null },
+    lastStreakRewardDate: { type: String, default: null },
+    referralCode: { type: String, unique: true, sparse: true, index: true },
   },
   { timestamps: true }
 );

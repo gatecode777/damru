@@ -10,7 +10,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '@/providers/AppProvider';
 import { post } from '@/lib/api';
@@ -27,8 +27,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function AuthScreen() {
   const router = useRouter();
   const { setUser } = useApp();
+  const params = useLocalSearchParams<{ ref?: string }>();
+  const initialReferralCode = typeof params.ref === 'string' ? params.ref.toUpperCase() : '';
 
-  const [mode, setMode] = useState<Mode>('login');
+  const [mode, setMode] = useState<Mode>(initialReferralCode ? 'register' : 'login');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [okMsg, setOkMsg] = useState('');
@@ -86,7 +88,7 @@ export default function AuthScreen() {
     }
   };
 
-  const handleRegister = async (name: string, phone: string, email: string, pass: string) => {
+  const handleRegister = async (name: string, phone: string, email: string, pass: string, referralCode: string) => {
     setBusy(true);
     setError('');
     setOkMsg('');
@@ -96,6 +98,7 @@ export default function AuthScreen() {
         phone: phone.trim() || undefined,
         email: email.trim(),
         password: pass,
+        referralCode: referralCode.trim() || undefined,
       });
       setUser(data.user);
       router.back();
@@ -249,6 +252,7 @@ export default function AuthScreen() {
                 }}
                 busy={busy}
                 error={error}
+                initialReferralCode={initialReferralCode}
               />
             )}
 

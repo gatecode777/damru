@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Blog from "@/models/Blog";
 import BlogCategory from "@/models/BlogCategory";
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
 
 // GET /api/blog-search?q=xxx — search published blogs
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim();
   if (!q || q.length < 2) return NextResponse.json({ results: [] });
   try {
+    const rl = await checkRateLimit(`blog-search:${getClientIp(req)}`, RATE_LIMITS.search);
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterSeconds);
+
     await connectDB();
     const regex = new RegExp(q, "i");
     const blogs = await Blog.find({

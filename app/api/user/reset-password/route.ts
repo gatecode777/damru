@@ -3,9 +3,13 @@ import bcrypt from "bcryptjs";
 import { verifyResetToken } from "@/lib/otp";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = await checkRateLimit(`reset-password:${getClientIp(req)}`, RATE_LIMITS.resetPassword);
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterSeconds);
+
     const { resetToken, password } = await req.json();
 
     if (!resetToken || !password)

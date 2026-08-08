@@ -10,7 +10,7 @@ import {
   LogOut, ChevronLeft, ChevronRight, FileText, BookOpen, Images, Ticket,
   ShoppingBag,
   CalendarDays,
-  MessageSquareWarning, MapPin, CalendarCheck, UserCog, QrCode,
+  MessageSquareWarning, MapPin, CalendarCheck, UserCog, QrCode, Gift,
 } from "lucide-react";
 
 interface Perms {
@@ -28,6 +28,7 @@ interface Perms {
     banquetBookings?: { view?: boolean };
     banquet?: { view?: boolean };
     coupons?: { view?: boolean };
+    rewards?: { view?: boolean };
     blogCategories?: { view?: boolean };
     blogs?: { view?: boolean };
     analytics?: { view?: boolean };
@@ -58,6 +59,7 @@ const navGroups = [
       { icon: MapPin,          label: "Branches",     href: "/admin/branches",    permission: "branches" },
       { icon: CalendarCheck,   label: "Banquet Bookings", href: "/admin/banquet-bookings", permission: "banquetBookings" },
       { icon: Ticket,          label: "Coupons",      href: "/admin/coupons",     permission: "coupons" },
+      { icon: Gift,            label: "Rewards & Loyalty", href: "/admin/rewards", permission: "rewards" },
     ],
   },
   {

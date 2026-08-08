@@ -3,6 +3,9 @@ import { getUserFromCookie, signUserSession } from "@/lib/userSession";
 import { connectDB } from "@/lib/mongodb";
 import UserModel from "@/models/User";
 import bcrypt from "bcryptjs";
+import { checkAndAwardDailyLogin } from "@/lib/rewardEngine";
+import { evaluateStreakAchievements, evaluateProfileAchievement, evaluateAccountAgeAchievements } from "@/lib/achievementEngine";
+import { evaluateStreakMissions, evaluateProfileMission } from "@/lib/missionEngine";
 
 // ── GET /api/user/me ──────────────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -16,6 +19,23 @@ export async function GET(req: NextRequest) {
       .select("name email phone city avatar createdAt")
       .lean() as any;
     if (!dbUser) return NextResponse.json({ user: null }, { status: 401 });
+
+    try {
+      const streakResult = await checkAndAwardDailyLogin(user.id);
+      if ("currentStreak" in streakResult) {
+        await evaluateStreakAchievements(user.id, streakResult.currentStreak);
+        await evaluateStreakMissions(user.id, streakResult.currentStreak);
+      }
+    } catch (err) {
+      console.error("checkAndAwardDailyLogin failed:", err);
+    }
+
+    try {
+      await evaluateAccountAgeAchievements(user.id, dbUser.createdAt);
+    } catch (err) {
+      console.error("evaluateAccountAgeAchievements failed:", err);
+    }
+
     return NextResponse.json({
       user: {
         id:        String(dbUser._id),
@@ -62,6 +82,13 @@ export async function PATCH(req: NextRequest) {
         sessionUser.id, updates, { new: true }
       ).select("name email phone city avatar").lean() as any;
 
+      try {
+        await evaluateProfileAchievement(sessionUser.id);
+        await evaluateProfileMission(sessionUser.id);
+      } catch (err) {
+        console.error("evaluateProfileAchievement failed:", err);
+      }
+
       // Re-issue cookie with updated name/avatar
       const jsonRes = NextResponse.json({
         success: true,
@@ -75,6 +102,34 @@ export async function PATCH(req: NextRequest) {
         avatar: updated.avatar || "",
       });
       return jsonRes;
+    }
+
+    if (action === "updateDateOfBirth") {
+      const { dateOfBirth } = body;
+      const dbUser = await UserModel.findById(sessionUser.id).select("dobLocked").lean() as any;
+      if (dbUser.dobLocked) return NextResponse.json({ error: "Date of birth is locked. Contact support to change it." }, { status: 403 });
+
+      const parsed = new Date(dateOfBirth);
+      if (!dateOfBirth || isNaN(parsed.getTime()) || parsed > new Date()) {
+        return NextResponse.json({ error: "Please enter a valid date of birth." }, { status: 400 });
+      }
+
+      await UserModel.findByIdAndUpdate(sessionUser.id, { dateOfBirth: parsed, dobLocked: true });
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "updateMarriageAnniversary") {
+      const { marriageAnniversary } = body;
+      const dbUser = await UserModel.findById(sessionUser.id).select("anniversaryLocked").lean() as any;
+      if (dbUser.anniversaryLocked) return NextResponse.json({ error: "Anniversary date is locked. Contact support to change it." }, { status: 403 });
+
+      const parsed = new Date(marriageAnniversary);
+      if (!marriageAnniversary || isNaN(parsed.getTime()) || parsed > new Date()) {
+        return NextResponse.json({ error: "Please enter a valid anniversary date." }, { status: 400 });
+      }
+
+      await UserModel.findByIdAndUpdate(sessionUser.id, { marriageAnniversary: parsed, anniversaryLocked: true });
+      return NextResponse.json({ success: true });
     }
 
     if (action === "changePassword") {

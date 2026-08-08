@@ -698,6 +698,7 @@
   color: #e67e22;
 }
 
+
 .submenu {
   margin-left: 21px;
   margin-top: 8px;
@@ -1139,5 +1140,353 @@
 
   .auth-title {
     font-size: 1.6rem
+  }
+}
+
+/* ============================================================
+   HAMBURGER MENU v2 — account card, iconed nav, contact panel
+   ============================================================ */
+.full-menu-overlay {
+  --ov-fg: #ffffff;
+  --ov-fg-soft: rgba(255, 255, 255, 0.68);
+  --ov-border: rgba(255, 255, 255, 0.16);
+  --ov-surface: rgba(255, 255, 255, 0.07);
+  --ov-surface-hover: rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 767px) {
+  .full-menu-overlay {
+    --ov-fg: #1a1a1a;
+    --ov-fg-soft: #8a7d72;
+    --ov-border: #eee3da;
+    --ov-surface: #fdf8f2;
+    --ov-surface-hover: #fbf0e2;
+  }
+}
+
+.overlay-content--v2 {
+  display: flex;
+  gap: 60px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.overlay-nav--v2 {
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+}
+
+/* Account card / login CTA */
+.overlay-account-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 30px;
+  background: var(--ov-surface);
+  border: 1px solid var(--ov-border);
+  border-radius: 16px;
+}
+
+.overlay-account-card__identity {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  text-decoration: none !important;
+}
+
+.overlay-account-card__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid #e67e22;
+}
+
+.overlay-account-card__avatar--initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e67e22;
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.overlay-account-card__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.overlay-account-card__name {
+  font-family: "Poppins", sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 14.5px !important;
+  letter-spacing: 0.01em !important;
+  color: var(--ov-fg) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.overlay-account-card__view {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 2px;
+  font-family: "Poppins", sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #e67e22;
+}
+
+.overlay-account-card__damru {
+  display: inline-flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  background: #e67e22;
+  border-radius: 12px;
+  color: #fff !important;
+  text-decoration: none !important;
+  font-family: "Poppins", sans-serif !important;
+}
+
+.overlay-account-card__damru span:first-child {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.overlay-account-card__damru-label {
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+
+.overlay-account-cta {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 30px;
+  padding: 14px 18px;
+  background: #e67e22;
+  border: none;
+  border-radius: 14px;
+  color: #fff !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.overlay-account-cta i {
+  margin-right: 4px;
+}
+
+/* Iconed nav list */
+.overlay-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.overlay-nav .overlay-nav__item {
+  display: block !important;
+  margin-bottom: 2px !important;
+  padding: 0;
+}
+
+.overlay-nav__eyebrow {
+  display: block;
+  margin: 0 0 10px 2px;
+  color: #e67e22;
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.overlay-nav .overlay-nav__link {
+  display: flex !important;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  font-family: "Playfair Display", serif !important;
+  font-size: 23px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.2px !important;
+  color: var(--ov-fg) !important;
+  text-decoration: none !important;
+  transition: background 0.2s ease, color 0.2s ease, padding-left 0.2s ease;
+}
+
+.overlay-nav .overlay-nav__link i {
+  width: 22px;
+  flex-shrink: 0;
+  font-size: 17px;
+  text-align: center;
+  color: #e67e22;
+  font-weight: 400;
+}
+
+.overlay-nav .overlay-nav__link:hover {
+  background: var(--ov-surface-hover);
+  padding-left: 14px;
+}
+
+.overlay-nav .overlay-nav__link.is-active {
+  background: var(--ov-surface);
+  color: #e67e22 !important;
+  font-weight: 600 !important;
+}
+
+.overlay-logout-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin-top: 22px;
+  padding-top: 18px;
+  border: none;
+  border-top: 1px solid var(--ov-border);
+  background: none;
+  color: #e74c3c !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* Contact panel */
+.overlay-contact--v2 {
+  min-width: 260px;
+  padding: 24px;
+  background: var(--ov-surface);
+  border: 1px solid var(--ov-border);
+  border-radius: 18px;
+}
+
+.overlay-contact--v2 h3 {
+  margin: 0 0 16px;
+  font-family: "Playfair Display", serif;
+  font-size: 25px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  color: var(--ov-fg);
+}
+
+.overlay-contact__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.overlay-contact__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ov-fg-soft);
+  font-family: "Poppins", sans-serif;
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+.overlay-contact__row i {
+  width: 18px;
+  flex-shrink: 0;
+  font-size: 16px;
+  color: #e67e22;
+}
+
+.overlay-contact__row--static {
+  cursor: default;
+}
+
+.overlay-socials--v2 {
+  display: flex;
+  gap: 10px;
+}
+
+.overlay-socials--v2 a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--ov-surface-hover);
+  color: var(--ov-fg);
+  font-size: 16px;
+  text-decoration: none !important;
+  transition: background 0.2s, color 0.2s;
+}
+
+.overlay-socials--v2 a:hover {
+  background: #e67e22;
+  color: #fff;
+}
+
+@media (max-width: 767px) {
+  .overlay-content--v2 {
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .overlay-nav--v2 {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .overlay-nav .overlay-nav__link {
+    font-size: 19px !important;
+    padding: 11px 8px;
+  }
+
+  .overlay-account-card,
+  .overlay-account-cta {
+    margin-bottom: 20px;
+  }
+
+  .overlay-contact--v2 {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .overlay-contact--v2 h3 {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 374px) {
+  .overlay-nav .overlay-nav__link {
+    gap: 10px;
+    font-size: 17px !important;
+  }
+
+  .overlay-account-card__name {
+    max-width: 120px;
   }
 }

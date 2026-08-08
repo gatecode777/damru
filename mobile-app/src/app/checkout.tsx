@@ -18,10 +18,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Button, Field } from "../components/ui";
 import { colors, assetUrl } from "../config";
-import { get, post } from "../lib/api";
+import { get, post, ApiRequestError } from "../lib/api";
 import { useApp } from "../providers/AppProvider";
 import { StaticAssets } from "../constants/assets";
 import type { Address } from "../types";
+import { getRewardsDashboard, redeemDamru } from "../services/rewardsApi";
+import { createRazorpayOrder, verifyRazorpayPayment } from "../services/paymentApi";
+import { trackRewardEvent } from "../lib/rewardsAnalytics";
+import RazorpayCheckout from "react-native-razorpay";
 
 const emptyAddress: Address = {
   label: "Home",
@@ -42,9 +46,25 @@ export default function CheckoutScreen() {
     discount?: string;
   }>();
 
-  const { cart, subtotal, clearCart } = useApp();
+  const { user, cart, subtotal, clearCart } = useApp();
 
   const queryClient = useQueryClient();
+
+  const { data: rewardsDashboard } = useQuery({
+    queryKey: queryKeys.rewards.dashboard(),
+    queryFn: getRewardsDashboard,
+    enabled: !!user,
+    staleTime: 30 * 1000,
+  });
+  const [requestedDamru, setRequestedDamru] = useState("");
+
+  // Same tax/delivery config the backend's own order-total calculation uses —
+  // keeps this preview from drifting from what /api/orders will actually charge.
+  const { data: checkoutConfig } = useQuery({
+    queryKey: queryKeys.checkout.config(),
+    queryFn: () => get<{ taxRate: number; freeDeliveryAbove: number; deliveryCharge: number }>("/api/checkout/config"),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data: addressesData } = useQuery({
     queryKey: queryKeys.profile.addresses(),
@@ -70,11 +90,18 @@ export default function CheckoutScreen() {
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Bill calculations
+  // Bill calculations — mirrors the same taxRate/freeDeliveryAbove/deliveryCharge
+  // config app/api/orders/route.ts uses, so this preview doesn't drift from the
+  // real charge. Falls back to the same defaults lib/getSettings.ts uses if the
+  // config fetch hasn't resolved yet.
+  const taxRate = checkoutConfig?.taxRate ?? 5;
+  const freeDeliveryAbove = checkoutConfig?.freeDeliveryAbove ?? 500;
+  const deliveryCharge = checkoutConfig?.deliveryCharge ?? 50;
   const discount = Number(discountParam || 0);
-  const deliveryFee = 0; // FREE Delivery
-  const tax = Math.round((subtotal - discount) * 0.05 * 100) / 100;
-  const total = Math.max(0, subtotal - discount + tax + deliveryFee);
+  const subtotalAfterDiscount = Math.max(0, subtotal - discount);
+  const deliveryFee = subtotalAfterDiscount >= freeDeliveryAbove ? 0 : deliveryCharge;
+  const tax = Math.round(subtotalAfterDiscount * taxRate / 100);
+  const total = Math.max(0, subtotalAfterDiscount + tax + deliveryFee);
 
   // UI States
   const [billExpanded, setBillExpanded] = useState(false);
@@ -156,6 +183,10 @@ export default function CheckoutScreen() {
       Alert.alert("Delivery address", "Please select or add an address.");
       return;
     }
+    if (payMethod !== "cod" && !user) {
+      Alert.alert("Login required", "Online payment requires login. Please log in, or choose Cash on Delivery.");
+      return;
+    }
 
     setBusy(true);
     try {
@@ -172,19 +203,37 @@ export default function CheckoutScreen() {
       // Clear the local and database cart
       await clearCart();
 
-      // Show success screen and route back
-      Alert.alert(
-        "Order Confirmed! 🎉",
-        `Your order #${
-          response.order.orderNumber ?? response.order._id.slice(-6)
-        } has been successfully placed.`,
-        [
-          {
-            text: "View Orders",
-            onPress: () => router.replace("/(tabs)/profile"),
-          },
-        ]
-      );
+      // Damru redemption is chained after order creation — the backend
+      // requires an existing, owned orderId to redeem against. This must run
+      // BEFORE Razorpay order creation below, since the payable amount sent
+      // to Razorpay is computed net of any Damru redeemed for this order.
+      let redeemMessage = "";
+      const damruAmount = Number(requestedDamru);
+      if (user && damruAmount > 0) {
+        trackRewardEvent("damru_redemption_started");
+        const result = await redeemDamru(response.order._id, damruAmount);
+        if (result.success) {
+          trackRewardEvent("damru_redemption_succeeded");
+          redeemMessage = `\n\n🪙 ${damruAmount} Damru redeemed → ₹${result.discount} discount recorded.`;
+          queryClient.invalidateQueries({ queryKey: queryKeys.rewards.dashboard() });
+        } else {
+          trackRewardEvent("damru_redemption_failed");
+          redeemMessage = `\n\nDamru redemption didn't go through: ${result.error} Your balance wasn't affected.`;
+        }
+      }
+
+      const orderLabel = response.order.orderNumber ?? response.order._id.slice(-6);
+
+      if (payMethod === "cod") {
+        Alert.alert(
+          "Order Confirmed! 🎉",
+          `Your order #${orderLabel} has been successfully placed.${redeemMessage}`,
+          [{ text: "View Orders", onPress: () => router.replace("/(tabs)/profile") }]
+        );
+        return;
+      }
+
+      await payWithRazorpay(response.order._id, orderLabel, redeemMessage);
     } catch (e: any) {
       Alert.alert(
         "Could not place order",
@@ -193,6 +242,76 @@ export default function CheckoutScreen() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Backend determines and freezes the payable amount (order.total net of any
+  // Damru already redeemed for this order) — this only ever opens Razorpay's
+  // native checkout for that server-returned amount, never one computed here.
+  async function payWithRazorpay(internalOrderId: string, orderLabel: string, redeemMessage: string) {
+    try {
+      const orderData = await createRazorpayOrder(internalOrderId);
+
+      if (orderData.zeroPayable) {
+        Alert.alert(
+          "Order Confirmed! 🎉",
+          `Your order #${orderLabel} has been successfully placed.${redeemMessage}`,
+          [{ text: "View Orders", onPress: () => router.replace("/(tabs)/profile") }]
+        );
+        return;
+      }
+
+      if (!orderData.razorpayOrderId || !orderData.amount || !orderData.keyId) {
+        throw new Error("Payment could not be started.");
+      }
+
+      const paymentResult = await RazorpayCheckout.open({
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency ?? "INR",
+        name: "Damru By Namo",
+        description: `Order #${orderLabel}`,
+        order_id: orderData.razorpayOrderId,
+        prefill: user ? { email: user.email, name: user.name } : undefined,
+        theme: { color: "#e67e22" },
+      });
+
+      const verifyResult = await verifyRazorpayPayment({
+        orderId: internalOrderId,
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_signature: paymentResult.razorpay_signature,
+      });
+
+      if (verifyResult.success) {
+        Alert.alert(
+          "Payment Successful! 🎉",
+          `Your order #${orderLabel} is confirmed and paid.${redeemMessage}`,
+          [{ text: "View Orders", onPress: () => router.replace("/(tabs)/profile") }]
+        );
+      } else {
+        offerPaymentRetry(internalOrderId, orderLabel, redeemMessage, "We couldn't verify your payment.");
+      }
+    } catch (e: unknown) {
+      // RazorpayCheckout.open() rejects on user cancellation or a failed
+      // payment attempt — either way, the order is saved and retryable, it
+      // is never silently marked paid from this catch block alone.
+      if (e instanceof ApiRequestError) {
+        offerPaymentRetry(internalOrderId, orderLabel, redeemMessage, e.message);
+      } else {
+        offerPaymentRetry(internalOrderId, orderLabel, redeemMessage, "Payment was cancelled or didn't complete.");
+      }
+    }
+  }
+
+  function offerPaymentRetry(internalOrderId: string, orderLabel: string, redeemMessage: string, reason: string) {
+    Alert.alert(
+      "Payment Not Completed",
+      `Order #${orderLabel} was saved, but payment didn't go through: ${reason}\n\nYour Damru balance wasn't affected.${redeemMessage}`,
+      [
+        { text: "Retry Payment", onPress: () => { setBusy(true); payWithRazorpay(internalOrderId, orderLabel, redeemMessage).finally(() => setBusy(false)); } },
+        { text: "View Orders", style: "cancel", onPress: () => router.replace("/(tabs)/profile") },
+      ]
+    );
   }
 
   return (
@@ -256,12 +375,14 @@ export default function CheckoutScreen() {
               )}
               <View style={styles.billDetailRow}>
                 <Text style={styles.billDetailLabel}>Delivery Fee</Text>
-                <Text style={[styles.billDetailVal, { color: colors.green }]}>
-                  FREE
-                </Text>
+                {deliveryFee === 0 ? (
+                  <Text style={[styles.billDetailVal, { color: colors.green }]}>FREE</Text>
+                ) : (
+                  <Text style={styles.billDetailVal}>₹{deliveryFee.toFixed(2)}</Text>
+                )}
               </View>
               <View style={styles.billDetailRow}>
-                <Text style={styles.billDetailLabel}>Taxes (5%)</Text>
+                <Text style={styles.billDetailLabel}>Taxes ({taxRate}%)</Text>
                 <Text style={styles.billDetailVal}>₹{tax.toFixed(2)}</Text>
               </View>
             </View>
@@ -341,6 +462,25 @@ export default function CheckoutScreen() {
             style={styles.notesInput}
           />
         </View>
+
+        {/* ── Redeem Damru ── */}
+        {user && rewardsDashboard && rewardsDashboard.damruBalance > 0 && (
+          <>
+            <Text style={styles.sectionHeader}>Redeem Damru</Text>
+            <View style={styles.sectionCard}>
+              <Text style={styles.redeemAvailableText}>🪙 Available: {rewardsDashboard.damruBalance} Damru</Text>
+              <TextInput
+                value={requestedDamru}
+                onChangeText={setRequestedDamru}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor="#a99c94"
+                style={styles.notesInput}
+              />
+              <Text style={styles.redeemNoteText}>The exact discount is confirmed once your order is placed.</Text>
+            </View>
+          </>
+        )}
 
         {/* ── Payment Methods Title ── */}
         <Text style={styles.sectionHeader}>Payment Method</Text>
@@ -774,6 +914,18 @@ const styles = StyleSheet.create({
     color: colors.ink,
     textAlignVertical: "top",
     padding: 0,
+  },
+  redeemAvailableText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 13,
+    color: colors.ink,
+    marginBottom: 8,
+  },
+  redeemNoteText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: "#a99c94",
+    marginTop: 8,
   },
   paymentMethodRow: {
     flexDirection: "row",

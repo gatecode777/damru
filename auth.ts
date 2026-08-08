@@ -50,8 +50,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await connectDB();
           const admin = await AdminUser.findOne({
             email: (credentials.email as string).toLowerCase(),
-          }).select("+password").lean();
+          }).select("+password isActive").lean();
           if (!admin) return null;
+          if (admin.isActive === false) return null;
 
           const stored = admin.password as string;
           const valid  = stored.startsWith("$2")

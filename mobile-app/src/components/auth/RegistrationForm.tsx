@@ -4,18 +4,21 @@ import { AuthInput } from './AuthInput';
 import { PasswordInput } from './PasswordInput';
 
 interface RegistrationFormProps {
-  onSubmit: (name: string, phone: string, email: string, pass: string) => void;
+  onSubmit: (name: string, phone: string, email: string, pass: string, referralCode: string) => void;
   onSwitchToLogin: () => void;
   busy: boolean;
   error?: string;
+  initialReferralCode?: string;
 }
 
-export function RegistrationForm({ onSubmit, onSwitchToLogin, busy, error }: RegistrationFormProps) {
+export function RegistrationForm({ onSubmit, onSwitchToLogin, busy, error, initialReferralCode }: RegistrationFormProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [referralCode, setReferralCode] = useState(initialReferralCode || '');
+  const [showReferralField, setShowReferralField] = useState(!!initialReferralCode);
 
   const [localErrors, setLocalErrors] = useState<{
     name?: string;
@@ -51,7 +54,7 @@ export function RegistrationForm({ onSubmit, onSwitchToLogin, busy, error }: Reg
     setLocalErrors(errors);
 
     if (Object.keys(errors).length === 0) {
-      onSubmit(name.trim(), phone.trim(), email.trim(), password);
+      onSubmit(name.trim(), phone.trim(), email.trim(), password, referralCode.trim());
     }
   };
 
@@ -130,6 +133,21 @@ export function RegistrationForm({ onSubmit, onSwitchToLogin, busy, error }: Reg
         error={localErrors.confirm}
       />
 
+      {showReferralField ? (
+        <AuthInput
+          icon="gift-outline"
+          placeholder="Referral Code (optional)"
+          value={referralCode}
+          onChangeText={(val) => setReferralCode(val.toUpperCase())}
+          autoCapitalize="characters"
+          editable={!busy}
+        />
+      ) : (
+        <Pressable onPress={() => setShowReferralField(true)} style={styles.referralToggle} disabled={busy}>
+          <Text style={styles.referralToggleText}>Have a referral code?</Text>
+        </Pressable>
+      )}
+
       <Text style={styles.termsText}>
         By signing below, you agree to the{' '}
         <Text style={styles.linkText} onPress={() => Linking.openURL('https://damrurestro.com/terms')}>
@@ -189,6 +207,14 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 13,
     fontFamily: 'Poppins_400Regular',
+  },
+  referralToggle: {
+    marginBottom: 14,
+  },
+  referralToggleText: {
+    color: '#e67e22',
+    fontSize: 13,
+    fontFamily: 'Poppins_600SemiBold',
   },
   termsText: {
     fontSize: 13,

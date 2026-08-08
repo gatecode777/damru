@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
+import { useRewards } from "@/lib/rewards/RewardsProvider";
 
 type AuthScreen = "login" | "register" | "forgot" | "otp" | "reset";
 interface UserInfo { id: string; name: string; email: string; avatar?: string }
@@ -101,6 +102,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { totalItems } = useCart();
+  const { dashboard: rewardsDashboard } = useRewards();
   const otpRef = useRef<{ getCode: () => string } | null>(null);
 
   // ── UI state (your original) ──────────────────────────────────
@@ -137,6 +139,8 @@ export default function Header() {
   const [regEmail, setRegEmail] = useState("");
   const [regPw, setRegPw] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
+  const [regReferralCode, setRegReferralCode] = useState("");
+  const [showReferralField, setShowReferralField] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [otpToken, setOtpToken] = useState("");
   const [resetToken, setResetToken] = useState("");
@@ -183,7 +187,18 @@ export default function Header() {
   useEffect(() => {
     fetch("/api/user/me")
       .then(r => r.json())
-      .then(d => setUser(d.user || null))
+      .then(d => {
+        setUser(d.user || null);
+        if (!d.user) {
+          const ref = new URLSearchParams(window.location.search).get("ref");
+          if (ref) {
+            setRegReferralCode(ref.toUpperCase());
+            setShowReferralField(true);
+            setActiveScreen("register");
+            setIsAuthOpen(true);
+          }
+        }
+      })
       .catch(() => setUser(null))
       .finally(() => setUserLoading(false));
 
@@ -321,7 +336,7 @@ export default function Header() {
     if (regPw !== regConfirm) { setErr("Passwords don't match."); return; }
     if (regPw.length < 6) { setErr("Password min 6 characters."); return; }
     setBusy(true); setErr("");
-    const d = await apiPost("/api/user/register", { name: regName, email: regEmail, phone: regPhone, password: regPw });
+    const d = await apiPost("/api/user/register", { name: regName, email: regEmail, phone: regPhone, password: regPw, referralCode: regReferralCode.trim() || undefined });
     setBusy(false);
     if (d.error) { setErr(d.error); return; }
     setUser(d.user);
@@ -536,6 +551,13 @@ export default function Header() {
               </Link>
             )}
 
+            {/* Damru balance pill — desktop/tablet only; shown in the profile menu on small screens */}
+            {!isMobile && !userLoading && user && rewardsDashboard && (
+              <Link href="/my-profile?tab=rewards" className="rewards__nav-pill" title="My Damru Rewards">
+                🪙 {rewardsDashboard.damruBalance}
+              </Link>
+            )}
+
             {/* Profile icon — login modal if not logged in, profile link if logged in */}
             {userLoading ? (
               <span className="icon-link" style={{ opacity: 0.4, cursor: "default" }}>
@@ -687,60 +709,109 @@ export default function Header() {
           <i className="ri-close-line"></i>
         </div>
 
-        <div className="overlay-content">
-          <div className="overlay-nav">
-            <ul>
-              <li><span className="dot"></span> <Link href="/" onClick={toggleMenu} className={pathname === "/" ? "active-menu" : ""}>HOME</Link></li>
-              <li><span className="dot"></span> <Link href="/menu" onClick={toggleMenu} className={pathname === "/menu" ? "active-menu" : ""}>MENU</Link></li>
-              <li><span className="dot"></span> <Link href="/about-us" onClick={toggleMenu} className={pathname === "/about-us" ? "active-menu" : ""}>ABOUT US</Link></li>
-              <li><span className="dot"></span> <Link href="/contact-us" onClick={toggleMenu} className={pathname === "/contact-us" ? "active-menu" : ""}>CONTACT US</Link></li>
-              <li><span className="dot"></span> <Link href="/gallery" onClick={toggleMenu} className={pathname === "/gallery" ? "active-menu" : ""}>GALLERY</Link></li>
-              <li className="has-submenu">
-                <span className="dot" style={{ background: pathname.startsWith("/blogs") ? "#e67e22" : undefined }}></span>
-                <Link href="/blogs" onClick={toggleMenu} className={pathname.startsWith("/blogs") ? "active-menu" : ""}>BLOGS</Link>
-              </li>
-              <li><span className="dot"></span> <Link href="/offers" onClick={toggleMenu} className={pathname === "/offers" ? "active-menu" : ""}>OFFERS</Link></li>
-              <li><span className="dot"></span> <Link href="/branches" onClick={toggleMenu} className={pathname.startsWith("/branches") ? "active-menu" : ""}>BANQUET / EVENT</Link></li>
-              {user ? (
-                <>
-                  <li><span className="dot"></span> <Link href="/my-profile" onClick={toggleMenu}>MY PROFILE</Link></li>
-                  <li>
-                    <span className="dot" style={{ background: "#e74c3c" }}></span>
-                    <button
-                      onClick={() => { setIsMenuOpen(false); handleLogout(); }}
-                      style={{ color: "#e74c3c" }}
-                    >
-                      LOGOUT
-                    </button>
-                  </li>
-                </>
+        <div className="overlay-content overlay-content--v2">
+          <div className="overlay-nav overlay-nav--v2">
+
+            {!userLoading && (
+              user ? (
+                <div className="overlay-account-card">
+                  <Link href="/my-profile" onClick={toggleMenu} className="overlay-account-card__identity">
+                    {user.avatar ? (
+                      <img src={`/uploads/avatars/${user.avatar}`} alt={user.name} className="overlay-account-card__avatar" />
+                    ) : (
+                      <span className="overlay-account-card__avatar overlay-account-card__avatar--initials">
+                        {user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="overlay-account-card__info">
+                      <span className="overlay-account-card__name">{user.name}</span>
+                      <span className="overlay-account-card__view">View Profile <i className="ri-arrow-right-s-line"></i></span>
+                    </span>
+                  </Link>
+                  {rewardsDashboard && (
+                    <Link href="/my-profile?tab=rewards" onClick={toggleMenu} className="overlay-account-card__damru" title="My Damru Rewards">
+                      <span>🪙 {rewardsDashboard.damruBalance}</span>
+                      <span className="overlay-account-card__damru-label">Damru</span>
+                    </Link>
+                  )}
+                </div>
               ) : (
-                <li>
-                  <span className="dot"></span>
-                  <button
-                    onClick={() => { setIsMenuOpen(false); setIsAuthOpen(true); }}
-                  >
-                    LOGIN
-                  </button>
-                </li>
-              )}
+                <button className="overlay-account-cta" onClick={() => { setIsMenuOpen(false); setIsAuthOpen(true); }}>
+                  <span><i className="ri-user-3-line"></i> Login / Sign Up</span>
+                  <i className="ri-arrow-right-s-line"></i>
+                </button>
+              )
+            )}
+
+            <span className="overlay-nav__eyebrow">Explore</span>
+            <ul className="overlay-nav__list">
+              <li className="overlay-nav__item">
+                <Link href="/" onClick={toggleMenu} className={`overlay-nav__link ${pathname === "/" ? "is-active" : ""}`}>
+                  <i className="ri-home-5-line"></i> <span>Home</span>
+                </Link>
+              </li>
+              <li className="overlay-nav__item">
+                <Link href="/menu" onClick={toggleMenu} className={`overlay-nav__link ${pathname === "/menu" ? "is-active" : ""}`}>
+                  <i className="ri-restaurant-2-line"></i> <span>Menu</span>
+                </Link>
+              </li>
+              <li className="overlay-nav__item">
+                <Link href="/about-us" onClick={toggleMenu} className={`overlay-nav__link ${pathname === "/about-us" ? "is-active" : ""}`}>
+                  <i className="ri-information-line"></i> <span>About Us</span>
+                </Link>
+              </li>
+              <li className="overlay-nav__item">
+                <Link href="/contact-us" onClick={toggleMenu} className={`overlay-nav__link ${pathname === "/contact-us" ? "is-active" : ""}`}>
+                  <i className="ri-phone-line"></i> <span>Contact Us</span>
+                </Link>
+              </li>
+              <li className="overlay-nav__item">
+                <Link href="/gallery" onClick={toggleMenu} className={`overlay-nav__link ${pathname === "/gallery" ? "is-active" : ""}`}>
+                  <i className="ri-image-line"></i> <span>Gallery</span>
+                </Link>
+              </li>
+              <li className="overlay-nav__item">
+                <Link href="/blogs" onClick={toggleMenu} className={`overlay-nav__link ${pathname.startsWith("/blogs") ? "is-active" : ""}`}>
+                  <i className="ri-article-line"></i> <span>Blogs</span>
+                </Link>
+              </li>
+              <li className="overlay-nav__item">
+                <Link href="/offers" onClick={toggleMenu} className={`overlay-nav__link ${pathname === "/offers" ? "is-active" : ""}`}>
+                  <i className="ri-price-tag-3-line"></i> <span>Offers</span>
+                </Link>
+              </li>
+              <li className="overlay-nav__item">
+                <Link href="/branches" onClick={toggleMenu} className={`overlay-nav__link ${pathname.startsWith("/branches") ? "is-active" : ""}`}>
+                  <i className="ri-calendar-event-line"></i> <span>Banquet / Event</span>
+                </Link>
+              </li>
             </ul>
+
+            {user && (
+              <button className="overlay-logout-btn" onClick={() => { setIsMenuOpen(false); handleLogout(); }}>
+                <i className="ri-logout-box-r-line"></i> Logout
+              </button>
+            )}
           </div>
 
-          <div className="overlay-contact">
-            <h3>Contact</h3>
-            <div className="dotted-divider"></div>
-            <p className="contact-detail">+91 8690987272</p>
-            <p className="contact-detail">info@damrubynamo.com</p>
-            <br /><br />
-            <p className="contact-address">
-              35 A Mansarover, Jaipur (Rajasthan),<br />302020
-            </p>
-            <div className="overlay-socials">
-              <Link href="#"><i className="ri-instagram-line"></i></Link>
-              <Link href="#"><i className="ri-twitter-line"></i></Link>
-              <Link href="#"><i className="ri-facebook-fill"></i></Link>
-              <Link href="#"><i className="ri-youtube-line"></i></Link>
+          <div className="overlay-contact overlay-contact--v2">
+            <h3>Get in Touch</h3>
+            <div className="overlay-contact__list">
+              <a href="tel:+918690987272" className="overlay-contact__row">
+                <i className="ri-phone-fill"></i> <span>+91 8690987272</span>
+              </a>
+              <a href="mailto:info@damrubynamo.com" className="overlay-contact__row">
+                <i className="ri-mail-fill"></i> <span>info@damrubynamo.com</span>
+              </a>
+              <div className="overlay-contact__row overlay-contact__row--static">
+                <i className="ri-map-pin-fill"></i> <span>35 A Mansarover, Jaipur (Rajasthan), 302020</span>
+              </div>
+            </div>
+            <div className="overlay-socials overlay-socials--v2">
+              <Link href="#" aria-label="Instagram"><i className="ri-instagram-line"></i></Link>
+              <Link href="#" aria-label="Twitter"><i className="ri-twitter-line"></i></Link>
+              <Link href="#" aria-label="Facebook"><i className="ri-facebook-fill"></i></Link>
+              <Link href="#" aria-label="YouTube"><i className="ri-youtube-line"></i></Link>
             </div>
           </div>
         </div>
@@ -816,6 +887,20 @@ export default function Header() {
                 <i className={showPassword.confirm ? "ri-eye-line" : "ri-eye-off-line"}></i>
               </button>
             </div>
+
+            {showReferralField ? (
+              <div className="auth-field">
+                <span className="auth-field-icon"><i className="ri-gift-line"></i></span>
+                <input type="text" placeholder="Referral Code (optional)" value={regReferralCode}
+                  onChange={e => setRegReferralCode(e.target.value.toUpperCase())} />
+              </div>
+            ) : (
+              <button type="button" className="auth-link orange" style={{ marginBottom: 14, display: "inline-block" }}
+                onClick={() => setShowReferralField(true)}>
+                Have a referral code?
+              </button>
+            )}
+
             <p className="auth-terms">By signing below, you agree to the <Link href="#">terms of use</Link> and <Link href="#">privacy notice</Link></p>
             <button className="auth-btn" onClick={handleRegister} disabled={busy}>
               {busy ? "Registering…" : "Register"}

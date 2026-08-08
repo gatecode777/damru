@@ -2,6 +2,18 @@ import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
 import AdminUser from "@/models/Admin";
 
+/**
+ * Shared admin-bypass predicate (also used by checkApiPerm.ts). `super_admin`
+ * always bypasses. `admin` bypasses too UNLESS `isSuperAdmin` was explicitly
+ * stored as `false` — accounts created before that flag existed have no
+ * stored value (`undefined !== false`) and keep full access, so existing
+ * production admins are never silently downgraded.
+ */
+export function adminBypassesPermissions(role: string, isSuperAdmin: boolean | undefined): boolean {
+  if (role === "super_admin") return true;
+  return role === "admin" && isSuperAdmin !== false;
+}
+
 export interface AdminPerms {
   name?: string;
   email?: string;
@@ -23,14 +35,14 @@ export async function getAdminPerms(): Promise<AdminPerms> {
   await connectDB();
   const admin = await AdminUser.findOne({
     email: (session.user as any).email,
-  }).select("role permissions isActive").lean() as any;
+  }).select("role permissions isActive isSuperAdmin").lean() as any;
 
-  if (!admin) {
+  if (!admin || admin.isActive === false) {
     const none = () => false;
     return { role:"moderator", isSuperAdmin:false, can:none, permissions:{} };
   }
 
-  const isSuperAdmin = admin.role === "super_admin" || admin.role === "admin";
+  const isSuperAdmin = adminBypassesPermissions(admin.role, admin.isSuperAdmin);
   const permissions  = admin.permissions || {};
 
   const can = (module: string, action: "view"|"create"|"edit"|"delete" = "view"): boolean => {

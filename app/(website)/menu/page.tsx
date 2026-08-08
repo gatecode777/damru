@@ -53,42 +53,65 @@ export default async function MenuPage({
 }) {
   const { category: catSlug, t: tableToken } = await searchParams;
 
-  // Verify table token if present
-  let tableDetails = null;
-  let isTableTokenInvalid = false;
-
-  if (tableToken) {
-    const verified = await verifyTableToken(tableToken);
-    if (verified) {
-      tableDetails = { ...verified, token: tableToken };
-    } else {
-      isTableTokenInvalid = true;
-    }
-  }
-
-  // ── Fetch from MongoDB ──────────────────────────────────────
+  // Table-token verification and the menu data fetch are independent — run in parallel
+  // instead of blocking the DB reads on the token check finishing first.
   let categories: ICategory[] = [];
   let items: IMenuItem[] = [];
+  let tableDetails: (Awaited<ReturnType<typeof verifyTableToken>> & { token: string }) | null = null;
+  let isTableTokenInvalid = false;
 
-  try {
-    await connectDB();
+  type LeanCategory = { _id: unknown; name: string; slug?: string; description?: string; sortOrder: number };
+  type LeanMenuItem = {
+    _id: unknown; name: string; description?: string; image?: string; basePrice: number;
+    variantType: string; variants: { label: string; price: number }[]; isVeg?: boolean;
+    category: unknown; sortOrder: number;
+  };
 
-    // All active categories for the filter bar
-    const rawCats = await CategoryModel
-      .find({ isActive: true })
-      .sort({ sortOrder: 1 })
-      .lean();
-    categories = JSON.parse(JSON.stringify(rawCats));
+  const [verified, menuData] = await Promise.all([
+    tableToken ? verifyTableToken(tableToken) : Promise.resolve(null),
+    (async () => {
+      await connectDB();
+      const [rawCats, rawItems] = await Promise.all([
+        CategoryModel.find({ isActive: true })
+          .select("name slug description sortOrder")
+          .sort({ sortOrder: 1 })
+          .lean<LeanCategory[]>(),
+        MenuItemModel.find({ isActive: true })
+          .select("name description image basePrice variantType variants isVeg category sortOrder")
+          .sort({ sortOrder: 1 })
+          .lean<LeanMenuItem[]>(),
+      ]);
+      return { rawCats, rawItems };
+    })().catch(err => {
+      console.error("Menu page DB error:", err);
+      return { rawCats: [] as LeanCategory[], rawItems: [] as LeanMenuItem[] };
+    }),
+  ]);
 
-    // Fetch all active menu items
-    const rawItems = await MenuItemModel
-      .find({ isActive: true })
-      .sort({ sortOrder: 1 })
-      .lean();
-    items = JSON.parse(JSON.stringify(rawItems));
-  } catch (err) {
-    console.error("Menu page DB error:", err);
+  if (tableToken) {
+    if (verified) tableDetails = { ...verified, token: tableToken };
+    else isTableTokenInvalid = true;
   }
+
+  categories = menuData.rawCats.map(c => ({
+    _id: String(c._id),
+    name: c.name,
+    slug: c.slug || "",
+    description: c.description || "",
+    sortOrder: c.sortOrder,
+  }));
+  items = menuData.rawItems.map(i => ({
+    _id: String(i._id),
+    name: i.name,
+    description: i.description || "",
+    image: i.image,
+    basePrice: i.basePrice,
+    variantType: i.variantType,
+    variants: i.variants || [],
+    isVeg: i.isVeg !== false,
+    category: String(i.category),
+    sortOrder: i.sortOrder,
+  }));
 
   if (isTableTokenInvalid) {
     return (

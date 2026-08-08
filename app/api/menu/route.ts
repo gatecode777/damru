@@ -17,15 +17,17 @@ export async function GET() {
   try {
     await connectDB();
 
-    // Fetch all active categories
-    const categories = await CategoryModel.find({ isActive: true })
-      .sort({ sortOrder: 1 })
-      .lean();
-
-    // Fetch all active menu items
-    const rawItems = await MenuItemModel.find({ isActive: true })
-      .sort({ sortOrder: 1 })
-      .lean();
+    // Categories and items are independent reads — fetch in parallel instead of sequentially.
+    const [categories, rawItems] = await Promise.all([
+      CategoryModel.find({ isActive: true })
+        .select("name slug description sortOrder")
+        .sort({ sortOrder: 1 })
+        .lean(),
+      MenuItemModel.find({ isActive: true })
+        .select("name description image basePrice variants category isVeg sortOrder")
+        .sort({ sortOrder: 1 })
+        .lean(),
+    ]);
 
     const items = rawItems.map((item: any) => {
       // Resolve display price

@@ -19,6 +19,7 @@ const MODULES = [
   { key:"branches",       label:"Branches",         group:"Restaurant" },
   { key:"banquetBookings",label:"Banquet Bookings", group:"Restaurant" },
   { key:"coupons",        label:"Coupons",          group:"Restaurant" },
+  { key:"rewards",        label:"Rewards & Loyalty",group:"Restaurant" },
   { key:"tables",         label:"Tables & QR",      group:"Restaurant" },
   { key:"analytics",      label:"Analytics",        group:"System" },
   // { key:"settings",       label:"Settings",         group:"System" },
@@ -160,6 +161,7 @@ interface Props {
   initial?: {
     _id: string; name: string; email: string;
     role: string; isActive: boolean; permissions: any;
+    isSuperAdmin?: boolean;
   };
 }
 
@@ -173,6 +175,7 @@ export default function ManagerForm({ initial }: Props) {
     password:    "",
     role:        initial?.role     || "admin",
     isActive:    initial?.isActive ?? true,
+    isSuperAdmin: initial?.isSuperAdmin ?? false,
     permissions: initial?.permissions || emptyPermissions(),
   });
   const [showPw, setShowPw] = useState(false);
@@ -202,6 +205,7 @@ export default function ManagerForm({ initial }: Props) {
       const body: any = {
         name: form.name.trim(), email: form.email.trim(),
         role: form.role, permissions: form.permissions, isActive: form.isActive,
+        isSuperAdmin: form.isSuperAdmin,
       };
       if (isEdit) body.id = initial!._id;
       if (form.password) body.password = form.password;
@@ -343,6 +347,16 @@ export default function ManagerForm({ initial }: Props) {
                 </label>
               ))}
             </div>
+            {form.role === "admin" && (
+              <div className="toggle-wrap" style={{ marginTop: 14 }}>
+                <input type="checkbox" id="isSuperAdminAdmin" checked={form.isSuperAdmin}
+                  onChange={e => upd("isSuperAdmin", e.target.checked)}
+                  style={{ width:16, height:16, accentColor:"#f97316", cursor:"pointer" }} />
+                <label htmlFor="isSuperAdminAdmin" className="toggle-label" style={{ cursor:"pointer" }}>
+                  Full Access — bypass the module permissions below (equivalent to Super Admin). Leave off to enforce the permission matrix for this Admin.
+                </label>
+              </div>
+            )}
           </div>
         </div>
 

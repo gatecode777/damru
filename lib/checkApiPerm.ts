@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
 import AdminUser from "@/models/Admin";
+import { adminBypassesPermissions } from "@/lib/adminPermissions";
 
 type Action = "view" | "create" | "edit" | "delete";
 
@@ -20,9 +21,12 @@ export async function checkApiPerm(module: string, action: Action = "view"): Pro
   await connectDB();
   const admin = await AdminUser.findOne({
     email: (session.user as any).email,
-  }).select("role permissions isActive").lean() as any;
+  }).select("role permissions isActive isSuperAdmin").lean() as any;
 
-  if (admin.role === "super_admin" || admin.role === "admin") return null; // always allowed
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (admin.isActive === false) return NextResponse.json({ error: "Forbidden: account deactivated" }, { status: 403 });
+
+  if (adminBypassesPermissions(admin.role, admin.isSuperAdmin)) return null;
 
   const allowed = Boolean(admin.permissions?.[module]?.[action]);
   if (!allowed) return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });

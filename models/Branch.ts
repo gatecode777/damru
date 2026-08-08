@@ -100,6 +100,9 @@ const BranchSchema = new Schema<IBranch>(
   { timestamps: true }
 );
 
+// Matches the real customer-facing query: find({isActive}).sort({sortOrder}).
+BranchSchema.index({ isActive: 1, sortOrder: 1 });
+
 const Branch: Model<IBranch> =
   mongoose.models.Branch || mongoose.model<IBranch>("Branch", BranchSchema);
 

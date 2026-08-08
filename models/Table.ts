@@ -23,7 +23,6 @@ const TableSchema = new Schema<ITable>(
   { timestamps: true }
 );
 
-TableSchema.index({ tableNumber: 1 });
 TableSchema.index({ status: 1 });
 
 if (mongoose.models.Table) {

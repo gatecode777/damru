@@ -3,7 +3,7 @@ import { ScrollView, Pressable, Text, StyleSheet } from "react-native";
 import { colors } from "@/config";
 import { AnimatedIcon } from "../ui/AnimatedIcon";
 
-export type ProfileTab = "overview" | "address" | "orders" | "payment" | "coupons" | "help";
+export type ProfileTab = "overview" | "rewards" | "address" | "orders" | "payment" | "coupons" | "help";
 
 interface ProfileNavigationTabsProps {
   activeTab: ProfileTab;
@@ -12,6 +12,7 @@ interface ProfileNavigationTabsProps {
 
 const TABS: { id: ProfileTab; label: string; icon: string; activeIcon: string }[] = [
   { id: "overview", label: "My Profile", icon: "person-outline", activeIcon: "person" },
+  { id: "rewards", label: "My Rewards", icon: "gift-outline", activeIcon: "gift" },
   { id: "address", label: "Address Book", icon: "book-outline", activeIcon: "book" },
   { id: "orders", label: "My Orders", icon: "bag-handle-outline", activeIcon: "bag-handle" },
   { id: "payment", label: "Payment Methods", icon: "card-outline", activeIcon: "card" },

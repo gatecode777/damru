@@ -77,4 +77,16 @@ export const queryKeys = {
     complaints: () => ["profile", "complaints"] as const,
     paymentMethods: () => ["profile", "paymentMethods"] as const,
   },
+  rewards: {
+    dashboard: () => ["rewards", "dashboard"] as const,
+    history: (page: number) => ["rewards", "history", page] as const,
+    coupons: () => ["rewards", "coupons"] as const,
+    upcoming: () => ["rewards", "upcoming"] as const,
+    achievements: () => ["rewards", "achievements"] as const,
+    missions: () => ["rewards", "missions"] as const,
+    referrals: () => ["rewards", "referrals"] as const,
+  },
+  checkout: {
+    config: () => ["checkout", "config"] as const,
+  },
 };

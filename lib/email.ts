@@ -55,3 +55,36 @@ export async function sendOtpEmail(to: string, otp: string, name?: string) {
     `,
   });
 }
+
+export async function sendRewardEmail(
+  to: string,
+  reward: { title: string; amount: number; description?: string },
+  name?: string
+) {
+  const { transporter, smtpUser, fromName, siteName } = await getTransporter();
+
+  await transporter.sendMail({
+    from: `"${fromName}" <${smtpUser}>`,
+    to,
+    subject: `${reward.title} — ${siteName}`,
+    html: `
+      <div style="font-family: 'Poppins', Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+        <div style="background: linear-gradient(135deg, #e67e22, #d4691a); padding: 32px 40px; text-align: center;">
+          <h1 style="color: #fff; margin: 0; font-size: 1.8rem; letter-spacing: 2px;">${siteName}</h1>
+        </div>
+        <div style="padding: 36px 40px;">
+          <h2 style="color: #111; font-size: 1.3rem; margin: 0 0 12px;">
+            ${name ? `Hi ${name}, ` : ""}${reward.title}
+          </h2>
+          <div style="background: #fff7ed; border: 2px dashed #e67e22; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px;">
+            <span style="font-size: 2.2rem; font-weight: 800; color: #e67e22;">+${reward.amount} Damru</span>
+          </div>
+          ${reward.description ? `<p style="color: #666; font-size: 0.9rem; line-height: 1.6; margin: 0;">${reward.description}</p>` : ""}
+        </div>
+        <div style="background: #f9f9f9; padding: 16px 40px; text-align: center;">
+          <p style="color: #bbb; font-size: 0.75rem; margin: 0;">© ${new Date().getFullYear()} ${siteName}, Jaipur</p>
+        </div>
+      </div>
+    `,
+  });
+}

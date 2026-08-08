@@ -66,6 +66,11 @@ MenuItemSchema.pre("save", function (next) {
   }
 });
 
+// Matches the two real customer-facing filter shapes: `{isActive}` / `{isActive,isFeatured}`
+// (menu listing, suggestions) and `{category,isActive}` (homepage category sections).
+MenuItemSchema.index({ isActive: 1, isFeatured: 1 });
+MenuItemSchema.index({ category: 1, isActive: 1 });
+
 const MenuItem: Model<IMenuItem> =
   mongoose.models.MenuItem ||
   mongoose.model<IMenuItem>("MenuItem", MenuItemSchema);
