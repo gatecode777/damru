@@ -3,10 +3,10 @@
  * Never imported by middleware.ts or any Edge-runtime file.
  */
 import mongoose from "mongoose";
+import * as dns from "node:dns";
 
 // Safely configure DNS fallback for MongoDB Atlas SRV lookup (using system default resolution first)
 try {
-  const dns = require("dns");
   if (typeof dns.setDefaultResultOrder === "function") {
     dns.setDefaultResultOrder("ipv4first");
   }
@@ -42,7 +42,9 @@ const cache = global._mongooseCache;
 // Instead of waiting for the first connectDB() call from a page,
 // kick off the connection promise immediately at module load time.
 // connectDB() then just awaits the already-in-progress promise.
-if (!cache.promise) {
+function startConnection(): Promise<typeof mongoose> {
+  if (cache.promise) return cache.promise;
+
   console.log("🔄 MongoDB: starting connection...");
   cache.promise = mongoose
     .connect(MONGODB_URI, {
@@ -61,12 +63,19 @@ if (!cache.promise) {
       cache.promise = null; // allow retry
       throw err;
     });
+
+  return cache.promise;
 }
+
+// Do not leave a rejected eager promise unhandled. startConnection() clears
+// the cached promise on failure so the next request can retry safely.
+void startConnection().catch(() => undefined);
 
 export async function connectDB() {
   // If already connected, return immediately — no await needed
   if (cache.conn) return cache.conn;
   // Otherwise await the already-in-progress promise
-  cache.conn = await cache.promise;
+  // Recreate the promise after a transient eager-start failure.
+  cache.conn = await startConnection();
   return cache.conn;
 }
