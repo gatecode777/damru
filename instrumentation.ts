@@ -16,8 +16,7 @@ export async function register() {
     }
 
     try {
-      const { connectDB } = await import("@/lib/mongodb");
-      await connectDB();
+      await import("@/lib/mongodb");
       console.log("🚀 MongoDB module loaded at startup");
     } catch (err) {
       console.error("⚠️ Failed to load MongoDB module at startup (will retry on demand):", err);

@@ -9,17 +9,22 @@ import { evaluateStreakMissions } from "@/lib/missionEngine";
 import { checkRateLimit, rateLimitResponse, getClientIp, RATE_LIMITS } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
+  let stage = "parse-request";
+
   try {
     const { email, password } = await req.json();
 
     if (!email || !password)
       return NextResponse.json({ error: "Email and password required." }, { status: 400 });
 
+    stage = "rate-limit";
     const rl = await checkRateLimit(`login:${getClientIp(req)}:${email.toLowerCase()}`, RATE_LIMITS.login);
     if (!rl.allowed) return rateLimitResponse(rl.retryAfterSeconds);
 
+    stage = "database-connect";
     await connectDB();
 
+    stage = "user-query";
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user)
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
@@ -27,10 +32,12 @@ export async function POST(req: NextRequest) {
     if (user.status === "suspended")
       return NextResponse.json({ error: "Account suspended. Contact support." }, { status: 403 });
 
+    stage = "password-check";
     const valid = await bcrypt.compare(password, user.password);
     if (!valid)
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
 
+    stage = "login-rewards";
     try {
       const streakResult = await checkAndAwardDailyLogin(user._id);
       if ("currentStreak" in streakResult) {
@@ -41,6 +48,7 @@ export async function POST(req: NextRequest) {
       console.error("checkAndAwardDailyLogin failed:", err);
     }
 
+    stage = "session-sign";
     const res = NextResponse.json({
       success: true,
       user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar },
@@ -54,6 +62,9 @@ export async function POST(req: NextRequest) {
 
   } catch (err) {
     console.error("Login error:", err);
-    return NextResponse.json({ error: "Login failed." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Login failed." },
+      { status: 500, headers: { "X-Damru-Login-Stage": stage } },
+    );
   }
 }

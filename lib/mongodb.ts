@@ -38,10 +38,7 @@ if (!global._mongooseCache) {
 
 const cache = global._mongooseCache;
 
-// Share one in-flight connection attempt across concurrent requests.
-function startConnection(): Promise<typeof mongoose> {
-  if (cache.promise) return cache.promise;
-
+if (!cache.promise) {
   console.log("🔄 MongoDB: starting connection...");
   cache.promise = mongoose
     .connect(MONGODB_URI, {
@@ -60,20 +57,11 @@ function startConnection(): Promise<typeof mongoose> {
       cache.promise = null; // allow retry
       throw err;
     });
-
-  return cache.promise;
 }
 
 export async function connectDB() {
   // If already connected, return immediately — no await needed
-  if (cache.conn && mongoose.connection.readyState === 1) return cache.conn;
-
-  // A resolved promise can outlive a dropped serverless connection. Clear
-  // stale state so a warm function reconnects instead of buffering queries.
-  if (mongoose.connection.readyState === 0) {
-    cache.conn = null;
-    cache.promise = null;
-  }
-  cache.conn = await startConnection();
+  if (cache.conn) return cache.conn;
+  cache.conn = await cache.promise;
   return cache.conn;
 }
