@@ -21,6 +21,7 @@ const MODULES = [
   { key:"coupons",        label:"Coupons",          group:"Restaurant" },
   { key:"rewards",        label:"Rewards & Loyalty",group:"Restaurant" },
   { key:"tables",         label:"Tables & QR",      group:"Restaurant" },
+  { key:"notifications",  label:"Notifications",    group:"System" },
   { key:"analytics",      label:"Analytics",        group:"System" },
   // { key:"settings",       label:"Settings",         group:"System" },
 ];

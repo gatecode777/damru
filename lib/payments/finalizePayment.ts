@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/mongodb";
 import { getDamruConfig } from "@/lib/getDamruConfig";
 import Order, { IOrder } from "@/models/Order";
 import DamruTransaction from "@/models/DamruTransaction";
+import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
 
 /**
  * The authoritative payable amount for a given order, in rupees. `order.total`
@@ -72,14 +73,37 @@ export async function finalizeRazorpayPayment(input: {
   // together) — the other caller already marked it paid. Same outcome either way.
   if (!order) return { success: true, alreadyFinalized: true };
 
+  if (order.userId) {
+    await notifyPaymentEvent({
+      userId: order.userId,
+      type: "PAYMENT_SUCCESSFUL",
+      sourceId: order._id,
+      sourceType: "Order",
+      orderNumber: order.orderId,
+      route: "/my-profile?tab=orders",
+    });
+  }
+
   return { success: true, alreadyFinalized: false, order };
 }
 
 /** Marks a payment attempt failed. Never overwrites an already-paid order. */
 export async function markRazorpayPaymentFailed(input: { orderId: string; razorpayOrderId: string }): Promise<void> {
   await connectDB();
-  await Order.findOneAndUpdate(
+  const order = await Order.findOneAndUpdate(
     { _id: input.orderId, razorpayOrderId: input.razorpayOrderId, paymentStatus: { $ne: "paid" } },
-    { $set: { paymentStatus: "failed", paymentFailedAt: new Date() } }
+    { $set: { paymentStatus: "failed", paymentFailedAt: new Date() } },
+    { new: true }
   );
+
+  if (order?.userId) {
+    await notifyPaymentEvent({
+      userId: order.userId,
+      type: "PAYMENT_FAILED",
+      sourceId: order._id,
+      sourceType: "Order",
+      orderNumber: order.orderId,
+      route: "/my-profile?tab=orders",
+    });
+  }
 }

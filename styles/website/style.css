@@ -564,7 +564,9 @@
 /* Content Inside Overlay */
 .diet-interactive-section .di-icon {
   line-height: 0;
-  margin-bottom: 4px;
+  /* Set apart from the title as its own badge rather than crowding it —
+     was 4px, which read as part of the same text block. */
+  margin-bottom: 16px;
 }
 
 .diet-interactive-section .di-icon img {
@@ -578,7 +580,11 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 8px;
+  /* Tighter base rhythm — title/tagline are one related unit; the icon and
+     the CTA button get their own explicit margins below instead, since a
+     single flat gap gave every element identical spacing regardless of how
+     closely related they actually are. */
+  gap: 4px;
   width: 100%;
   position: relative;
   z-index: 3;
@@ -588,8 +594,8 @@
   font-family: "Montserrat", sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  line-height: 1.25;
+  letter-spacing: 0.3px;
+  line-height: 1.3;
   margin: 0;
   color: #ffffff;
   text-align: left;
@@ -601,6 +607,8 @@
   font-family: "Montserrat", sans-serif;
   font-size: 0.95rem;
   font-weight: 500;
+  letter-spacing: 0.2px;
+  line-height: 1.5;
   color: #ffffff;
   opacity: 0.9;
   margin: 0;
@@ -612,10 +620,13 @@
   color: #fbd404;
   font-size: 1rem;
   font-weight: 700;
+  letter-spacing: 0.2px;
   text-decoration: none;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
+  /* Clearer separation from the tagline above, marking it as a distinct
+     action rather than another line of description — was 6px. */
+  margin-top: 14px;
   display: inline-flex;
 }
 
@@ -754,6 +765,10 @@
   .diet-interactive-section .di-overlay {
     width: 100%;
     padding: 20px;
+    /* :hover never reliably fires on touch devices — without this the card
+       either never reveals its content, or gets stuck showing it after the
+       first tap. Always-visible is the correct default on mobile. */
+    opacity: 1;
   }
 
   /* Overlay text size mobile ke liye */
@@ -766,14 +781,15 @@
     width: 110px;
   }
 
-  /* Curve adjustments in overlay for mobile */
-  .diet-interactive-section .di-overlay-right {
-    padding-left: 20px;
-    border-radius: 0;
-  }
-
+  /* Curve adjustments in overlay for mobile.
+     Both variants position their chef image at the same bottom-right spot
+     (di-chef-right/di-chef-left are visually identical — see .di-chef above),
+     so both need their RIGHT padding widened to clear the 110px-wide mascot;
+     the "-left"/"-right" naming doesn't correspond to a mirrored layout. */
+  .diet-interactive-section .di-overlay-right,
   .diet-interactive-section .di-overlay-left {
-    padding-right: 20px;
+    padding-right: 120px;
+    padding-left: 20px;
     border-radius: 0;
   }
 }

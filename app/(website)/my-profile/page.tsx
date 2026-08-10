@@ -25,7 +25,7 @@ const PAYMENT_STATUS_DISPLAY: Record<string, { label: string; color: string; bg:
   refunded:           { label: "Refunded",            color: "#6d28d9", bg: "#f5f3ff" },
 };
 interface Coupon { _id: string; code: string; description: string; type: string; value: number; maxDiscount: number | null; minOrderValue: number; expiryDate: string | null; usageLimit: number | null; usedCount: number }
-type Section = "overview" | "rewards" | "address" | "orders" | "payment" | "coupons" | "settings" | "help";
+type Section = "overview" | "rewards" | "notifications" | "address" | "orders" | "payment" | "coupons" | "settings" | "help";
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; icon: string }> = {
   pending:          { bg:"#fffbeb", color:"#b45309", icon:"fa-regular fa-clock" },
@@ -498,6 +498,13 @@ function MyProfileContent() {
   const [annivSaving,setAnnivSaving] = useState(false);
   const [annivError,setAnnivError]   = useState("");
 
+  const [notifItems,setNotifItems]         = useState<{_id:string;title:string;message:string;isRead:boolean;createdAt:string;category:string;action?:{route:string}}[]>([]);
+  const [notifPage,setNotifPage]           = useState(1);
+  const [notifPages,setNotifPages]         = useState(1);
+  const [notifLoading,setNotifLoading]     = useState(false);
+  const [notifPrefs,setNotifPrefs]         = useState<{orderUpdates:boolean;rewardUpdates:boolean;promotionalPush:boolean;promotionalEmail:boolean;promotionalInApp:boolean}|null>(null);
+  const [notifPrefsSaving,setNotifPrefsSaving] = useState(false);
+
   function showToast(msg:string){setToast(msg);setTimeout(()=>setToast(""),3200);}
 
   useEffect(()=>{
@@ -538,6 +545,44 @@ function MyProfileContent() {
         setRewardsHistoryPages(d.totalPages||1);
       }
     }finally{setRewardsHistoryLoading(false);}
+  }
+
+  async function loadNotifications(page:number){
+    setNotifLoading(true);
+    try{
+      const r=await fetch(`/api/notifications?page=${page}&limit=20`);
+      const d=await r.json();
+      if(r.ok){
+        setNotifItems(d.notifications||[]);
+        setNotifPage(d.page||1);
+        setNotifPages(d.totalPages||1);
+      }
+    }finally{setNotifLoading(false);}
+    if(!notifPrefs){
+      const pr=await fetch("/api/user/notification-preferences");
+      const pd=await pr.json();
+      if(pr.ok)setNotifPrefs(pd.preferences);
+    }
+  }
+
+  async function markNotifRead(id:string){
+    setNotifItems(prev=>prev.map(n=>n._id===id?{...n,isRead:true}:n));
+    await fetch(`/api/notifications/${id}/read`,{method:"PATCH"});
+  }
+
+  async function markAllNotifsRead(){
+    setNotifItems(prev=>prev.map(n=>({...n,isRead:true})));
+    await fetch("/api/notifications/read-all",{method:"PATCH"});
+  }
+
+  async function saveNotifPref(key:string,value:boolean){
+    setNotifPrefsSaving(true);
+    setNotifPrefs(prev=>prev?{...prev,[key]:value}:prev);
+    try{
+      const r=await fetch("/api/user/notification-preferences",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({[key]:value})});
+      const d=await r.json();
+      if(r.ok)setNotifPrefs(d.preferences);
+    }finally{setNotifPrefsSaving(false);}
   }
 
   async function loadRewardsUpcoming(){
@@ -646,16 +691,17 @@ function MyProfileContent() {
     if(s==="orders")loadOrders();
     if(s==="coupons")loadCoupons();
     if(s==="rewards")loadRewardsExtras();
+    if(s==="notifications")loadNotifications(1);
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
 
-  // Deep-link: /my-profile?tab=rewards
+  // Deep-link: /my-profile?tab=rewards|notifications
   useEffect(()=>{
     const tab=searchParams.get("tab");
-    if(tab!=="rewards")return;
-    Promise.resolve().then(()=>{ switchSection("rewards"); });
+    if(tab!=="rewards"&&tab!=="notifications")return;
+    Promise.resolve().then(()=>{ switchSection(tab); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[searchParams]);
 
@@ -731,7 +777,7 @@ function MyProfileContent() {
   return(
     <div className="profile">
       <aside className="profile__sidebar">
-        {([["overview","fa-regular fa-user","My Profile"],["rewards","fa-solid fa-coins","Damru Rewards"],["address","fa-solid fa-book","Address Book"],["orders","fa-solid fa-bag-shopping","My Orders"],["payment","fa-regular fa-credit-card","Payment Methods"],["coupons","fa-solid fa-tag","Offers & Coupons"],["settings","fa-solid fa-gear","Account Settings"],["help","fa-solid fa-circle-dollar-to-slot","Help & Support"]] as [Section,string,string][]).map(([id,icon,label])=>(
+        {([["overview","fa-regular fa-user","My Profile"],["rewards","fa-solid fa-coins","Damru Rewards"],["notifications","fa-solid fa-bell","Notifications"],["address","fa-solid fa-book","Address Book"],["orders","fa-solid fa-bag-shopping","My Orders"],["payment","fa-regular fa-credit-card","Payment Methods"],["coupons","fa-solid fa-tag","Offers & Coupons"],["settings","fa-solid fa-gear","Account Settings"],["help","fa-solid fa-circle-dollar-to-slot","Help & Support"]] as [Section,string,string][]).map(([id,icon,label])=>(
           <div key={id} className={`profile__nav-item${section===id?" active":""}`} onClick={()=>switchSection(id)}>
             <i className={icon}></i> {label}
           </div>
@@ -1170,6 +1216,72 @@ function MyProfileContent() {
                   <button className="profile__update-btn" onClick={handleSaveAnniversary} disabled={annivSaving}>{annivSaving?"Saving…":"Save"}</button>
                 )}
               </div>
+            </div>
+          </section>
+        )}
+
+        {/* NOTIFICATIONS */}
+        {section==="notifications"&&(
+          <section className="profile__section active">
+            <h1 className="profile__page-title">Notifications</h1>
+            <p className="profile__page-subtitle">Order, payment, reward, and offer updates</p>
+
+            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
+              {notifItems.some(n=>!n.isRead) && (
+                <button className="profile__btn-reorder" onClick={markAllNotifsRead}>Mark All Read</button>
+              )}
+            </div>
+
+            <div className="profile__card">
+              {notifLoading?(
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading…</p>
+              ):notifItems.length===0?(
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>No notifications yet.</p>
+              ):(<>
+                {notifItems.map(n=>(
+                  <div key={n._id} className="rewards__tx-row" style={{cursor:"pointer",background:n.isRead?"transparent":"#fff7ed",borderRadius:8,padding:"10px 8px"}}
+                    onClick={()=>{ if(!n.isRead)markNotifRead(n._id); if(n.action?.route)router.push(n.action.route); }}>
+                    <div>
+                      <p className="rewards__tx-desc">{n.title}</p>
+                      <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",margin:"2px 0"}}>{n.message}</p>
+                      <p className="rewards__tx-date">{fmtDateTime(n.createdAt)}</p>
+                    </div>
+                    {!n.isRead && <span style={{width:8,height:8,borderRadius:"50%",background:"#e67e22",flexShrink:0}} />}
+                  </div>
+                ))}
+                {notifPages>1&&(
+                  <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:14}}>
+                    <button className="profile__btn-reorder" disabled={notifPage<=1} onClick={()=>loadNotifications(notifPage-1)}>Prev</button>
+                    <span style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#888",alignSelf:"center"}}>Page {notifPage} of {notifPages}</span>
+                    <button className="profile__btn-reorder" disabled={notifPage>=notifPages} onClick={()=>loadNotifications(notifPage+1)}>Next</button>
+                  </div>
+                )}
+              </>)}
+            </div>
+
+            <div className="rewards__section-title">Notification Preferences</div>
+            <div className="profile__card">
+              {!notifPrefs?(
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading…</p>
+              ):(
+                <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  {([
+                    ["orderUpdates","Order & Payment Updates"],
+                    ["rewardUpdates","Reward Updates"],
+                    ["promotionalInApp","Offers — In-App"],
+                    ["promotionalEmail","Offers — Email"],
+                    ["promotionalPush","Offers — Push"],
+                  ] as [keyof typeof notifPrefs,string][]).map(([key,label])=>(
+                    <label key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontFamily:"Poppins,sans-serif",fontSize:14}}>
+                      {label}
+                      <input type="checkbox" checked={notifPrefs[key]} disabled={notifPrefsSaving} onChange={e=>saveNotifPref(key,e.target.checked)} />
+                    </label>
+                  ))}
+                  <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#aaa",margin:0}}>
+                    Critical account and security notifications (like password changes) are always sent regardless of these settings.
+                  </p>
+                </div>
+              )}
             </div>
           </section>
         )}

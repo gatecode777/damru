@@ -9,8 +9,8 @@ import Order from "@/models/Order";
 import { getDamruConfig } from "@/lib/getDamruConfig";
 import { getDailyStreakConfig } from "@/lib/getDailyStreakConfig";
 import { projectNextStreak, rewardDayForStreak, amountForDay, toDateStr } from "@/lib/dailyStreak";
-import { sendRewardEmail } from "@/lib/email";
 import { assignLotFields, allocateDebit, releaseAllocation } from "@/lib/rewards/damruAllocation";
+import { notifyRewardEvent, mapCreditCategoryToType } from "@/lib/notifications/rewardNotificationService";
 
 interface CouponTemplate {
   type: "flat" | "percentage";
@@ -110,16 +110,32 @@ export async function awardDamru(input: AwardDamruInput) {
     await transaction.save();
   }
 
-  if (user.email) {
-    try {
-      await sendRewardEmail(
-        user.email,
-        { title: input.description, amount: input.amount, description: coupon ? `A reward coupon (${coupon.code}) has also been added to your account.` : undefined },
-        user.name
-      );
-    } catch (err) {
-      console.error("sendRewardEmail failed:", err);
-    }
+  // Notification delivery is intentionally decoupled from the reward above —
+  // notifyRewardEvent() never throws, so a failure here can never roll back
+  // or block the Damru that was already credited (PRD 4B v2 section 2).
+  const notificationType = mapCreditCategoryToType(input.category);
+  if (notificationType) {
+    await notifyRewardEvent({
+      userId: user._id,
+      type: notificationType,
+      sourceId: transaction._id,
+      sourceType: "DamruTransaction",
+      amount: input.amount,
+      description: input.description,
+      route: "/my-profile?tab=rewards",
+    });
+  }
+  if (coupon) {
+    await notifyRewardEvent({
+      userId: user._id,
+      type: "COUPON_ISSUED",
+      sourceId: coupon._id,
+      sourceType: "Coupon",
+      couponCode: coupon.code,
+      couponDescription: coupon.description,
+      couponExpiryDate: coupon.expiryDate,
+      route: "/my-profile?tab=rewards",
+    });
   }
 
   return { duplicate: false as const, transaction, newBalance: user.damruBalance, coupon };
@@ -129,7 +145,7 @@ export async function awardDamru(input: AwardDamruInput) {
 export async function redeemDamru(userId: string | mongoose.Types.ObjectId, amount: number, orderId: string | mongoose.Types.ObjectId) {
   await connectDB();
   if (!mongoose.isValidObjectId(orderId)) return { success: false as const, error: "Invalid order." };
-  const order = await Order.findOne({ _id: orderId, userId }).select("_id").lean();
+  const order = await Order.findOne({ _id: orderId, userId }).select("_id orderId").lean<{ _id: mongoose.Types.ObjectId; orderId: string }>();
   if (!order) return { success: false as const, error: "Order not found." };
 
   const config = await getDamruConfig();
@@ -167,6 +183,17 @@ export async function redeemDamru(userId: string | mongoose.Types.ObjectId, amou
   }
 
   const discount = Math.round(amount * config.redemptionRate);
+
+  await notifyRewardEvent({
+    userId,
+    type: "DAMRU_REDEEMED",
+    sourceId: transaction._id,
+    sourceType: "DamruTransaction",
+    amount,
+    orderNumber: order.orderId,
+    route: "/my-profile?tab=rewards",
+  });
+
   return { success: true as const, discount, newBalance: allocation.newBalance, transaction };
 }
 
@@ -233,6 +260,17 @@ export async function adjustDamru(input: {
     transaction.balanceAfter = user.damruBalance;
     await transaction.save();
     await recalcLoyaltyLevel(user._id, user.damruTotalEarned);
+
+    await notifyRewardEvent({
+      userId: user._id,
+      type: "DAMRU_CREDITED",
+      sourceId: transaction._id,
+      sourceType: "DamruTransaction",
+      amount: input.amount,
+      description: input.reason.trim(),
+      route: "/my-profile?tab=rewards",
+    });
+
     return { success: true as const, newBalance: user.damruBalance, transaction };
   }
 

@@ -24,6 +24,8 @@ export const RATE_LIMITS = {
   razorpayVerify: { limit: 20, windowSeconds: 600 },  // per user
   adminRefund:    { limit: 20, windowSeconds: 600 },  // per admin
   paymentRecheck: { limit: 30, windowSeconds: 600 },  // per admin — manual "Recheck Payment"
+  notificationMarkRead: { limit: 60, windowSeconds: 600 }, // per user — mark read / mark all read
+  adminSendCampaign:    { limit: 10, windowSeconds: 600 }, // per admin — high-blast-radius bulk send
 } as const;
 
 interface RateLimitOptions {

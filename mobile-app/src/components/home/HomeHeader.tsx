@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from '../ui/Image';
@@ -9,6 +9,7 @@ import { LocalAssets } from '../../constants/assets';
 import { NavMenu } from '../ui/NavMenu';
 import { useApp } from '@/providers/AppProvider';
 import { avatarUrl } from '@/config';
+import { getUnreadCount } from '@/services/notificationsApi';
 
 interface HomeHeaderProps {
   onSearchPress?: () => void;
@@ -21,6 +22,20 @@ export function HomeHeader({ onSearchPress, onProfilePress }: HomeHeaderProps) {
   const { height: screenHeight } = useWindowDimensions();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return; }
+    let cancelled = false;
+    const fetchUnread = () => {
+      getUnreadCount()
+        .then(d => { if (!cancelled) setUnreadCount(d.count || 0); })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user]);
 
   // Dynamic height calculated according to screen height
   const headerHeight = Math.min(Math.max(screenHeight * 0.075, 58), 80);
@@ -59,6 +74,24 @@ export function HomeHeader({ onSearchPress, onProfilePress }: HomeHeaderProps) {
             >
               <Ionicons name="search-outline" size={22} color={Colors.darkText} />
             </Pressable>
+
+            {user ? (
+              <Pressable
+                onPress={() => router.push('/notifications')}
+                style={styles.iconBtn}
+                accessibilityLabel={`Notifications, ${unreadCount} unread`}
+                accessibilityRole="button"
+              >
+                <Ionicons name="notifications-outline" size={22} color={Colors.darkText} />
+                {unreadCount > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            ) : null}
 
             <Pressable
               onPress={() => router.push('/cart')}

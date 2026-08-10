@@ -25,7 +25,23 @@ import type { Address } from "../types";
 import { getRewardsDashboard, redeemDamru } from "../services/rewardsApi";
 import { createRazorpayOrder, verifyRazorpayPayment } from "../services/paymentApi";
 import { trackRewardEvent } from "../lib/rewardsAnalytics";
-import RazorpayCheckout from "react-native-razorpay";
+import type { RazorpayCheckoutOptions, RazorpaySuccessResponse } from "react-native-razorpay";
+
+// Lazily loaded (not a static top-level import) because this native module
+// isn't compiled into Expo Go — a static import would crash the ENTIRE app on
+// launch, not just checkout, since Expo Go can't resolve it at bundle-eval
+// time. Deferring the import to the moment payment is actually attempted lets
+// every other screen work fine in Expo Go; only "Pay Online" itself needs a
+// development build (see eas.json's `development` profile). COD is unaffected.
+async function openRazorpayCheckout(options: RazorpayCheckoutOptions): Promise<RazorpaySuccessResponse> {
+  let RazorpayCheckout: { open: (options: RazorpayCheckoutOptions) => Promise<RazorpaySuccessResponse> };
+  try {
+    RazorpayCheckout = (await import("react-native-razorpay")).default;
+  } catch {
+    throw new Error("Online payment isn't available in this Expo Go preview — install a development build to test payments. Cash on Delivery still works here.");
+  }
+  return RazorpayCheckout.open(options);
+}
 
 const emptyAddress: Address = {
   label: "Home",
@@ -264,7 +280,7 @@ export default function CheckoutScreen() {
         throw new Error("Payment could not be started.");
       }
 
-      const paymentResult = await RazorpayCheckout.open({
+      const paymentResult = await openRazorpayCheckout({
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency ?? "INR",
@@ -296,6 +312,12 @@ export default function CheckoutScreen() {
       // payment attempt — either way, the order is saved and retryable, it
       // is never silently marked paid from this catch block alone.
       if (e instanceof ApiRequestError) {
+        offerPaymentRetry(internalOrderId, orderLabel, redeemMessage, e.message);
+      } else if (e instanceof Error) {
+        // Razorpay's own cancellation/failure rejection is a plain object, not
+        // an Error instance, so this branch only ever catches errors WE threw
+        // ourselves (e.g. openRazorpayCheckout's Expo-Go guard above) — real
+        // user-cancelled payments still fall through to the generic message below.
         offerPaymentRetry(internalOrderId, orderLabel, redeemMessage, e.message);
       } else {
         offerPaymentRetry(internalOrderId, orderLabel, redeemMessage, "Payment was cancelled or didn't complete.");

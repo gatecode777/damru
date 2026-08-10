@@ -27,6 +27,13 @@ export interface IUser extends Document {
   lastEligibleActivityDate: string | null;
   lastStreakRewardDate: string | null;
   referralCode?: string;
+  notificationPreferences?: {
+    orderUpdates: boolean;
+    rewardUpdates: boolean;
+    promotionalPush: boolean;
+    promotionalEmail: boolean;
+    promotionalInApp: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +68,17 @@ const UserSchema = new Schema<IUser>(
     lastEligibleActivityDate: { type: String, default: null },
     lastStreakRewardDate: { type: String, default: null },
     referralCode: { type: String, unique: true, sparse: true, index: true },
+    notificationPreferences: {
+      type: {
+        orderUpdates: { type: Boolean, default: true },
+        rewardUpdates: { type: Boolean, default: true },
+        promotionalPush: { type: Boolean, default: true },
+        promotionalEmail: { type: Boolean, default: true },
+        promotionalInApp: { type: Boolean, default: true },
+      },
+      _id: false,
+      default: undefined,
+    },
   },
   { timestamps: true }
 );

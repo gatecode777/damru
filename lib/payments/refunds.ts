@@ -8,6 +8,8 @@ import User from "@/models/User";
 import { getRazorpayClient, toRazorpayAmount } from "@/lib/payments/razorpay";
 import { getDamruConfig } from "@/lib/getDamruConfig";
 import { assignLotFields } from "@/lib/rewards/damruAllocation";
+import { notifyRewardEvent } from "@/lib/notifications/rewardNotificationService";
+import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
 
 /**
  * Releases one reserved usage of a coupon — called when an order that
@@ -131,6 +133,15 @@ export async function restoreDamruForOrder(
       console.error(`Damru restore: could not restore ${alloc.amount} into lot ${alloc.creditTransactionId} (order ${orderId}) — original lot may have been altered.`);
     }
   }
+
+  await notifyRewardEvent({
+    userId,
+    type: "DAMRU_RESTORED",
+    sourceId: transaction._id,
+    sourceType: "DamruTransaction",
+    amount: redemption.amount,
+    route: "/my-profile?tab=rewards",
+  });
 }
 
 /**
@@ -161,11 +172,23 @@ export async function finalizeRefund(refundId: string | mongoose.Types.ObjectId)
   // Policy A (see docs/PAYMENT_RELIABILITY_REFUNDS.md): restore Damru only
   // once the order has been refunded IN FULL — proportional restoration for
   // partial refunds is explicitly deferred, undefined product policy.
-  const order = await Order.findById(refund.orderId).select("paymentAmount refundedAmount userId").lean<{
-    paymentAmount?: number; refundedAmount: number; userId?: mongoose.Types.ObjectId;
+  const order = await Order.findById(refund.orderId).select("orderId paymentAmount refundedAmount userId").lean<{
+    orderId: string; paymentAmount?: number; refundedAmount: number; userId?: mongoose.Types.ObjectId;
   }>();
   if (order && order.paymentAmount != null && order.paymentAmount > 0 && order.refundedAmount >= order.paymentAmount) {
     await restoreDamruForOrder(refund.orderId, order.userId, String(refund._id));
+  }
+
+  if (order?.userId) {
+    await notifyPaymentEvent({
+      userId: order.userId,
+      type: "REFUND_PROCESSED",
+      sourceId: refund._id,
+      sourceType: "PaymentRefund",
+      amount: refund.amount,
+      orderNumber: order.orderId,
+      route: `/my-profile?tab=orders`,
+    });
   }
 
   return { alreadyFinalized: false, refund };
@@ -190,6 +213,18 @@ export async function markRefundFailed(refundId: string | mongoose.Types.ObjectI
 
   await Order.updateOne({ _id: refund.orderId }, { $inc: { pendingRefundAmount: -refund.amount } });
   await syncOrderPaymentStatus(refund.orderId);
+
+  const order = await Order.findById(refund.orderId).select("orderId userId").lean<{ orderId: string; userId?: mongoose.Types.ObjectId }>();
+  if (order?.userId) {
+    await notifyPaymentEvent({
+      userId: order.userId,
+      type: "REFUND_FAILED",
+      sourceId: refund._id,
+      sourceType: "PaymentRefund",
+      orderNumber: order.orderId,
+      route: `/my-profile?tab=orders`,
+    });
+  }
 }
 
 export interface RequestRefundInput {

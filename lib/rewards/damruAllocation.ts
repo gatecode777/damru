@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import DamruTransaction, { DamruTransactionCategory, IDamruAllocation } from "@/models/DamruTransaction";
 import type { DamruConfigValues } from "@/lib/getDamruConfig";
+import { notifyRewardEvent } from "@/lib/notifications/rewardNotificationService";
 
 /**
  * Central Damru expiry/allocation service (PRD 4A). Every path that debits a
@@ -389,11 +390,75 @@ export async function processExpiredDamru(maxLots = 5000, userId?: string | mong
       await transaction.save();
     }
 
+    await notifyRewardEvent({
+      userId: lot.userId,
+      type: "DAMRU_EXPIRED",
+      sourceId: transaction._id,
+      sourceType: "DamruTransaction",
+      amount: claimedAmount,
+      route: "/my-profile?tab=rewards",
+    });
+
     processedLots++;
     totalExpired += claimedAmount;
   }
 
   return { processedLots, totalExpired };
+}
+
+/**
+ * Fixed 30/7/1-day warning windows (PRD 4B v2 section 70/45) — a product
+ * default, not admin-configurable per-window (the dashboard's own
+ * `expiryWarningDays` from PRD 4A remains a separate, independently
+ * configurable "what counts as expiring soon for display" threshold).
+ */
+const EXPIRY_WARNING_WINDOWS_DAYS = [30, 7, 1] as const;
+
+export interface ExpiryWarningResult {
+  warningsCreated: number;
+}
+
+/**
+ * Run by the daily rewards scheduler. For each window, finds lots that have
+ * newly entered it (expiresAt within the window, not yet expired) and fires
+ * notifyRewardEvent — its own dedupKey (`expiry-warning:{lotId}:{days}d`)
+ * guarantees each lot is warned AT MOST ONCE per window, no matter how many
+ * times the scheduler runs (section 21/46). Bounded and indexed — reuses the
+ * same `{expiresAt, remainingAmount}` index processExpiredDamru relies on,
+ * never scans full lifetime history (section 45).
+ */
+export async function generateExpiryWarnings(maxLotsPerWindow = 2000): Promise<ExpiryWarningResult> {
+  await connectDB();
+  const now = new Date();
+  let warningsCreated = 0;
+
+  for (const days of EXPIRY_WARNING_WINDOWS_DAYS) {
+    const cutoff = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    const lots = await DamruTransaction.find({
+      type: "credit",
+      remainingAmount: { $gt: 0 },
+      expiresAt: { $ne: null, $gt: now, $lte: cutoff },
+    })
+      .select("userId remainingAmount expiresAt")
+      .limit(maxLotsPerWindow)
+      .lean<{ _id: mongoose.Types.ObjectId; userId: mongoose.Types.ObjectId; remainingAmount: number; expiresAt: Date }[]>();
+
+    for (const lot of lots) {
+      const result = await notifyRewardEvent({
+        userId: lot.userId,
+        type: "DAMRU_EXPIRING_SOON",
+        sourceId: lot._id,
+        sourceType: "DamruTransaction",
+        amount: lot.remainingAmount,
+        expiresAt: lot.expiresAt,
+        dedupSuffix: `${days}d`,
+        route: "/my-profile?tab=rewards",
+      });
+      if (result.success && !result.duplicate) warningsCreated++;
+    }
+  }
+
+  return { warningsCreated };
 }
 
 export interface ReconcileMismatch {

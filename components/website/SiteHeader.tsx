@@ -150,6 +150,14 @@ export default function Header() {
   const [showNewConf, setShowNewConf] = useState(false);
   const [hasTableSession, setHasTableSession] = useState(false);
 
+  // ── Notification bell ──────────────────────────────────────────
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState<{ _id: string; title: string; message: string; isRead: boolean; createdAt: string; action?: { route: string } }[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifPanelPos, setNotifPanelPos] = useState({ top: 70, right: 16, width: 320 });
+  const notifRef = useRef<HTMLDivElement>(null);
+
   // Detect mobile view
   const [isMobile, setIsMobile] = useState(false);
 
@@ -235,6 +243,76 @@ export default function Header() {
     };
   }, []);
 
+  // ── Notification bell: unread count on login, light poll while logged in ──
+  useEffect(() => {
+    let cancelled = false;
+    if (!user) {
+      const t = setTimeout(() => { if (!cancelled) setNotifUnread(0); }, 0);
+      return () => { cancelled = true; clearTimeout(t); };
+    }
+    const fetchUnread = () => {
+      fetch("/api/notifications/unread-count")
+        .then(r => r.json())
+        .then(d => { if (!cancelled) setNotifUnread(d.count || 0); })
+        .catch(() => {});
+    };
+    const kickoff = setTimeout(fetchUnread, 0);
+    const interval = setInterval(fetchUnread, 60000);
+    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(interval); };
+  }, [user]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function toggleNotifDropdown() {
+    const next = !notifOpen;
+    if (next && notifRef.current) {
+      // Computed fresh on every open (event handler, not render) so the panel
+      // never overflows the viewport regardless of screen width or where the
+      // bell sits in the header — a fixed right:0/width:320 overflowed off
+      // the left edge on narrow/mobile screens.
+      const rect = notifRef.current.getBoundingClientRect();
+      const width = Math.min(320, window.innerWidth - 24);
+      let right = window.innerWidth - rect.right;
+      if (window.innerWidth - right - width < 12) right = window.innerWidth - width - 12;
+      right = Math.max(12, right);
+      setNotifPanelPos({ top: rect.bottom + 10, right, width });
+    }
+    if (next) setIsMenuOpen(false);
+    setNotifOpen(next);
+    if (next) {
+      setNotifLoading(true);
+      try {
+        const r = await fetch("/api/notifications?limit=5");
+        const d = await r.json();
+        setNotifItems(d.notifications || []);
+      } finally {
+        setNotifLoading(false);
+      }
+    }
+  }
+
+  async function markAllNotifsRead() {
+    setNotifItems(prev => prev.map(n => ({ ...n, isRead: true })));
+    setNotifUnread(0);
+    await fetch("/api/notifications/read-all", { method: "PATCH" });
+  }
+
+  async function openNotif(n: { _id: string; isRead: boolean; action?: { route: string } }) {
+    if (!n.isRead) {
+      setNotifItems(prev => prev.map(x => x._id === n._id ? { ...x, isRead: true } : x));
+      setNotifUnread(prev => Math.max(0, prev - 1));
+      await fetch(`/api/notifications/${n._id}/read`, { method: "PATCH" });
+    }
+    setNotifOpen(false);
+    if (n.action?.route) router.push(n.action.route);
+  }
+
   // ── Search debounce ──────────────────────────────────────────
   const handleSearch = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
@@ -282,7 +360,13 @@ export default function Header() {
   }, [isMobile]);
 
   // ── Your original handlers ────────────────────────────────────
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleMenu = () => {
+    // The two overlays must never be open together — the notification
+    // panel's high z-index otherwise renders on top of the nav overlay
+    // instead of the two being mutually exclusive.
+    setNotifOpen(false);
+    setIsMenuOpen(!isMenuOpen);
+  };
   const toggleAuth = () => {
     setIsAuthOpen(!isAuthOpen);
     setErr(""); setOkMsg("");
@@ -549,6 +633,42 @@ export default function Header() {
                   <span style={{ position: "absolute", top: "-6px", right: "-6px", background: "#e67e22", color: "#fff", borderRadius: "50%", width: "18px", height: "18px", fontSize: "0.65rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Poppins,sans-serif" }}>{totalItems > 99 ? "99+" : totalItems}</span>
                 )}
               </Link>
+            )}
+
+            {/* Notification bell — only when logged in */}
+            {!userLoading && user && (
+              <div ref={notifRef} style={{ position: "relative" }}>
+                <button className="icon-link" aria-label="Notifications" onClick={toggleNotifDropdown} style={{ position: "relative", background: "none", border: "none", cursor: "pointer" }}>
+                  <i className="ri-notification-3-line"></i>
+                  {notifUnread > 0 && (
+                    <span style={{ position: "absolute", top: "-6px", right: "-6px", background: "#dc2626", color: "#fff", borderRadius: "50%", width: "18px", height: "18px", fontSize: "0.65rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Poppins,sans-serif" }}>{notifUnread > 99 ? "99+" : notifUnread}</span>
+                  )}
+                </button>
+                {notifOpen && (
+                  <div style={{ position: "fixed", top: notifPanelPos.top, right: notifPanelPos.right, width: notifPanelPos.width, maxWidth: "calc(100vw - 24px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.12)", border: "1px solid #f0f0f0", zIndex: 999999, overflow: "hidden" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}>
+                      <span style={{ fontFamily: "Poppins,sans-serif", fontWeight: 700, fontSize: 14 }}>Notifications</span>
+                      {notifUnread > 0 && <button onClick={markAllNotifsRead} style={{ background: "none", border: "none", color: "#e67e22", fontSize: 12, cursor: "pointer", fontFamily: "Poppins,sans-serif" }}>Mark All Read</button>}
+                    </div>
+                    <div style={{ maxHeight: 360, overflowY: "auto" }}>
+                      {notifLoading ? (
+                        <p style={{ padding: 20, textAlign: "center", color: "#aaa", fontSize: 13, fontFamily: "Poppins,sans-serif" }}>Loading…</p>
+                      ) : notifItems.length === 0 ? (
+                        <p style={{ padding: 20, textAlign: "center", color: "#aaa", fontSize: 13, fontFamily: "Poppins,sans-serif" }}>No notifications yet.</p>
+                      ) : notifItems.map(n => (
+                        <div key={n._id} onClick={() => openNotif(n)} style={{ padding: "12px 16px", borderBottom: "1px solid #f7f7f7", cursor: "pointer", background: n.isRead ? "#fff" : "#fff7ed" }}>
+                          <p style={{ fontFamily: "Poppins,sans-serif", fontWeight: 700, fontSize: 13, margin: "0 0 2px" }}>{n.title}</p>
+                          <p style={{ fontFamily: "Poppins,sans-serif", fontSize: 12, color: "#666", margin: "0 0 4px" }}>{n.message}</p>
+                          <p style={{ fontFamily: "Poppins,sans-serif", fontSize: 11, color: "#aaa", margin: 0 }}>{new Date(n.createdAt).toLocaleString("en-IN")}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <Link href="/my-profile?tab=notifications" onClick={() => setNotifOpen(false)} style={{ display: "block", textAlign: "center", padding: "10px", fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: "#e67e22", textDecoration: "none", borderTop: "1px solid #f0f0f0" }}>
+                      View All
+                    </Link>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Damru balance pill — desktop/tablet only; shown in the profile menu on small screens */}

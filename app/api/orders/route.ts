@@ -6,6 +6,8 @@ import Order from "@/models/Order";
 import Cart from "@/models/Cart";
 import Coupon from "@/models/Coupon";
 import Address from "@/models/Address";
+import { notifyOrderEvent } from "@/lib/notifications/orderNotificationService";
+import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
 
 function generateOrderId(): string {
   const date = new Date();
@@ -197,6 +199,13 @@ export async function POST(req: NextRequest) {
         ? Cart.findOneAndUpdate({ userId: user.id }, { items: [] })
         : Promise.resolve(),
     ]);
+
+    if (user) {
+      await notifyOrderEvent({ userId: user.id, type: "ORDER_PLACED", sourceId: order._id, orderNumber: order.orderId, route: "/my-profile?tab=orders" });
+      if (paymentMethod === "cod") {
+        await notifyPaymentEvent({ userId: user.id, type: "COD_CONFIRMED", sourceId: order._id, sourceType: "Order", orderNumber: order.orderId, route: "/my-profile?tab=orders" });
+      }
+    }
 
     return NextResponse.json({
       success: true,

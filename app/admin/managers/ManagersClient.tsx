@@ -19,7 +19,7 @@ const ROLE_CONFIG = {
 
 const MODULES = [
   "dashboard","users","orders","reservations","complaints",
-  "categories","menu","blogs","blogCategories","gallery","branches","banquetBookings","coupons","rewards","analytics",
+  "categories","menu","blogs","blogCategories","gallery","branches","banquetBookings","coupons","rewards","notifications","analytics",
 ];
 
 function permCount(admin: Admin) {

@@ -9,6 +9,16 @@ import { evaluateOrderAchievements } from "@/lib/achievementEngine";
 import { evaluateOrderMissions } from "@/lib/missionEngine";
 import { evaluateReferralQualification } from "@/lib/referralEngine";
 import { evaluateLoyaltyTier } from "@/lib/loyaltyEngine";
+import { notifyOrderEvent } from "@/lib/notifications/orderNotificationService";
+import type { NotificationType } from "@/models/Notification";
+
+const ORDER_STATUS_TO_NOTIFICATION_TYPE: Record<string, NotificationType | undefined> = {
+  confirmed: "ORDER_CONFIRMED",
+  preparing: "ORDER_PREPARING",
+  out_for_delivery: "ORDER_OUT_FOR_DELIVERY",
+  delivered: "ORDER_DELIVERED",
+  cancelled: "ORDER_CANCELLED",
+};
 
 export async function updateOrderStatus(id: string, status: string) {
   // Check if user has edit permission for orders
@@ -56,6 +66,19 @@ export async function updateOrderStatus(id: string, status: string) {
       await evaluateLoyaltyTier(order.userId, { issueBonus: true });
     } catch (err) {
       console.error("Loyalty tier evaluation failed:", err);
+    }
+  }
+
+  if (order && order.userId) {
+    const notifType = ORDER_STATUS_TO_NOTIFICATION_TYPE[status];
+    if (notifType) {
+      await notifyOrderEvent({
+        userId: order.userId,
+        type: notifType,
+        sourceId: order._id,
+        orderNumber: order.orderId,
+        route: "/my-profile?tab=orders",
+      });
     }
   }
 
@@ -108,6 +131,16 @@ export async function cancelOrder(id: string) {
     if (order.paymentMethod === "cod" || order.paymentStatus === "pending" || order.paymentStatus === "failed") {
       const { restoreDamruForOrder } = await import("@/lib/payments/refunds");
       await restoreDamruForOrder(order._id, order.userId, `cancel_${order._id}`);
+    }
+
+    if (order.userId) {
+      await notifyOrderEvent({
+        userId: order.userId,
+        type: "ORDER_CANCELLED",
+        sourceId: order._id,
+        orderNumber: order.orderId,
+        route: "/my-profile?tab=orders",
+      });
     }
   }
 

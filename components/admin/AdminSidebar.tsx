@@ -29,6 +29,7 @@ interface Perms {
     banquet?: { view?: boolean };
     coupons?: { view?: boolean };
     rewards?: { view?: boolean };
+    notifications?: { view?: boolean };
     blogCategories?: { view?: boolean };
     blogs?: { view?: boolean };
     analytics?: { view?: boolean };
@@ -60,6 +61,13 @@ const navGroups = [
       { icon: CalendarCheck,   label: "Banquet Bookings", href: "/admin/banquet-bookings", permission: "banquetBookings" },
       { icon: Ticket,          label: "Coupons",      href: "/admin/coupons",     permission: "coupons" },
       { icon: Gift,            label: "Rewards & Loyalty", href: "/admin/rewards", permission: "rewards" },
+    ],
+  },
+  {
+    label: "Notifications",
+    items: [
+      { icon: Bell,            label: "Campaigns",    href: "/admin/notifications/campaigns", permission: "notifications" },
+      { icon: FileText,        label: "Templates",    href: "/admin/notifications/templates", permission: "notifications" },
     ],
   },
   {
