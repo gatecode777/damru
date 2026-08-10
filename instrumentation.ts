@@ -16,8 +16,8 @@ export async function register() {
     }
 
     try {
-      // Importing the module triggers the eager connection at the bottom of mongodb.ts
-      await import("@/lib/mongodb");
+      const { connectDB } = await import("@/lib/mongodb");
+      await connectDB();
       console.log("🚀 MongoDB module loaded at startup");
     } catch (err) {
       console.error("⚠️ Failed to load MongoDB module at startup (will retry on demand):", err);

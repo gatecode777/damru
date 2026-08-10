@@ -38,10 +38,7 @@ if (!global._mongooseCache) {
 
 const cache = global._mongooseCache;
 
-// ── Eagerly start connecting as soon as this module is imported ──────────────
-// Instead of waiting for the first connectDB() call from a page,
-// kick off the connection promise immediately at module load time.
-// connectDB() then just awaits the already-in-progress promise.
+// Share one in-flight connection attempt across concurrent requests.
 function startConnection(): Promise<typeof mongoose> {
   if (cache.promise) return cache.promise;
 
@@ -67,15 +64,16 @@ function startConnection(): Promise<typeof mongoose> {
   return cache.promise;
 }
 
-// Do not leave a rejected eager promise unhandled. startConnection() clears
-// the cached promise on failure so the next request can retry safely.
-void startConnection().catch(() => undefined);
-
 export async function connectDB() {
   // If already connected, return immediately — no await needed
-  if (cache.conn) return cache.conn;
-  // Otherwise await the already-in-progress promise
-  // Recreate the promise after a transient eager-start failure.
+  if (cache.conn && mongoose.connection.readyState === 1) return cache.conn;
+
+  // A resolved promise can outlive a dropped serverless connection. Clear
+  // stale state so a warm function reconnects instead of buffering queries.
+  if (mongoose.connection.readyState === 0) {
+    cache.conn = null;
+    cache.promise = null;
+  }
   cache.conn = await startConnection();
   return cache.conn;
 }
