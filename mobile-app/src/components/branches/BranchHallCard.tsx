@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { colors } from "../../config";
 import { getWebImageUri } from "../../constants/assets";
-import type { IHallCard } from "../../../models/Branch";
+import type { IHallCard } from "../../types";
 
 interface Props {
   hall: IHallCard;
@@ -54,7 +54,7 @@ export default function BranchHallCard({ hall, index }: Props) {
         {hall.features && hall.features.length > 0 ? (
           <View style={styles.listSection}>
             <Text style={styles.listHeading}>Features & Facilities</Text>
-            {hall.features.map((feature, idx) => (
+            {hall.features.map((feature: string, idx: number) => (
               <View key={idx} style={styles.bulletRow}>
                 <Ionicons name="checkmark-circle-outline" size={16} color={colors.orange} style={styles.bulletIcon} />
                 <Text style={styles.bulletText}>{feature}</Text>
@@ -67,7 +67,7 @@ export default function BranchHallCard({ hall, index }: Props) {
         {hall.perfectFor && hall.perfectFor.length > 0 ? (
           <View style={styles.listSection}>
             <Text style={styles.listHeading}>Perfect For</Text>
-            {hall.perfectFor.map((pf, idx) => (
+            {hall.perfectFor.map((pf: string, idx: number) => (
               <View key={idx} style={styles.bulletRow}>
                 <Ionicons name="star-outline" size={15} color="#c8a96e" style={styles.bulletIcon} />
                 <Text style={styles.bulletText}>{pf}</Text>

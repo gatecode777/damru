@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,7 +16,7 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { HomeHeader } from "../../components/home/HomeHeader";
 import { EmptyState } from "../../components/ui";
 import { LocalAssets, getWebImageUri } from "../../constants/assets";
-import { get } from "../../lib/api";
+import { useHomepageBranches } from "../../hooks/useHomepageBranches";
 import { colors } from "../../config";
 import type { Branch } from "../../types";
 
@@ -56,23 +56,11 @@ const STATIC_FALLBACK: Branch[] = [
 export default function BranchesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    get<{ branches: Branch[] }>("/api/branches")
-      .then((d) => {
-        if (d.branches && d.branches.length > 0) {
-          setBranches(d.branches);
-        } else {
-          setBranches(STATIC_FALLBACK);
-        }
-      })
-      .catch(() => {
-        setBranches(STATIC_FALLBACK);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  // Shares the same react-query cache/staleTime as the Home tab's branches
+  // section instead of firing its own independent fetch every time this
+  // screen mounts.
+  const { branches: fetchedBranches, loading } = useHomepageBranches();
+  const branches: Branch[] = fetchedBranches.length > 0 ? fetchedBranches : STATIC_FALLBACK;
 
   function handleReadMore(branch: Branch) {
     if (branch.slug) {
@@ -148,40 +136,53 @@ export default function BranchesScreen() {
     );
   }
 
+  function BranchCardSkeleton() {
+    return (
+      <View style={styles.card}>
+        <View style={[styles.imageWrapper, { backgroundColor: '#f0ece6' }]} />
+        <View style={styles.cardBody}>
+          <View style={[styles.skeletonLine, { width: '60%', height: 18, marginBottom: 8 }]} />
+          <View style={[styles.skeletonLine, { width: '100%', height: 2, marginBottom: 12 }]} />
+          <View style={[styles.skeletonLine, { width: '90%', height: 12, marginBottom: 6 }]} />
+          <View style={[styles.skeletonLine, { width: '80%', height: 12, marginBottom: 16 }]} />
+          <View style={[styles.skeletonLine, { width: '45%', height: 12, marginBottom: 6 }]} />
+          <View style={[styles.skeletonLine, { width: '55%', height: 12, marginBottom: 16 }]} />
+          <View style={[styles.skeletonLine, { width: '25%', height: 14 }]} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.page}>
       <HomeHeader />
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.orange} />
-        </View>
-      ) : (
-        <FlatList
-          data={branches}
-          keyExtractor={(item) => item._id}
-          renderItem={renderBranchCard}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + 85 },
-          ]}
-          ListHeaderComponent={
-            <View style={styles.header}>
-              <Text style={styles.title}>Our Branches</Text>
-              <Text style={styles.subtitle}>
-                Serving delicious food and unforgettable moments at multiple locations
-              </Text>
-            </View>
-          }
-          ListEmptyComponent={
+      <FlatList
+        data={loading ? [{ _id: "s1" }, { _id: "s2" }] as any[] : branches}
+        keyExtractor={(item) => item._id}
+        renderItem={loading ? () => <BranchCardSkeleton /> : renderBranchCard}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 85 },
+        ]}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.title}>Our Branches</Text>
+            <Text style={styles.subtitle}>
+              Serving delicious food and unforgettable moments at multiple locations
+            </Text>
+          </View>
+        }
+        ListEmptyComponent={
+          !loading ? (
             <EmptyState
               title="No Branches Available"
               message="We are updating our locations. Please try again later."
             />
-          }
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+          ) : null
+        }
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 }
@@ -300,5 +301,9 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: colors.ink,
     letterSpacing: 0.5,
+  },
+  skeletonLine: {
+    backgroundColor: "#f0ece6",
+    borderRadius: 4,
   },
 });

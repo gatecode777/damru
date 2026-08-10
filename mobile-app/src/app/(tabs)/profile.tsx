@@ -36,6 +36,7 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
   const [toast, setToast] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
 
   const {
     addresses,
@@ -49,6 +50,15 @@ export default function ProfileScreen() {
     deletePaymentMethod,
     reload,
   } = useProfile();
+
+  const handleRefresh = useCallback(async () => {
+    setManualRefreshing(true);
+    try {
+      await refreshData();
+    } finally {
+      setManualRefreshing(false);
+    }
+  }, [refreshData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,8 +151,8 @@ export default function ProfileScreen() {
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
                     React.createElement(RefreshControl as any, {
-                      refreshing: refreshing,
-                      onRefresh: refreshData,
+                      refreshing: manualRefreshing,
+                      onRefresh: handleRefresh,
                       colors: [colors.orange],
                     })
                   }
@@ -177,8 +187,8 @@ export default function ProfileScreen() {
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
                     React.createElement(RefreshControl as any, {
-                      refreshing: refreshing,
-                      onRefresh: refreshData,
+                      refreshing: manualRefreshing,
+                      onRefresh: handleRefresh,
                       colors: [colors.orange],
                     })
                   }
@@ -247,8 +257,8 @@ export default function ProfileScreen() {
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
                     React.createElement(RefreshControl as any, {
-                      refreshing: refreshing,
-                      onRefresh: refreshData,
+                      refreshing: manualRefreshing,
+                      onRefresh: handleRefresh,
                       colors: [colors.orange],
                     })
                   }
@@ -287,8 +297,8 @@ export default function ProfileScreen() {
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
                     React.createElement(RefreshControl as any, {
-                      refreshing: refreshing,
-                      onRefresh: refreshData,
+                      refreshing: manualRefreshing,
+                      onRefresh: handleRefresh,
                       colors: [colors.orange],
                     })
                   }
@@ -331,8 +341,8 @@ export default function ProfileScreen() {
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
                     React.createElement(RefreshControl as any, {
-                      refreshing: refreshing,
-                      onRefresh: refreshData,
+                      refreshing: manualRefreshing,
+                      onRefresh: handleRefresh,
                       colors: [colors.orange],
                     })
                   }
@@ -363,8 +373,8 @@ export default function ProfileScreen() {
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
                     React.createElement(RefreshControl as any, {
-                      refreshing: refreshing,
-                      onRefresh: refreshData,
+                      refreshing: manualRefreshing,
+                      onRefresh: handleRefresh,
                       colors: [colors.orange],
                     })
                   }

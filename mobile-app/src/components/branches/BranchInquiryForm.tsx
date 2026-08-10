@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "between",
+    justifyContent: "space-between",
   },
   dropdownValue: {
     fontFamily: "Poppins_400Regular",

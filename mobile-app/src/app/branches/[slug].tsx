@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,12 +11,13 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { HomeHeader } from "../../components/home/HomeHeader";
 import BranchHallCard from "../../components/branches/BranchHallCard";
 import BranchInquiryForm from "../../components/branches/BranchInquiryForm";
 import { colors } from "../../config";
-import { get } from "../../lib/api";
+import { useHomepageBranches } from "../../hooks/useHomepageBranches";
 import { LocalAssets, getWebImageUri } from "../../constants/assets";
 import type { Branch } from "../../types";
 
@@ -115,22 +116,11 @@ export default function BranchDetailPage() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
 
-  const [branch, setBranch] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    get<{ branches: any[] }>("/api/branches")
-      .then((d) => {
-        const list = d.branches && d.branches.length > 0 ? d.branches : STATIC_FALLBACK;
-        const found = list.find((b) => b.slug === slug);
-        setBranch(found || null);
-      })
-      .catch(() => {
-        const found = STATIC_FALLBACK.find((b) => b.slug === slug);
-        setBranch(found || null);
-      })
-      .finally(() => setLoading(false));
-  }, [slug]);
+  // Shares the same react-query cache/staleTime as the branches list screen
+  // and the Home tab's branches section instead of firing its own fetch.
+  const { branches: fetchedBranches, loading } = useHomepageBranches();
+  const list = fetchedBranches.length > 0 ? fetchedBranches : STATIC_FALLBACK;
+  const branch = list.find((b) => b.slug === slug) || null;
 
   if (loading) {
     return (
@@ -189,7 +179,10 @@ export default function BranchDetailPage() {
             style={styles.heroImg}
             contentFit="cover"
           />
-          <View style={styles.heroOverlay} />
+          <LinearGradient
+            colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.3)"]}
+            style={styles.heroOverlay}
+          />
         </View>
 
         {/* SECTION 2 — BRANCH INTRO */}
@@ -391,8 +384,10 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     position: "absolute",
-    inset: 0,
-    background: "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%)",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   introSection: {
     paddingVertical: 36,

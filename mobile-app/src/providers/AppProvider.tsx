@@ -56,33 +56,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const start = performance.now();
-    Promise.all([
-      refreshUser().then(() => {
-        if (__DEV__) {
-          console.info(`[Startup] Session restored in ${(performance.now() - start).toFixed(2)}ms`);
-        }
-      }),
-      AsyncStorage.getItem(GUEST_CART).then((raw) => {
-        if (raw) {
-          try {
-            setCart(JSON.parse(raw));
-          } catch (error) {
-            if (__DEV__) {
-              console.error("Failed to parse guest cart from AsyncStorage:", error);
-            }
-            AsyncStorage.removeItem(GUEST_CART).catch(() => undefined);
-            setCart([]);
+    const start = Date.now();
+    
+    // Fetch user session in the background without blocking the initial App mount
+    refreshUser().finally(() => {
+      if (__DEV__) {
+        console.info(`[Startup] Background session restore finished in ${(Date.now() - start).toFixed(2)}ms`);
+      }
+    });
+
+    // Only block initial mount on restoring the local guest cart from AsyncStorage (which is local and fast)
+    AsyncStorage.getItem(GUEST_CART).then((raw) => {
+      if (raw) {
+        try {
+          setCart(JSON.parse(raw));
+        } catch (error) {
+          if (__DEV__) {
+            console.error("Failed to parse guest cart from AsyncStorage:", error);
           }
+          AsyncStorage.removeItem(GUEST_CART).catch(() => undefined);
+          setCart([]);
         }
-        if (__DEV__) {
-          console.info(`[Startup] Guest cart restored in ${(performance.now() - start).toFixed(2)}ms`);
-        }
-      }),
-    ]).finally(() => {
+      }
+      if (__DEV__) {
+        console.info(`[Startup] Guest cart restored in ${(Date.now() - start).toFixed(2)}ms`);
+      }
+    }).finally(() => {
       setReady(true);
       if (__DEV__) {
-        console.info(`[Startup] AppProvider initialized in ${(performance.now() - start).toFixed(2)}ms`);
+        console.info(`[Startup] AppProvider initialized (ready) in ${(Date.now() - start).toFixed(2)}ms`);
       }
     });
   }, [refreshUser]);

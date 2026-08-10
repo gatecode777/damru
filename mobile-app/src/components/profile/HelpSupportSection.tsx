@@ -540,7 +540,7 @@ export function HelpSupportSection({ showToast }: HelpSupportSectionProps) {
                           <View style={{ marginBottom: 12 }}>
                             <Text style={styles.attachmentLabel}>Attachment:</Text>
                             <RNImage
-                              source={assetUrl("complaints", c.attachment)}
+                              source={{ uri: assetUrl("complaints", c.attachment) }}
                               style={styles.attachmentImage}
                             />
                           </View>

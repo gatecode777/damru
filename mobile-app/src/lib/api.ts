@@ -9,20 +9,42 @@ export class ApiRequestError extends Error {
   }
 }
 
-type Options = Omit<RequestInit, "body"> & { body?: unknown };
+type Options = Omit<RequestInit, "body"> & { body?: unknown; timeoutMs?: number };
+
+const DEFAULT_TIMEOUT_MS = 15000;
 
 export async function api<T>(path: string, options: Options = {}): Promise<T> {
-  const hasJsonBody = options.body !== undefined && !(options.body instanceof FormData);
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(hasJsonBody ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-    body: hasJsonBody ? JSON.stringify(options.body) : (options.body as BodyInit | undefined),
-  });
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, signal: callerSignal, ...rest } = options;
+  const hasJsonBody = rest.body !== undefined && !(rest.body instanceof FormData);
+
+  // Respect a caller-provided signal as-is; otherwise enforce our own timeout so a
+  // hung request can't block a screen indefinitely.
+  const timeoutController = callerSignal ? null : new AbortController();
+  const timeoutId = timeoutController
+    ? setTimeout(() => timeoutController.abort(), timeoutMs)
+    : null;
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...rest,
+      credentials: "include",
+      signal: callerSignal ?? timeoutController?.signal,
+      headers: {
+        Accept: "application/json",
+        ...(hasJsonBody ? { "Content-Type": "application/json" } : {}),
+        ...rest.headers,
+      },
+      body: hasJsonBody ? JSON.stringify(rest.body) : (rest.body as BodyInit | undefined),
+    });
+  } catch (err) {
+    if (timeoutController?.signal.aborted) {
+      throw new ApiRequestError("Request timed out. Please check your connection.", 0);
+    }
+    throw err;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 
   let payload: unknown;
   try {

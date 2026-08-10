@@ -16,8 +16,10 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 
 import { HomeHeader } from "../components/home/HomeHeader";
 import { EmptyState } from "../components/ui";
+import { BlogCardSkeleton } from "../components/home/BlogCard";
 import { getWebImageUri } from "../constants/assets";
 import { publicGet } from "../lib/api";
+import { useHomepageBlogs } from "../hooks/useHomepageBlogs";
 import { colors } from "../config";
 
 interface BlogAuthor {
@@ -90,78 +92,67 @@ export default function BlogsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Homepage feed is shared with the Home tab's BlogsSection via react-query
+  // (15min staleTime) instead of this screen firing its own independent fetch.
+  const { blogs: homepageBlogs, loading: homepageLoading } = useHomepageBlogs();
+
+  const [searchResults, setSearchResults] = useState<Blog[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Load paginated blogs or search results
+  const isSearching = query.trim().length >= 2;
+  const blogs = isSearching
+    ? (searchResults ?? [])
+    : (homepageBlogs.length > 0 ? homepageBlogs : STATIC_FALLBACK);
+  const loading = isSearching ? searchLoading : homepageLoading;
+
+  // Debounced search — only fires once the user has typed at least 2 characters.
   useEffect(() => {
+    if (!isSearching) {
+      setSearchResults(null);
+      return;
+    }
+
     let active = true;
-    setLoading(true);
+    setSearchLoading(true);
 
-    if (query.trim().length >= 2) {
-      // Fetch Search Results
-      const delayTimer = setTimeout(() => {
-        publicGet<{ results: any[] }>(`/api/blog-search?q=${encodeURIComponent(query.trim())}`)
-          .then((d) => {
-            if (!active) return;
-            const normalized = (d.results || []).map((b) => ({
-              _id: String(b._id),
-              title: b.title ?? "",
-              slug: b.slug ?? "",
-              excerpt: b.excerpt ?? "",
-              coverImage: b.coverImage ?? "",
-              author: {
-                name: b.author?.name ?? "Damru By Namo",
-                avatar: b.author?.image ?? b.author?.avatar ?? "",
-              },
-              readTime: b.readTime ?? 1,
-              publishedAt: b.publishedAt ? String(b.publishedAt) : String(b.createdAt),
-              category: b.category?.name ?? "Healthy Food",
-            }));
-            setBlogs(normalized);
-            setTotalPages(1); // Search results are single-page
-          })
-          .catch((err) => {
-            console.error("❌ [BlogsScreen] Search failed:", err);
-            if (active) setBlogs([]);
-          })
-          .finally(() => {
-            if (active) setLoading(false);
-          });
-      }, 350);
-
-      return () => {
-        active = false;
-        clearTimeout(delayTimer);
-      };
-    } else {
-      // Fetch Homepage Blogs Feed (already deployed on live server)
-      publicGet<{ blogs: any[] }>("/api/homepage-blogs")
+    const delayTimer = setTimeout(() => {
+      publicGet<{ results: any[] }>(`/api/blog-search?q=${encodeURIComponent(query.trim())}`)
         .then((d) => {
           if (!active) return;
-          if (d.blogs && d.blogs.length > 0) {
-            setBlogs(d.blogs);
-          } else {
-            setBlogs(STATIC_FALLBACK);
-          }
-          setTotalPages(1);
+          const normalized = (d.results || []).map((b) => ({
+            _id: String(b._id),
+            title: b.title ?? "",
+            slug: b.slug ?? "",
+            excerpt: b.excerpt ?? "",
+            coverImage: b.coverImage ?? "",
+            author: {
+              name: b.author?.name ?? "Damru By Namo",
+              avatar: b.author?.image ?? b.author?.avatar ?? "",
+            },
+            readTime: b.readTime ?? 1,
+            publishedAt: b.publishedAt ? String(b.publishedAt) : String(b.createdAt),
+            category: b.category?.name ?? "Healthy Food",
+          }));
+          setSearchResults(normalized);
+          setTotalPages(1); // Search results are single-page
         })
         .catch((err) => {
-          console.error("❌ [BlogsScreen] Fetch failed:", err);
-          if (active) setBlogs(STATIC_FALLBACK);
+          console.error("❌ [BlogsScreen] Search failed:", err);
+          if (active) setSearchResults([]);
         })
         .finally(() => {
-          if (active) setLoading(false);
+          if (active) setSearchLoading(false);
         });
+    }, 350);
 
-      return () => {
-        active = false;
-      };
-    }
-  }, [page, query]);
+    return () => {
+      active = false;
+      clearTimeout(delayTimer);
+    };
+  }, [query, isSearching]);
 
   function formatDate(d?: string) {
     if (!d) return "";
@@ -186,6 +177,10 @@ export default function BlogsScreen() {
   }
 
   function renderBlogCard({ item, index }: { item: Blog; index: number }) {
+    if (loading) {
+      return <BlogCardSkeleton />;
+    }
+
     // Resolve cover image source
     const coverSource = item.coverImage
       ? { uri: getWebImageUri(`/uploads/blogs/${item.coverImage}`) + "?tr=w-400,h-260,fo-auto" }
@@ -312,7 +307,7 @@ export default function BlogsScreen() {
       <HomeHeader />
 
       <FlatList
-        data={blogs}
+        data={loading ? [{ _id: "s1" }, { _id: "s2" }] as any[] : blogs}
         keyExtractor={(item) => item._id}
         renderItem={renderBlogCard}
         initialNumToRender={4}
@@ -348,15 +343,6 @@ export default function BlogsScreen() {
                 style={styles.searchInput}
               />
             </View>
-
-            {/* Loader indicator */}
-            {loading ? (
-              <ActivityIndicator
-                size="small"
-                color={colors.orange}
-                style={styles.loader}
-              />
-            ) : null}
           </>
         }
         ListFooterComponent={renderPagination()}

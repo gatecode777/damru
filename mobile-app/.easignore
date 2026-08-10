@@ -1,0 +1,24 @@
+# Ignore local node dependencies
+node_modules/
+
+# Ignore Expo temp files
+.expo/
+dist/
+web-build/
+metro-cache/
+
+# Ignore local android build caches and outputs (these are built fresh on EAS)
+android/build
+android/app/build
+android/app/.cxx
+android/.gradle
+android/.kotlin
+android/app/build/outputs/apk
+android/app/build/outputs/bundle
+
+# Ignore local logs and artifacts
+*.log
+*.apk
+*.aab
+*.txt
+convert.ps1

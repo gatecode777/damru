@@ -1,11 +1,3 @@
-/**
- * BanquetShowcaseSection.tsx
- *
- * Exact recreation of website's .damru-hero-slider section.
- *
- * FIX: useSharedValue CANNOT be inside Array.from() — violates Rules of Hooks.
- *      Each opacity value is declared as a separate top-level shared value.
- */
 
 import React, { useEffect, useRef } from 'react';
 import {
@@ -31,11 +23,11 @@ import { LocalAssets } from '../../constants/assets';
 /* ─────────────────────────────────────────
    Website CSS values — DO NOT change
 ────────────────────────────────────────── */
-const AUTO_PLAY_MS      = 3000;   // main.js: setInterval 3000ms
-const FADE_DURATION_MS  = 1500;   // CSS: transition: opacity 1.5s ease-in-out
-const SECTION_HEIGHT    = 380;    // set to 380 to prevent slides looking cut in half
-const FLOATING_HALF_MS  = 2500;   // @keyframes floating: 5s total → 2.5s each half
-const HEADING  = 'Elegant Wedding Events & Special Celebrations';
+const AUTO_PLAY_MS = 3000;   // main.js: setInterval 3000ms
+const FADE_DURATION_MS = 1500;   // CSS: transition: opacity 1.5s ease-in-out
+const SECTION_HEIGHT = 380;    // set to 380 to prevent slides looking cut in half
+const FLOATING_HALF_MS = 2500;   // @keyframes floating: 5s total → 2.5s each half
+const HEADING = 'Elegant Wedding Events & Special Celebrations';
 const CTA_ROUTE = '/branches';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -63,14 +55,6 @@ function ExploreButton({ onPress }: { onPress: () => void }) {
     </AnimatedPressable>
   );
 }
-
-/* ─────────────────────────────────────────
-   Floating Glass Card
-   CSS: rgba(255,255,255,0.5), backdrop-filter blur(1px),
-        border 1.5px rgba(255,255,255,0.4), border-radius 20px,
-        padding 40px 20px (mobile),
-        @keyframes floating: translateY 0→-10→0, 5s ease-in-out infinite
-────────────────────────────────────────── */
 function FloatingGlassCard({ onExplore }: { onExplore: () => void }) {
   const floatY = useSharedValue(0);
 
@@ -78,13 +62,12 @@ function FloatingGlassCard({ onExplore }: { onExplore: () => void }) {
     floatY.value = withRepeat(
       withSequence(
         withTiming(-10, { duration: FLOATING_HALF_MS, easing: Easing.bezier(0.45, 0, 0.55, 1) }),
-        withTiming(0,   { duration: FLOATING_HALF_MS, easing: Easing.bezier(0.45, 0, 0.55, 1) }),
+        withTiming(0, { duration: FLOATING_HALF_MS, easing: Easing.bezier(0.45, 0, 0.55, 1) }),
       ),
       -1,
       false,
     );
   }, []);
-
   const floatStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: floatY.value }],
   }));
@@ -96,16 +79,9 @@ function FloatingGlassCard({ onExplore }: { onExplore: () => void }) {
     </Animated.View>
   );
 }
-
-/* ─────────────────────────────────────────
-   Main Section
-   4 slides — top-level shared values (Rules of Hooks compliant)
-────────────────────────────────────────── */
 export function BanquetShowcaseSection() {
   const router = useRouter();
-
-  // ── 4 opacity values declared individually at top level ──
-  const op0 = useSharedValue(1); // slide 1 starts visible
+  const op0 = useSharedValue(1);
   const op1 = useSharedValue(0);
   const op2 = useSharedValue(0);
   const op3 = useSharedValue(0);
@@ -245,13 +221,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 10,
   },
-
-  /*
-   * .explore-btn:
-   *   background #e66a0d, color white
-   *   padding 12px 35px, border-radius 5px
-   *   font-size 1.1rem ≈ 17px, font-weight 500
-   */
   exploreBtn: {
     flexDirection: 'row',
     alignItems: 'center',

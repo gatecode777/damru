@@ -17,7 +17,7 @@ import { colors } from '@/config';
 
 export interface IndoChineseProduct {
   key: string;
-  image: ReturnType<typeof require>;
+  image: any;
   name: string;
 }
 

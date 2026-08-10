@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ScrollView, InteractionManager } from 'react-native';
 import { HomeHeader } from '../../components/home/HomeHeader';
 import { HeroSection } from '../../components/home/HeroSection';
 import { MenuSection } from '../../components/home/MenuSection';
@@ -14,6 +14,18 @@ import { TasteThroughLensSection } from '../../components/home/TasteThroughLensS
 import { Colors } from '../../constants/theme';
 
 export default function HomeScreen() {
+  // Defer below-the-fold sections until after the initial screen has painted
+  // and interactions/animations have settled, so first paint isn't competing
+  // with 7 extra sections' image decode + Reanimated setup for the JS/UI thread.
+  const [belowFoldReady, setBelowFoldReady] = useState(false);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setBelowFoldReady(true);
+    });
+    return () => task.cancel();
+  }, []);
+
   return (
     <View style={styles.screen}>
       <HomeHeader />
@@ -28,26 +40,30 @@ export default function HomeScreen() {
         {/* ── 3. MENU SHOWCASE SECTION ── */}
         <MenuSection />
 
-        {/* ── 4. BANQUET SHOWCASE SLIDER ── */}
-        <BanquetShowcaseSection />
+        {belowFoldReady ? (
+          <>
+            {/* ── 4. BANQUET SHOWCASE SLIDER ── */}
+            <BanquetShowcaseSection />
 
-        {/* ── 6. OUR BRANCHES SECTION ── */}
-        <BranchesSection />
+            {/* ── 6. OUR BRANCHES SECTION ── */}
+            <BranchesSection />
 
-        {/* ── 7. INDO CHINESE SECTION ── */}
-        <IndoChineseSection />
+            {/* ── 7. INDO CHINESE SECTION ── */}
+            <IndoChineseSection />
 
-        {/* ── 8. QUALITY HIGHLIGHTS SECTION ── */}
-        <QualityHighlightsSection />
+            {/* ── 8. QUALITY HIGHLIGHTS SECTION ── */}
+            <QualityHighlightsSection />
 
-        {/* ── 9. OUR BLOGS SECTION ── */}
-        <BlogsSection />
+            {/* ── 9. OUR BLOGS SECTION ── */}
+            <BlogsSection />
 
-        {/* ── 10. RESERVATION SECTION ── */}
-        <ReservationSection />
+            {/* ── 10. RESERVATION SECTION ── */}
+            <ReservationSection />
 
-        {/* ── 11. TASTE THROUGH LENS SECTION ── */}
-        <TasteThroughLensSection />
+            {/* ── 11. TASTE THROUGH LENS SECTION ── */}
+            <TasteThroughLensSection />
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );

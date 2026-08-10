@@ -233,6 +233,10 @@ export default function CartScreen() {
           <View style={[styles.bottomBar, { bottom: insets.bottom > 0 ? insets.bottom + 80 : 96 }]}>
             <Pressable
               onPress={() => {
+                if (!user) {
+                  router.push("/auth");
+                  return;
+                }
                 router.push({
                   pathname: "/checkout",
                   params: { coupon, discount: String(discount) },

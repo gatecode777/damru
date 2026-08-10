@@ -1,4 +1,5 @@
 import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
+import { ApiRequestError } from "./api";
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -27,7 +28,14 @@ export const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: (failureCount, error) => {
+        // Don't retry 4xx (auth/validation) errors — retrying won't fix a bad request
+        // or expired session, it just doubles the failed traffic and delays the error UI.
+        if (error instanceof ApiRequestError && error.status >= 400 && error.status < 500) {
+          return false;
+        }
+        return failureCount < 1;
+      },
       staleTime: 60_000, // Default 1 minute
       gcTime: 10 * 60_000, // Bounded garbage-collection time (10 minutes)
       refetchOnMount: false,

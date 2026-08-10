@@ -1,9 +1,11 @@
 import Constants from "expo-constants";
 
+const PRODUCTION_API_URL = "https://damrurestro.com";
+
 const configuredUrl =
   process.env.EXPO_PUBLIC_API_URL ??
   Constants.expoConfig?.extra?.apiUrl ??
-  "http://10.0.2.2:3000";
+  PRODUCTION_API_URL;
 
 export const API_URL = String(configuredUrl).replace(/\/+$/, "");
 

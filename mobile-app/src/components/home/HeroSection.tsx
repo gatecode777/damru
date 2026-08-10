@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { Image } from '../ui/Image';
 import Animated, {
   useAnimatedStyle,
+  useSharedValue,
   withTiming,
   Easing,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/theme';
 import { LocalAssets } from '../../constants/assets';
@@ -23,18 +25,18 @@ export const HeroSection: React.FC = () => {
   const { selectedIndex, selectIndex } = useHeroSelection(4, 5000);
 
   // Wheel rotation angle matching website main.js: selectedIndex * -90deg
-  const rotationAngle = selectedIndex * -90;
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    rotation.value = withTiming(selectedIndex * -90, {
+      duration: 800,
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+    });
+  }, [selectedIndex, rotation]);
 
   const wheelAnimatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [
-        {
-          rotate: withTiming(`${rotationAngle}deg`, {
-            duration: 800,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
-          }),
-        },
-      ],
+      transform: [{ rotate: `${rotation.value}deg` }],
     };
   });
 
@@ -66,14 +68,13 @@ export const HeroSection: React.FC = () => {
           {LocalAssets.plates.map((plateSource, index) => {
             // Position 4 plates on the rim: 9 o'clock (180°), 12 o'clock (270°), 3 o'clock (0°), 6 o'clock (90°)
             const itemAngleDeg = 180 + index * 90;
-            const counterAngle = -rotationAngle;
 
             return (
               <PlateItem
                 key={index}
                 plateSource={plateSource}
                 itemAngleDeg={itemAngleDeg}
-                counterAngle={counterAngle}
+                rotation={rotation}
                 isActive={selectedIndex === index}
               />
             );
@@ -87,24 +88,19 @@ export const HeroSection: React.FC = () => {
 function PlateItem({
   plateSource,
   itemAngleDeg,
-  counterAngle,
+  rotation,
   isActive,
 }: {
   plateSource: any;
   itemAngleDeg: number;
-  counterAngle: number;
+  rotation: SharedValue<number>;
   isActive: boolean;
 }) {
   // Counter-rotate plate so food remains right-side up
   const animatedPlateStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        {
-          rotate: withTiming(`${counterAngle}deg`, {
-            duration: 800,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
-          }),
-        },
+        { rotate: `${-rotation.value}deg` },
         {
           scale: withTiming(isActive ? 1.05 : 0.9, {
             duration: 400,

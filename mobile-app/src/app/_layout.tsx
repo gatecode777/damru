@@ -21,7 +21,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 import { GlobalBottomBar } from "@/components/navigation/GlobalBottomBar";
 
-const appStartTime = performance.now();
+const appStartTime = Date.now();
 
 import { useApp } from "@/providers/AppProvider";
 
@@ -41,7 +41,7 @@ function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; f
   useEffect(() => {
     if ((fontsLoaded || fontError) && ready) {
       if (__DEV__) {
-        console.info(`[Startup] Splash screen hidden in ${(performance.now() - appStartTime).toFixed(2)}ms (fonts: ${fontsLoaded}, ready: ${ready})`);
+        console.info(`[Startup] Splash screen hidden in ${(Date.now() - appStartTime).toFixed(2)}ms (fonts: ${fontsLoaded}, ready: ${ready})`);
       }
       SplashScreen.hideAsync().catch(() => {});
     }

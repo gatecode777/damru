@@ -155,16 +155,25 @@ export default function MenuScreen() {
   const allItems = data?.items || FALLBACK_ITEMS;
 
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const flatListRef = useRef<FlatList<MenuItem>>(null);
 
   useEffect(() => {
-    if (categories.length > 0 && !selectedCategory) {
-      setSelectedCategory(categories[0]._id);
+    if (categories.length > 0) {
+      const exists = categories.some((c) => c._id === selectedCategory);
+      if (!exists) {
+        setSelectedCategory(categories[0]._id);
+      }
     }
   }, [categories, selectedCategory]);
 
   const handleRetry = () => {
     refetch();
   };
+
+  const handleCategorySelect = useCallback((id: string) => {
+    setSelectedCategory(id);
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
 
   // Filter products based on selected category
   const filteredProducts = allItems.filter(
@@ -224,41 +233,6 @@ export default function MenuScreen() {
     );
   }, [cart, handleAdd, handleIncrement, handleDecrement, handleOrderNow]);
 
-  const renderHeader = () => (
-    <>
-      <MenuHeroSection />
-
-      {/* Category Tabs Row */}
-      {categories.length > 0 && (
-        <MenuCategoryTabs
-          categories={categories}
-          activeId={selectedCategory}
-          onSelect={setSelectedCategory}
-        />
-      )}
-
-      {/* Dynamic Category Header */}
-      {activeCategoryObj && (
-        <View style={styles.categoryHeader}>
-          <Text style={styles.categoryTitle}>{activeCategoryObj.name}</Text>
-          {activeCategoryObj.description ? (
-            <Text style={styles.categoryDesc}>{activeCategoryObj.description}</Text>
-          ) : null}
-        </View>
-      )}
-
-      {/* Skeletons for Loading State */}
-      {loading && (
-        <View style={styles.skeletonList}>
-          <MenuProductSkeleton />
-          <MenuProductSkeleton />
-          <MenuProductSkeleton />
-          <MenuProductSkeleton />
-        </View>
-      )}
-    </>
-  );
-
   return (
     <View style={styles.page}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -275,10 +249,44 @@ export default function MenuScreen() {
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={loading ? [] : filteredProducts}
           keyExtractor={(item) => item._id}
           renderItem={renderProductItem}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={
+            <>
+              <MenuHeroSection />
+
+              {/* Category Tabs Row */}
+              {categories.length > 0 && (
+                <MenuCategoryTabs
+                  categories={categories}
+                  activeId={selectedCategory}
+                  onSelect={handleCategorySelect}
+                />
+              )}
+
+              {/* Dynamic Category Header */}
+              {activeCategoryObj && (
+                <View style={styles.categoryHeader}>
+                  <Text style={styles.categoryTitle}>{activeCategoryObj.name}</Text>
+                  {activeCategoryObj.description ? (
+                    <Text style={styles.categoryDesc}>{activeCategoryObj.description}</Text>
+                  ) : null}
+                </View>
+              )}
+
+              {/* Skeletons for Loading State */}
+              {loading && (
+                <View style={styles.skeletonList}>
+                  <MenuProductSkeleton />
+                  <MenuProductSkeleton />
+                  <MenuProductSkeleton />
+                  <MenuProductSkeleton />
+                </View>
+              )}
+            </>
+          }
           ListFooterComponent={!loading ? <MenuReservationSection /> : null}
           ListEmptyComponent={
             !loading ? (

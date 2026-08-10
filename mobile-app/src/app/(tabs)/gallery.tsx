@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,24 +18,24 @@ import { HomeHeader } from "@/components/home/HomeHeader";
 import { EmptyState, ScreenTitle } from "@/components/ui";
 import { assetUrl, colors } from "@/config";
 import { get } from "@/lib/api";
+import { queryKeys } from "@/lib/queryClient";
 import type { GalleryItem, GalleryTab } from "@/types";
 
 const PAGE_SIZE = 10;
 const FALLBACK_BANNER = "https://ik.imagekit.io/zp0tch54w/DAMRU/All%20menu%20page.webp";
 
 export default function GalleryScreen() {
-  const [tabs, setTabs] = useState<GalleryTab[]>([]);
   const [activeKey, setActiveKey] = useState("all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [loading, setLoading] = useState(true);
 
-  // Fetch gallery tabs from database API
-  useEffect(() => {
-    get<{ tabs: GalleryTab[] }>("/api/gallery")
-      .then((d) => setTabs(d.tabs ?? []))
-      .catch((err) => console.error("Error fetching gallery tabs:", err))
-      .finally(() => setLoading(false));
-  }, []);
+  // Cached via react-query so re-focusing the Gallery tab doesn't re-download
+  // the whole collection every time.
+  const { data, isLoading: loading } = useQuery({
+    queryKey: queryKeys.gallery.list(),
+    queryFn: () => get<{ tabs: GalleryTab[] }>("/api/gallery"),
+    staleTime: 5 * 60 * 1000,
+  });
+  const tabs = data?.tabs ?? [];
 
   // Compute virtual "all" tab containing all items deduplicated & sorted by sortOrder
   const allTab: GalleryTab = useMemo(() => {
@@ -117,74 +118,82 @@ export default function GalleryScreen() {
     <View style={styles.container}>
       <HomeHeader />
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.orange} />
-        </View>
-      ) : (
-        <FlatList
-          data={visibleItems}
-          keyExtractor={(item, idx) => item._id ?? `gallery-item-${idx}`}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <View style={styles.headerComponent}>
-              {/* Hero Banner Section */}
-              <View style={styles.heroWrapper}>
+      <FlatList
+        data={loading ? [{ _id: "s1" }, { _id: "s2" }] as any[] : visibleItems}
+        keyExtractor={(item, idx) => item._id ?? `gallery-item-${idx}`}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={styles.headerComponent}>
+            {/* Hero Banner Section */}
+            <View style={styles.heroWrapper}>
+              {loading ? (
+                <View style={[styles.heroBannerImg, { backgroundColor: '#f0ece6' }]} />
+              ) : (
                 <Image
                   source={{ uri: bannerUri }}
                   style={styles.heroBannerImg}
                   contentFit="cover"
                   contentPosition="left center"
                 />
-              </View>
-
-              {/* Horizontal Scrollable Category Filter Tabs */}
-              <View style={styles.filterBarContainer}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.filterScrollView}
-                >
-                  {allTabsList.map((tab) => {
-                    const isActive = activeKey === tab.tabKey;
-                    return (
-                      <Pressable
-                        key={tab.tabKey}
-                        onPress={() => handleSwitchTab(tab.tabKey)}
-                        style={styles.filterTabPressable}
-                      >
-                        <Text
-                          style={[
-                            styles.filterTabText,
-                            isActive && styles.filterTabTextActive,
-                          ]}
-                        >
-                          {tab.label}
-                        </Text>
-                        {isActive && <View style={styles.activeUnderline} />}
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
+              )}
             </View>
-          }
-          ListEmptyComponent={
+
+            {/* Horizontal Scrollable Category Filter Tabs */}
+            <View style={styles.filterBarContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterScrollView}
+              >
+                {allTabsList.map((tab) => {
+                  const isActive = activeKey === tab.tabKey;
+                  return (
+                    <Pressable
+                      key={tab.tabKey}
+                      onPress={() => handleSwitchTab(tab.tabKey)}
+                      style={styles.filterTabPressable}
+                      disabled={loading}
+                    >
+                      <Text
+                        style={[
+                          styles.filterTabText,
+                          isActive && styles.filterTabTextActive,
+                        ]}
+                      >
+                        {tab.label}
+                      </Text>
+                      {isActive && <View style={styles.activeUnderline} />}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          !loading ? (
             <EmptyState
               title="No images in this category"
               message="Check back soon for new gallery additions."
             />
-          }
-          renderItem={({ item }) => {
-            const isTopAligned = item.overlayClass === "top-aligned";
-            const imageUrl = assetUrl("gallery", item.image);
-
+          ) : null
+        }
+        renderItem={({ item }) => {
+          if (loading) {
             return (
-              <Pressable
-                style={styles.cardContainer}
-                onPress={() => router.push("/menu")}
-              >
+              <View style={[styles.cardContainer, { backgroundColor: '#f0ece6' }]} />
+            );
+          }
+
+          const isTopAligned = item.overlayClass === "top-aligned";
+          const imageUrl = assetUrl("gallery", item.image);
+
+          return (
+            <Pressable
+              style={styles.cardContainer}
+              onPress={() => router.push("/menu")}
+            >
                 <Image
                   source={{ uri: imageUrl }}
                   style={styles.cardImg}
@@ -230,7 +239,6 @@ export default function GalleryScreen() {
             ) : null
           }
         />
-      )}
     </View>
   );
 }

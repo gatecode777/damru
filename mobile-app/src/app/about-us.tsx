@@ -1,14 +1,20 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Dimensions,
   ImageBackground,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
@@ -16,8 +22,6 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-
-import { Platform, NativeModules } from "react-native";
 
 import { HomeHeader } from "../components/home/HomeHeader";
 import { ReservationSection } from "../components/home/ReservationSection";
@@ -27,25 +31,20 @@ import { colors } from "../config";
 const DELICIOUS_VIDEO_URI = getWebImageUri("/assets/videos/Cinematic Food Video.mp4");
 
 function ExpoVideoComponent({ uri, style }: { uri: string; style: any }) {
-  try {
-    const { useVideoPlayer, VideoView } = require("expo-video");
-    const player = useVideoPlayer(uri, (p: any) => {
-      p.loop = true;
-      p.muted = true;
-      p.play();
-    });
-    return (
-      <VideoView
-        player={player}
-        style={style}
-        contentFit="cover"
-        nativeControls={false}
-        allowsFullscreen={false}
-      />
-    );
-  } catch (_e) {
-    return null;
-  }
+  const player = useVideoPlayer(uri, (videoPlayer) => {
+    videoPlayer.loop = true;
+    videoPlayer.muted = true;
+    videoPlayer.play();
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={style}
+      contentFit="cover"
+      nativeControls={false}
+    />
+  );
 }
 
 function SafeVideoPlayer({ uri, style }: { uri: string; style: any }) {
@@ -70,46 +69,30 @@ function SafeVideoPlayer({ uri, style }: { uri: string; style: any }) {
     );
   }
 
-  // Try expo-video native module first
-  try {
-    const expoVideo = require("expo-video");
-    if (expoVideo?.useVideoPlayer) {
-      return <ExpoVideoComponent uri={uri} style={style} />;
-    }
-  } catch (_e) {}
-
-  // Fallback to expo-av if linked
-  const hasNativeAv = Boolean(
-    NativeModules.ExponentAV ||
-      NativeModules.EXAV ||
-      (global as any)?.ExpoModules?.ExponentAV
-  );
-
-  if (hasNativeAv) {
-    try {
-      const expoAv = require("expo-av");
-      const ExpoAvVideo = expoAv?.Video;
-      const ResizeMode = expoAv?.ResizeMode;
-      if (ExpoAvVideo) {
-        return (
-          <ExpoAvVideo
-            source={{ uri }}
-            style={style}
-            resizeMode={ResizeMode?.COVER ?? "cover"}
-            shouldPlay
-            isLooping
-            isMuted
-          />
-        );
-      }
-    } catch (_e) {}
-  }
-
-  return null;
+  return <ExpoVideoComponent uri={uri} style={style} />;
 }
+
+const { height: WINDOW_HEIGHT } = Dimensions.get("window");
 
 export default function AboutUsScreen() {
   const insets = useSafeAreaInsets();
+
+  // The background video is far down the scroll — don't start buffering/decoding
+  // it until the section is about to come into view.
+  const [videoVisible, setVideoVisible] = useState(false);
+  const videoSectionY = useRef<number | null>(null);
+
+  const handleVideoSectionLayout = (e: LayoutChangeEvent) => {
+    videoSectionY.current = e.nativeEvent.layout.y;
+  };
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (videoVisible || videoSectionY.current === null) return;
+    const scrollY = e.nativeEvent.contentOffset.y;
+    if (scrollY + WINDOW_HEIGHT >= videoSectionY.current) {
+      setVideoVisible(true);
+    }
+  };
 
   // Reanimated shared values matching website fadeInRight keyframe animation
   const cardOpacity = useSharedValue(0);
@@ -142,6 +125,8 @@ export default function AboutUsScreen() {
           { paddingBottom: insets.bottom + 75 },
         ]}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={100}
       >
         {/* ── 1. HERO BANNER SECTION ── */}
         <ImageBackground
@@ -310,16 +295,18 @@ export default function AboutUsScreen() {
         </View>
 
         {/* ── 4. DELICIOUS BANNER SECTION WITH BACKGROUND VIDEO ── */}
-        <View style={styles.deliciousSection}>
+        <View style={styles.deliciousSection} onLayout={handleVideoSectionLayout}>
           <Image
             source={LocalAssets.deliciousBg}
             style={styles.deliciousVideoBg}
             contentFit="cover"
           />
-          <SafeVideoPlayer
-            uri={DELICIOUS_VIDEO_URI}
-            style={styles.deliciousVideoBg}
-          />
+          {videoVisible ? (
+            <SafeVideoPlayer
+              uri={DELICIOUS_VIDEO_URI}
+              style={styles.deliciousVideoBg}
+            />
+          ) : null}
           <View style={styles.deliciousOverlay}>
             <Text style={styles.deliciousEyebrow}>Pure Taste</Text>
             <Text style={styles.deliciousTitle}>It looks delicious</Text>

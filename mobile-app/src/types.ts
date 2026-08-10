@@ -44,10 +44,17 @@ export type Branch = {
   cardImage?: string;
   cardAlt?: string;
   heroImage?: string;
+  bannerImage?: string;
   shortDescription?: string;
   description?: string;
   isActive?: boolean;
   sortOrder?: number;
+  whyChoose?: string;
+  offerItems?: string[];
+  eventTypes?: { label: string; image: string }[];
+  hallCards?: IHallCard[];
+  ctaTitle?: string;
+  ctaSubtitle?: string;
 };
 
 export type GalleryItem = {
@@ -146,3 +153,15 @@ export type Complaint = {
   adminNote?: string;
   createdAt: string;
 };
+
+export interface IHallCard {
+  _id?:        string;
+  title:       string;
+  subtitle:    string;
+  description: string;
+  features:    string[];
+  perfectFor:  string[];
+  images:      string[];
+  sortOrder:   number;
+}
+
