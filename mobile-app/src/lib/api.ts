@@ -9,6 +9,17 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiRequestError)) return fallback;
+  if (error.status === 0) return "You're offline. Try again when you're connected.";
+  if (error.status === 401) return "Your session has expired. Please sign in again.";
+  if (error.status === 403) return "You don't have permission to access this feature.";
+  if (error.status === 404) return fallback;
+  if (error.status === 429) return "Too many requests. Please try again shortly.";
+  if (error.status >= 500) return fallback;
+  return error.message || fallback;
+}
+
 type Options = Omit<RequestInit, "body"> & { body?: unknown; timeoutMs?: number };
 
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -37,11 +48,11 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
       },
       body: hasJsonBody ? JSON.stringify(rest.body) : (rest.body as BodyInit | undefined),
     });
-  } catch (err) {
+  } catch {
     if (timeoutController?.signal.aborted) {
       throw new ApiRequestError("Request timed out. Please check your connection.", 0);
     }
-    throw err;
+    throw new ApiRequestError("Network request failed.", 0);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }

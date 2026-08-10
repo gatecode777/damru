@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui";
 import { getReferrals } from "@/services/rewardsApi";
 import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import type { ReferralHistoryEntry, ReferralsResponse } from "@/types/rewards";
+import { getApiErrorMessage } from "@/lib/api";
 
 const STATUS_LABEL: Record<string, string> = {
   REGISTERED: "Registered",
@@ -31,8 +32,8 @@ export default function RewardsReferralsScreen() {
     try {
       const result = await getReferrals(1, 30);
       setData(result);
-    } catch (err: any) {
-      setError(err?.message || "Could not load referrals.");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, "Unable to load referrals."));
     } finally {
       setLoading(false);
       setRefreshing(false);

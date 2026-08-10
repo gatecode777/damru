@@ -5,6 +5,7 @@ import { colors } from "@/config";
 import { EmptyState } from "@/components/ui";
 import { getRewardHistory } from "@/services/rewardsApi";
 import type { RewardTransaction } from "@/types/rewards";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function RewardsHistoryScreen() {
   const [transactions, setTransactions] = useState<RewardTransaction[]>([]);
@@ -25,8 +26,8 @@ export default function RewardsHistoryScreen() {
       setTransactions(prev => (mode === "more" ? [...prev, ...data.transactions] : data.transactions));
       setPage(data.page);
       setTotalPages(data.totalPages);
-    } catch (err: any) {
-      setError(err?.message || "Could not load your reward history.");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, "Unable to load your reward history."));
     } finally {
       setLoading(false);
       setRefreshing(false);

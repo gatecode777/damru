@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Save, Loader2, ChevronRight } from "lucide-react";
 import { createCategory, updateCategory } from "@/app/actions/categories";
+import { useToast } from "@/components/admin/Toast";
 
 interface Props {
   category?: {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function CategoryForm({ category }: Props) {
+  const toast = useToast();
   const isEdit = !!category;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,8 @@ export default function CategoryForm({ category }: Props) {
       const res = isEdit
         ? await updateCategory(category._id, fd)
         : await createCategory(fd);
-      if (res?.error) setError(res.error);
+      if (res?.error) { setError(res.error); toast.error("Unable to save category"); }
+      else toast.success(isEdit ? "Category updated successfully" : "Category created successfully");
     });
   }
 

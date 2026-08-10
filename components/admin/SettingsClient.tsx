@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Save, Loader2, Globe, Mail, Bell, ShoppingBag, Wrench, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
+import { getAdminResponseError } from "@/lib/admin-error";
 
 type Settings = {
   siteName: string; siteUrl: string; supportEmail: string; tagline: string;
@@ -65,6 +67,7 @@ function Inp({ value, onChange, type = "text", placeholder }: { value: string | 
 }
 
 export default function SettingsClient() {
+  const toast = useToast();
   const [active, setActive] = useState("general");
   const [settings, setSettings] = useState<Settings>(DEFAULT);
   const [loading, setLoading] = useState(true);
@@ -90,10 +93,11 @@ export default function SettingsClient() {
     try {
       const res = await fetch("/api/admin/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings) });
       const data = await res.json();
-      if (data.error) { setError(data.error); return; }
+      if (!res.ok || data.error) { const message = await getAdminResponseError(res, "Unable to save settings."); setError(message); toast.error("Unable to save settings", message); return; }
       setSaved(true);
+      toast.success("Settings saved successfully");
       setTimeout(() => setSaved(false), 3000);
-    } catch { setError("Failed to save. Check connection."); }
+    } catch { setError("Failed to save. Check connection."); toast.error("Unable to save settings", "Please check your connection and try again."); }
     finally { setSaving(false); }
   }
 

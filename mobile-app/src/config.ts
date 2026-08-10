@@ -1,11 +1,20 @@
 import Constants from "expo-constants";
 
-const PRODUCTION_API_URL = "https://damrurestro.com";
-
 const configuredUrl =
   process.env.EXPO_PUBLIC_API_URL ??
-  Constants.expoConfig?.extra?.apiUrl ??
-  PRODUCTION_API_URL;
+  Constants.expoConfig?.extra?.apiUrl;
+
+if (!configuredUrl) {
+  throw new Error("EXPO_PUBLIC_API_URL is required. Configure it for this Expo/EAS environment before building.");
+}
+
+if (!/^https?:\/\//i.test(String(configuredUrl))) {
+  throw new Error("EXPO_PUBLIC_API_URL must be an absolute HTTP(S) URL.");
+}
+
+if (!__DEV__ && /https?:\/\/(localhost|127\.0\.0\.1)(?::|\/|$)/i.test(String(configuredUrl))) {
+  throw new Error("Release builds cannot use a localhost API URL.");
+}
 
 export const API_URL = String(configuredUrl).replace(/\/+$/, "");
 

@@ -10,7 +10,8 @@ export const queryClient = new QueryClient({
     },
     onError: (error, query) => {
       if (__DEV__) {
-        console.error(`[React Query Error] Key: ${JSON.stringify(query.queryKey)}, Error: ${error instanceof Error ? error.message : String(error)}`);
+        const status = error instanceof ApiRequestError ? error.status : "unknown";
+        console.warn(`[React Query] request failed`, { queryKey: query.queryKey, status });
       }
     },
   }),
@@ -22,7 +23,8 @@ export const queryClient = new QueryClient({
     },
     onError: (error, variables, context, mutation) => {
       if (__DEV__) {
-        console.error(`[React Query Mutation Error] Key: ${JSON.stringify(mutation.options.mutationKey)}, Error: ${error instanceof Error ? error.message : String(error)}`);
+        const status = error instanceof ApiRequestError ? error.status : "unknown";
+        console.warn(`[React Query] mutation failed`, { mutationKey: mutation.options.mutationKey, status });
       }
     },
   }),
@@ -85,6 +87,11 @@ export const queryKeys = {
     achievements: () => ["rewards", "achievements"] as const,
     missions: () => ["rewards", "missions"] as const,
     referrals: () => ["rewards", "referrals"] as const,
+    expiry: () => ["rewards", "expiry"] as const,
+  },
+  notifications: {
+    list: () => ["notifications", "list"] as const,
+    unreadCount: () => ["notifications", "unreadCount"] as const,
   },
   checkout: {
     config: () => ["checkout", "config"] as const,

@@ -60,11 +60,16 @@ const navGroups = [
       { icon: MapPin,          label: "Branches",     href: "/admin/branches",    permission: "branches" },
       { icon: CalendarCheck,   label: "Banquet Bookings", href: "/admin/banquet-bookings", permission: "banquetBookings" },
       { icon: Ticket,          label: "Coupons",      href: "/admin/coupons",     permission: "coupons" },
-      { icon: Gift,            label: "Rewards & Loyalty", href: "/admin/rewards", permission: "rewards" },
     ],
   },
   {
-    label: "Notifications",
+    label: "Loyalty",
+    items: [
+      { icon: Gift,            label: "Damru Rewards", href: "/admin/rewards", permission: "rewards" },
+    ],
+  },
+  {
+    label: "Engagement",
     items: [
       { icon: Bell,            label: "Campaigns",    href: "/admin/notifications/campaigns", permission: "notifications" },
       { icon: FileText,        label: "Templates",    href: "/admin/notifications/templates", permission: "notifications" },

@@ -5,6 +5,7 @@ import { colors } from "@/config";
 import { EmptyState } from "@/components/ui";
 import { getAchievements } from "@/services/rewardsApi";
 import type { Achievement } from "@/types/rewards";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function RewardsAchievementsScreen() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -21,8 +22,8 @@ export default function RewardsAchievementsScreen() {
       const data = await getAchievements();
       setAchievements(data.achievements);
       setSummary(data.summary);
-    } catch (err: any) {
-      setError(err?.message || "Could not load achievements.");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, "Unable to load achievements."));
     } finally {
       setLoading(false);
       setRefreshing(false);

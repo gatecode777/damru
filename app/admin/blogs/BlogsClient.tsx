@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, Filter, ChevronDown, X, Check, Trash2, Eye, EyeOff, Download } from "lucide-react";
 import { deleteBlog, toggleBlogStatus } from "@/app/actions/blogs";
+import { useToast } from "@/components/admin/Toast";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -19,6 +20,7 @@ interface Blog {
 const PAGE_SIZE = 10;
 
 export default function BlogsClient({ blogs, perms }: { blogs: Blog[]; perms?: Perms }) {
+  const toast = useToast();
   const router = useRouter();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.blogs?.[action]);
   
@@ -75,12 +77,12 @@ export default function BlogsClient({ blogs, perms }: { blogs: Blog[]; perms?: P
   async function handleDelete(id: string, title: string) {
     if (!canDelete) return;
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    await deleteBlog(id); router.refresh();
+    await deleteBlog(id); toast.success("Blog post deleted"); router.refresh();
   }
 
   async function handleToggle(id: string, status: string) {
     if (!canEdit) return;
-    await toggleBlogStatus(id, status); router.refresh();
+    await toggleBlogStatus(id, status); toast.success(status === "published" ? "Blog post unpublished" : "Blog post published"); router.refresh();
   }
 
   async function handleBulkDelete() {
@@ -88,7 +90,7 @@ export default function BlogsClient({ blogs, perms }: { blogs: Blog[]; perms?: P
     if (!confirm(`Delete ${selected.size} post(s)?`)) return;
     setBulkLoading(true);
     for (const id of selected) await deleteBlog(id);
-    setBulkLoading(false); clearSel(); router.refresh();
+    setBulkLoading(false); clearSel(); toast.success("Blog posts deleted"); router.refresh();
   }
 
   async function handleBulkPublish(publish: boolean) {
@@ -96,7 +98,7 @@ export default function BlogsClient({ blogs, perms }: { blogs: Blog[]; perms?: P
     setBulkLoading(true);
     const toChange = blogs.filter(b => selected.has(b._id) && (b.status === "published") !== publish);
     for (const b of toChange) await toggleBlogStatus(b._id, b.status);
-    setBulkLoading(false); clearSel(); router.refresh();
+    setBulkLoading(false); clearSel(); toast.success(publish ? "Blog posts published" : "Blog posts unpublished"); router.refresh();
   }
 
   function handleExport() {

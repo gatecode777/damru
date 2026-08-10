@@ -5,10 +5,24 @@ import { colors } from "@/config";
 import { getLoyalty } from "@/services/rewardsApi";
 import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import type { LoyaltyResponse } from "@/types/rewards";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function RewardsLoyaltyScreen() {
   const [data, setData] = useState<LoyaltyResponse | null>(null); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [error, setError] = useState("");
-  const load = useCallback(async (refresh = false) => { refresh ? setRefreshing(true) : setLoading(true); setError(""); try { const value = await getLoyalty(); setData(value); trackRewardEvent("loyalty_progress_viewed", { percentage: value.progress.percentage }); } catch (err: any) { setError(err?.message || "Could not load loyalty details."); } finally { setLoading(false); setRefreshing(false); } }, []);
+  const load = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true); else setLoading(true);
+    setError("");
+    try {
+      const value = await getLoyalty();
+      setData(value);
+      trackRewardEvent("loyalty_progress_viewed", { percentage: value.progress.percentage });
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, "Unable to load loyalty details."));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
   useEffect(() => { void load(); }, [load]);
   return <View style={styles.container}><Stack.Screen options={{ title: "Loyalty Tiers", headerShown: true }} />
     {loading ? <View style={styles.center}><ActivityIndicator size="large" color={colors.orange} /></View> : error && !data ? <View style={styles.center}><Text style={styles.error}>{error}</Text><Pressable style={styles.retry} onPress={() => load()}><Text style={styles.retryText}>Retry</Text></Pressable></View> :

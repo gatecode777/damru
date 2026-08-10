@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from '../ui/Image';
@@ -10,6 +10,8 @@ import { NavMenu } from '../ui/NavMenu';
 import { useApp } from '@/providers/AppProvider';
 import { avatarUrl } from '@/config';
 import { getUnreadCount } from '@/services/notificationsApi';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryClient';
 
 interface HomeHeaderProps {
   onSearchPress?: () => void;
@@ -22,20 +24,14 @@ export function HomeHeader({ onSearchPress, onProfilePress }: HomeHeaderProps) {
   const { height: screenHeight } = useWindowDimensions();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    if (!user) { setUnreadCount(0); return; }
-    let cancelled = false;
-    const fetchUnread = () => {
-      getUnreadCount()
-        .then(d => { if (!cancelled) setUnreadCount(d.count || 0); })
-        .catch(() => {});
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 60000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, [user]);
+  const unreadQuery = useQuery({
+    queryKey: queryKeys.notifications.unreadCount(),
+    queryFn: getUnreadCount,
+    enabled: Boolean(user),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const unreadCount = user ? Math.max(0, unreadQuery.data?.count ?? 0) : 0;
 
   // Dynamic height calculated according to screen height
   const headerHeight = Math.min(Math.max(screenHeight * 0.075, 58), 80);

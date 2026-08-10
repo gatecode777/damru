@@ -5,6 +5,7 @@ import {
   Search, X, Save, Loader2, Gift, Settings2, Users,
   Plus, Minus, Lock, Unlock, Flame, Trash2, Trophy, Pencil, Target, Share2, Crown,
 } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -16,6 +17,7 @@ interface RewardRule {
 }
 
 function LoyaltyTab({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const [tiers, setTiers] = useState<LoyaltyTierRow[]>([]); const [form, setForm] = useState(EMPTY_LOYALTY); const [error, setError] = useState(""); const [saving, setSaving] = useState(false);
   const load = useCallback(async () => { const r = await fetch("/api/admin/rewards/loyalty"); const d = await r.json(); if (r.ok) setTiers(d.tiers || []); else setError(d.error || "Could not load tiers."); }, []);
   useEffect(() => { void load(); }, [load]);
@@ -23,11 +25,11 @@ function LoyaltyTab({ canEdit }: { canEdit: boolean }) {
     setSaving(true); setError("");
     const payload = { ...form, maximumValue: form.maximumValue === "" ? null : Number(form.maximumValue), benefits: form.benefits.split("\n").map(v => v.trim()).filter(Boolean) };
     const r = await fetch("/api/admin/rewards/loyalty", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); const d = await r.json(); setSaving(false);
-    if (!r.ok) return setError(d.error || "Could not create tier."); setForm(EMPTY_LOYALTY); await load();
+    if (!r.ok) { const message = d.error || "Could not create tier."; setError(message); toast.error("Unable to create loyalty tier", message); return; } setForm(EMPTY_LOYALTY); toast.success("Loyalty tier created"); await load();
   }
   async function toggle(tier: LoyaltyTierRow) {
     const r = await fetch(`/api/admin/rewards/loyalty/${tier._id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !tier.isActive }) }); const d = await r.json();
-    if (!r.ok) setError(d.error || "Could not update tier."); else await load();
+    if (!r.ok) { const message = d.error || "Could not update tier."; setError(message); toast.error("Unable to update loyalty tier", message); } else { toast.success(tier.isActive ? "Loyalty tier disabled" : "Loyalty tier enabled"); await load(); }
   }
   return <div>
     <h3 style={{ marginTop: 0 }}>Loyalty Tiers</h3>
@@ -132,12 +134,12 @@ export default function RewardsClient({ perms }: { perms?: Perms }) {
 
   return (
     <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ display: "flex", borderBottom: "1px solid #f3f4f6" }}>
+      <div className="rewards-tabbar" style={{ display: "flex", borderBottom: "1px solid #f3f4f6", overflowX: "auto" }}>
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "14px 20px",
-              background: "none", border: "none", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6, padding: "14px 18px",
+              background: "none", border: "none", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
               fontFamily: "DM Sans, sans-serif", fontSize: "0.85rem", fontWeight: 600,
               color: tab === t.key ? "#f97316" : "#6b7280",
               borderBottom: tab === t.key ? "2px solid #f97316" : "2px solid transparent",
@@ -146,6 +148,10 @@ export default function RewardsClient({ perms }: { perms?: Perms }) {
           </button>
         ))}
       </div>
+      <style>{`
+        .rewards-tabbar::-webkit-scrollbar { height: 4px; }
+        .rewards-tabbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+      `}</style>
       <div style={{ padding: 22 }}>
         {tab === "rules" && <RulesTab canEdit={can("edit")} />}
         {tab === "config" && <ConfigTab canEdit={can("edit")} />}
@@ -162,6 +168,7 @@ export default function RewardsClient({ perms }: { perms?: Perms }) {
 
 // ── Reward Rules ─────────────────────────────────────────────
 function RulesTab({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const [rules, setRules] = useState<RewardRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -186,7 +193,8 @@ function RulesTab({ canEdit }: { canEdit: boolean }) {
         }),
       });
       const data = await res.json();
-      if (data.rule) update(rule._id, data.rule);
+      if (data.rule) { update(rule._id, data.rule); toast.success("Reward rule updated successfully"); }
+      else toast.error("Unable to update reward rule");
     } finally {
       setSavingId(null);
     }
@@ -252,6 +260,7 @@ function RulesTab({ canEdit }: { canEdit: boolean }) {
 
 // ── Damru Configuration ──────────────────────────────────────
 function ConfigTab({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const [config, setConfig] = useState<DamruConfigValues | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -271,7 +280,8 @@ function ConfigTab({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify(config),
       });
       const data = await res.json();
-      if (data.config) { setConfig(data.config); setSaved(true); }
+      if (data.config) { setConfig(data.config); setSaved(true); toast.success("Damru configuration saved"); }
+      else toast.error("Unable to save Damru configuration");
     } finally {
       setSaving(false);
     }
@@ -371,6 +381,7 @@ function ConfigTab({ canEdit }: { canEdit: boolean }) {
 
 // ── Daily Streak Rewards ─────────────────────────────────────
 function DailyTab({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const [config, setConfig] = useState<DailyStreakConfigValues | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -391,8 +402,8 @@ function DailyTab({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify(config),
       });
       const data = await res.json();
-      if (data.error) { setError(data.error); return; }
-      if (data.config) { setConfig(data.config); setSaved(true); }
+      if (data.error) { setError(data.error); toast.error("Unable to save daily reward configuration"); return; }
+      if (data.config) { setConfig(data.config); setSaved(true); toast.success("Daily reward configuration saved"); }
     } finally {
       setSaving(false);
     }
@@ -502,6 +513,7 @@ function DailyTab({ canEdit }: { canEdit: boolean }) {
 
 // ── Achievements ──────────────────────────────────────────────
 function AchievementsTab({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const [achievements, setAchievements] = useState<AchievementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -547,7 +559,8 @@ function AchievementsTab({ canEdit }: { canEdit: boolean }) {
       body: JSON.stringify({ isActive: !a.isActive }),
     });
     const data = await res.json();
-    if (data.achievement) setAchievements(prev => prev.map(x => x._id === a._id ? data.achievement : x));
+    if (data.achievement) { setAchievements(prev => prev.map(x => x._id === a._id ? data.achievement : x)); toast.success(data.achievement.isActive ? "Achievement enabled" : "Achievement disabled"); }
+    else toast.error("Unable to update achievement");
   }
 
   async function submit() {
@@ -566,8 +579,9 @@ function AchievementsTab({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (data.error) { setError(data.error); return; }
+      if (data.error) { setError(data.error); toast.error("Unable to save achievement"); return; }
       setShowForm(false);
+      toast.success(editingId ? "Achievement updated successfully" : "Achievement created successfully");
       await load();
     } finally {
       setSaving(false);
@@ -688,6 +702,7 @@ function AchievementsTab({ canEdit }: { canEdit: boolean }) {
 
 // ── Missions ──────────────────────────────────────────────────
 function MissionsTab({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const [missions, setMissions] = useState<MissionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -735,7 +750,8 @@ function MissionsTab({ canEdit }: { canEdit: boolean }) {
       body: JSON.stringify({ isActive: !m.isActive }),
     });
     const data = await res.json();
-    if (data.mission) setMissions(prev => prev.map(x => x._id === m._id ? data.mission : x));
+    if (data.mission) { setMissions(prev => prev.map(x => x._id === m._id ? data.mission : x)); toast.success(data.mission.isActive ? "Mission enabled" : "Mission disabled"); }
+    else toast.error("Unable to update mission");
   }
 
   async function submit() {
@@ -755,8 +771,9 @@ function MissionsTab({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (data.error) { setError(data.error); return; }
+      if (data.error) { setError(data.error); toast.error("Unable to save mission"); return; }
       setShowForm(false);
+      toast.success(editingId ? "Mission updated successfully" : "Mission created successfully");
       await load();
     } finally {
       setSaving(false);
@@ -879,6 +896,7 @@ function MissionsTab({ canEdit }: { canEdit: boolean }) {
 
 // ── Referrals ─────────────────────────────────────────────────
 function ReferralsTab({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const [config, setConfig] = useState<ReferralConfigValues | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -916,7 +934,8 @@ function ReferralsTab({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify(config),
       });
       const data = await res.json();
-      if (data.config) { setConfig(data.config); setSaved(true); }
+      if (data.config) { setConfig(data.config); setSaved(true); toast.success("Referral configuration saved"); }
+      else toast.error("Unable to save referral configuration");
     } finally {
       setSaving(false);
     }
@@ -1046,6 +1065,7 @@ function ReferralsTab({ canEdit }: { canEdit: boolean }) {
 
 // ── User Rewards ─────────────────────────────────────────────
 function UsersTab({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<RewardUser[]>([]);
   const [selected, setSelected] = useState<RewardUser | null>(null);
@@ -1100,9 +1120,10 @@ function UsersTab({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify({ amount: Number(amount), direction, reason, requestId: requestIdRef.current, neverExpires }),
       });
       const data = await res.json();
-      if (data.error) { setError(data.error); return; }
+      if (data.error) { setError(data.error); toast.error("Unable to adjust Damru", data.error === "Insufficient Damru balance." ? data.error : undefined); return; }
       requestIdRef.current = null;
       setAmount(""); setReason(""); setNeverExpires(false);
+      toast.success(direction === "credit" ? "Damru added successfully" : "Damru deducted successfully", `${Number(amount).toLocaleString("en-IN")} Damru ${direction === "credit" ? "added to" : "deducted from"} the user's wallet.`);
       await loadUser(selected._id);
     } finally {
       setAdjusting(false);
@@ -1117,7 +1138,8 @@ function UsersTab({ canEdit }: { canEdit: boolean }) {
       body: JSON.stringify({ field }),
     });
     const data = await res.json();
-    if (!data.error) setSelected(prev => prev ? { ...prev, dobLocked: data.dobLocked, anniversaryLocked: data.anniversaryLocked } : prev);
+    if (!data.error) { setSelected(prev => prev ? { ...prev, dobLocked: data.dobLocked, anniversaryLocked: data.anniversaryLocked } : prev); toast.success(field === "dob" ? "Birthday unlocked successfully" : "Marriage anniversary unlocked successfully"); }
+    else toast.error("Unable to unlock occasion");
   }
 
   return (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Loader2, Eye } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, { view?: boolean; create?: boolean; edit?: boolean; delete?: boolean }>; }
 
@@ -29,6 +30,7 @@ const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRad
 const EMPTY_FORM = { name: "", code: "", category: "PROMOTIONS", titleTemplate: "", messageTemplate: "" };
 
 export default function TemplatesClient({ perms }: { perms: Perms }) {
+  const toast = useToast();
   const canCreate = perms.isSuperAdmin || perms.permissions?.notifications?.create;
   const canEdit = perms.isSuperAdmin || perms.permissions?.notifications?.edit;
 
@@ -65,15 +67,18 @@ export default function TemplatesClient({ perms }: { perms: Perms }) {
     });
     const d = await r.json();
     setSaving(false);
-    if (!r.ok) { setError(d.error || "Could not create template."); return; }
+    if (!r.ok) { setError(d.error || "Could not create template."); toast.error("Save failed", d.error || "Could not create template."); return; }
     setForm(EMPTY_FORM);
+    toast.success("Template created");
     await load();
   }
 
   async function toggleActive(t: Template) {
-    await fetch(`/api/admin/notifications/templates/${t._id}`, {
+    const r = await fetch(`/api/admin/notifications/templates/${t._id}`, {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !t.isActive }),
     });
+    if (r.ok) toast.success(t.isActive ? "Template deactivated" : "Template activated");
+    else toast.error("Update failed", "Could not update template.");
     await load();
   }
 

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { deleteBlogCategory, toggleBlogCategoryActive } from "@/app/actions/blog-categories";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -22,6 +23,7 @@ interface Props { categories: Category[]; perms?: Perms; }
 const PAGE_SIZE = 15;
 
 export default function BlogCategoriesClient({ categories, perms }: Props) {
+  const toast = useToast();
   const router = useRouter();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.blog_categories?.[action]);
   
@@ -70,7 +72,7 @@ export default function BlogCategoriesClient({ categories, perms }: Props) {
     if (!confirm(`Delete ${selected.size} categor${selected.size > 1 ? "ies" : "y"}? This cannot be undone.`)) return;
     setBulkLoading(true);
     for (const id of selected) await deleteBlogCategory(id);
-    setBulkLoading(false); clearSel(); router.refresh();
+    setBulkLoading(false); clearSel(); toast.success("Blog categories deleted"); router.refresh();
   }
 
   async function handleBulkToggle(activate: boolean) {
@@ -78,18 +80,18 @@ export default function BlogCategoriesClient({ categories, perms }: Props) {
     setBulkLoading(true);
     const toChange = categories.filter(c => selected.has(c._id) && c.isActive !== activate);
     for (const c of toChange) await toggleBlogCategoryActive(c._id, c.isActive);
-    setBulkLoading(false); clearSel(); router.refresh();
+    setBulkLoading(false); clearSel(); toast.success(activate ? "Blog categories enabled" : "Blog categories disabled"); router.refresh();
   }
 
   async function handleDelete(id: string, name: string) {
     if (!canDelete) return;
     if (!confirm(`Delete blog category "${name}"?\nBlog posts using this category will show it as plain text.`)) return;
-    await deleteBlogCategory(id); router.refresh();
+    await deleteBlogCategory(id); toast.success("Blog category deleted"); router.refresh();
   }
 
   async function handleToggleActive(id: string, current: boolean) {
     if (!canEdit) return;
-    await toggleBlogCategoryActive(id, current); router.refresh();
+    await toggleBlogCategoryActive(id, current); toast.success(current ? "Blog category disabled" : "Blog category enabled"); router.refresh();
   }
 
   function handleExport() {

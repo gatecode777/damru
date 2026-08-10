@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Edit2, Trash2, ToggleLeft, ToggleRight, Shield, Crown, User, Eye } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
 
 interface Admin {
   _id: string; name: string; email: string;
@@ -34,14 +35,12 @@ function fmtDate(d: string) {
 
 export default function ManagersClient({ initialAdmins }: { initialAdmins: Admin[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [admins,    setAdmins]    = useState<Admin[]>(initialAdmins);
   const [deleteId,  setDeleteId]  = useState<string | null>(null);
   const [deleting,  setDeleting]  = useState(false);
-  const [toast,     setToast]     = useState("");
   const [viewAdmin, setViewAdmin] = useState<Admin | null>(null);
   const [search,    setSearch]    = useState("");
-
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(""), 3000); }
 
   async function toggleActive(a: Admin) {
     const res  = await fetch("/api/admin/managers", {
@@ -51,7 +50,9 @@ export default function ManagersClient({ initialAdmins }: { initialAdmins: Admin
     const data = await res.json();
     if (data.admin) {
       setAdmins(prev => prev.map(x => x._id === a._id ? { ...x, isActive: data.admin.isActive } : x));
-      showToast(data.admin.isActive ? "Admin activated!" : "Admin deactivated!");
+      toast.success(data.admin.isActive ? "Admin activated" : "Admin deactivated");
+    } else {
+      toast.error("Update failed", data.error);
     }
   }
 
@@ -64,8 +65,11 @@ export default function ManagersClient({ initialAdmins }: { initialAdmins: Admin
     const data = await res.json();
     if (data.success) {
       setAdmins(prev => prev.filter(a => a._id !== id));
-      setDeleteId(null); showToast("Admin deleted!");
-    } else showToast(data.error || "Delete failed.");
+      setDeleteId(null);
+      toast.success("Admin deleted");
+    } else {
+      toast.error("Delete failed", data.error);
+    }
     setDeleting(false);
   }
 
@@ -237,16 +241,6 @@ export default function ManagersClient({ initialAdmins }: { initialAdmins: Admin
           </div>
         </div>
       )}
-
-      {/* Toast */}
-      {toast && (
-        <div style={{ position:"fixed", bottom:24, right:24, background:"#111827", color:"#fff",
-          padding:"12px 20px", borderRadius:10, fontFamily:"DM Sans,sans-serif", fontSize:13,
-          zIndex:99999, boxShadow:"0 8px 24px rgba(0,0,0,0.3)", display:"flex", alignItems:"center", gap:8 }}>
-          <span style={{ width:7, height:7, borderRadius:"50%", background:"#22c55e", display:"inline-block" }} />
-          {toast}
-        </div>
-      )}
     </div>
   );
 }
@@ -257,7 +251,8 @@ export function PermTable({ permissions, readonly }: { permissions: any; readonl
     dashboard:"Dashboard", users:"Users", orders:"Orders", reservations:"Reservations",
     complaints:"Complaints", categories:"Categories", menu:"Menu Items", blogs:"Blogs",
     blogCategories:"Blog Categories", gallery:"Gallery", branches:"Branches",
-    banquetBookings:"Banquet Bookings", coupons:"Coupons", rewards:"Rewards & Loyalty", analytics:"Analytics",
+    banquetBookings:"Banquet Bookings", coupons:"Coupons", rewards:"Rewards & Loyalty",
+    notifications:"Notifications", analytics:"Analytics",
   };
   const ACTIONS = ["view","create","edit","delete"];
   return (

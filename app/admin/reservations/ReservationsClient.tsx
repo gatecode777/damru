@@ -4,6 +4,7 @@ import React, { useState, useMemo, useTransition, useRef, useEffect } from "reac
 import { useRouter } from "next/navigation";
 import { Search, X, CalendarDays, Clock, Users, StickyNote, Trash2, Loader2, ChevronDown } from "lucide-react";
 import type { ReservationRow } from "./page";
+import { useToast } from "@/components/admin/Toast";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -33,6 +34,7 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Status dropdown — uses fixed positioning to escape table overflow ───────────
 function StatusDropdown({ reservation, onUpdated, canEdit }: { reservation: ReservationRow; onUpdated: (id: string, status: string) => void; canEdit: boolean }) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState({ top: 0, left: 0 });
   const [isPending, startTransition] = useTransition();
@@ -54,7 +56,8 @@ function StatusDropdown({ reservation, onUpdated, canEdit }: { reservation: Rese
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (res.ok) onUpdated(reservation._id, status);
+      if (res.ok) { onUpdated(reservation._id, status); toast.success(status === "confirmed" ? "Reservation confirmed" : status === "cancelled" ? "Reservation cancelled" : "Reservation updated"); }
+      else toast.error("Unable to update reservation");
     });
   }
 
@@ -139,6 +142,7 @@ function DetailRow({ r }: { r: ReservationRow }) {
 // ════════════════════════════════════════════════════════════
 export default function ReservationsClient({ reservations: initial, perms }: { reservations: ReservationRow[]; perms?: Perms }) {
   const router = useRouter();
+  const toast = useToast();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.reservations?.[action]);
   
   const [reservations, setReservations] = useState<ReservationRow[]>(initial);
@@ -176,11 +180,13 @@ export default function ReservationsClient({ reservations: initial, perms }: { r
     if (!can("delete")) return;
     if (!confirm(`Delete reservation for "${name}"? This cannot be undone.`)) return;
     setDeletingId(id);
-    await fetch(`/api/reservations/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/reservations/${id}`, { method: "DELETE" });
+    if (!res.ok) { setDeletingId(null); toast.error("Unable to delete reservation"); return; }
     setReservations(prev => prev.filter(r => r._id !== id));
     setDeletingId(null);
     if (expandedId === id) setExpandedId(null);
     router.refresh();
+    toast.success("Reservation deleted");
   }
 
   return (

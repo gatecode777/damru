@@ -10,6 +10,7 @@ import { getRewardsDashboard, getUpcomingRewards, updateOccasionDetails } from "
 import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import { EmptyState } from "@/components/ui";
 import type { RewardsDashboard, RewardsUpcoming } from "@/types/rewards";
+import { getApiErrorMessage } from "@/lib/api";
 
 const LEVEL_LABEL: Record<string, string> = { bronze: "Bronze", silver: "Silver", gold: "Gold", platinum: "Platinum" };
 
@@ -107,6 +108,7 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
     setDobSaving(false);
     if (!res.success) { setDobError(res.error || "Could not save."); return; }
     trackRewardEvent("birthday_added");
+    queryClient.invalidateQueries({ queryKey: queryKeys.user.me() });
     queryClient.invalidateQueries({ queryKey: queryKeys.rewards.upcoming() });
     onToast("Date of birth saved!");
   }
@@ -117,12 +119,13 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
     setAnnivSaving(false);
     if (!res.success) { setAnnivError(res.error || "Could not save."); return; }
     trackRewardEvent("anniversary_added");
+    queryClient.invalidateQueries({ queryKey: queryKeys.user.me() });
     queryClient.invalidateQueries({ queryKey: queryKeys.rewards.upcoming() });
     onToast("Anniversary date saved!");
   }
 
   const loading = dashboardQuery.isLoading;
-  const error = dashboardQuery.error instanceof Error ? dashboardQuery.error.message : (dashboardQuery.error ? "Could not load your rewards." : null);
+  const error = dashboardQuery.error ? getApiErrorMessage(dashboardQuery.error, "Unable to load your rewards dashboard.") : null;
   const dashboard = dashboardQuery.data as RewardsDashboard | undefined;
   const upcoming = upcomingQuery.data as RewardsUpcoming | undefined;
 
@@ -305,20 +308,27 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
 
       {/* Upcoming */}
       <Text style={styles.sectionTitle}>Upcoming Rewards</Text>
-      <View style={styles.upcomingGrid}>
-        <View style={styles.upcomingCard}>
-          <Text style={styles.upcomingLabel}>🎂 Birthday</Text>
-          <Text style={styles.upcomingValue}>
-            {upcoming?.birthdayDaysLeft != null ? `${upcoming.birthdayDaysLeft} Days Left` : "Not set"}
-          </Text>
+      {upcomingQuery.isLoading ? (
+        <ActivityIndicator color={colors.orange} style={{ marginVertical: 16 }} />
+      ) : upcomingQuery.error ? (
+        <View style={styles.sectionError}>
+          <Text style={styles.errorText}>{getApiErrorMessage(upcomingQuery.error, "Unable to load upcoming rewards.")}</Text>
+          <Pressable style={styles.retryBtn} onPress={() => upcomingQuery.refetch()}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </Pressable>
         </View>
-        <View style={styles.upcomingCard}>
-          <Text style={styles.upcomingLabel}>💍 Anniversary</Text>
-          <Text style={styles.upcomingValue}>
-            {upcoming?.anniversaryDaysLeft != null ? `${upcoming.anniversaryDaysLeft} Days Left` : "Not set"}
-          </Text>
+      ) : (
+        <View style={styles.upcomingGrid}>
+          <View style={styles.upcomingCard}>
+            <Text style={styles.upcomingLabel}>🎂 Birthday</Text>
+            <Text style={styles.upcomingValue}>{upcoming?.birthdayDaysLeft != null ? `${upcoming.birthdayDaysLeft} Days Left` : "Not set"}</Text>
+          </View>
+          <View style={styles.upcomingCard}>
+            <Text style={styles.upcomingLabel}>💍 Anniversary</Text>
+            <Text style={styles.upcomingValue}>{upcoming?.anniversaryDaysLeft != null ? `${upcoming.anniversaryDaysLeft} Days Left` : "Not set"}</Text>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Recent activity */}
       <View style={styles.sectionHeaderRow}>
@@ -383,6 +393,7 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: "Poppins_500Medium", fontSize: 14, color: colors.danger, marginBottom: 12, textAlign: "center" },
   retryBtn: { backgroundColor: colors.orange, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10 },
   retryBtnText: { fontFamily: "Poppins_600SemiBold", fontSize: 13, color: "#ffffff" },
+  sectionError: { alignItems: "center", backgroundColor: "#fff", borderWidth: 1, borderColor: "#eee3da", borderRadius: 14, padding: 16, marginBottom: 10 },
   walletGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 6 },
   walletStat: { width: "47%", backgroundColor: "#fff7ed", borderWidth: 1, borderColor: "#fde3c8", borderRadius: 14, padding: 14 },
   walletLabel: { fontFamily: "Poppins_500Medium", fontSize: 11, color: "#9a7b52", textTransform: "uppercase", marginBottom: 4 },

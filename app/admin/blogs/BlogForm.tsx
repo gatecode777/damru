@@ -9,6 +9,7 @@ import {
   Quote, Info, ImageIcon, Table2, Minus, GripVertical,
 } from "lucide-react";
 import { createBlog, updateBlog } from "@/app/actions/blogs";
+import { useToast } from "@/components/admin/Toast";
 
 // ── Types ────────────────────────────────────────────────────
 type BlockType = "paragraph"|"heading"|"subheading"|"bullet_list"|"numbered_list"|"quote"|"callout"|"image"|"table"|"divider";
@@ -245,6 +246,7 @@ function BlockEditor({ block, idx, total, onChange, onRemove, onMove }: {
 // Main BlogForm
 // ════════════════════════════════════════════════════════════
 export default function BlogForm({ blog, categories = [] }: { blog?: Blog; categories?: BlogCategory[] }) {
+  const toast = useToast();
   const isEdit = !!blog;
   const [isPending, startTransition] = useTransition();
   const [error,    setError]    = useState<string|null>(null);
@@ -309,7 +311,8 @@ export default function BlogForm({ blog, categories = [] }: { blog?: Blog; categ
 
     startTransition(async () => {
       const res = isEdit ? await updateBlog(blog._id, fd) : await createBlog(fd);
-      if (res?.error) setError(res.error);
+      if (res?.error) { setError(res.error); toast.error("Unable to save blog post"); }
+      else toast.success(isEdit ? "Blog post updated" : "Blog post created");
     });
   }
 

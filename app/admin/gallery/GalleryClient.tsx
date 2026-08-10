@@ -10,6 +10,7 @@ import {
   upsertGalleryTab, deleteGalleryTab, toggleGalleryTabActive,
   addGalleryItem, updateGalleryItem, deleteGalleryItem,
 } from "@/app/actions/gallery";
+import { useToast } from "@/components/admin/Toast";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -32,6 +33,7 @@ function ImageUpload({ current, target, onDone, label, height = 140, canEdit }: 
   current: string; target: string; onDone: (f: string) => void;
   label: string; height?: number; canEdit?: boolean;
 }) {
+  const toast = useToast();
   const [uploading, setUploading] = useState(false);
   const [preview,   setPreview]   = useState(current);
   const ref = useRef<HTMLInputElement>(null);
@@ -46,7 +48,8 @@ function ImageUpload({ current, target, onDone, label, height = 140, canEdit }: 
       fd.append("file", file); fd.append("target", target);
       const res  = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (data.filename) { setPreview(`/uploads/gallery/${data.filename}`); onDone(data.filename); }
+      if (data.filename) { setPreview(`/uploads/gallery/${data.filename}`); onDone(data.filename); toast.success("Image uploaded"); }
+      else toast.error("Image upload failed", data.error);
     } finally { setUploading(false); }
   }
 
@@ -93,6 +96,7 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted, canEdit, canDelete }
   onItemDeleted: (itemId: string) => void;
   canEdit: boolean; canDelete: boolean;
 }) {
+  const toast = useToast();
   const [expanded,  setExpanded]  = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [deleting,  setDeleting]  = useState(false);
@@ -114,6 +118,7 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted, canEdit, canDelete }
     await updateGalleryItem(tabId, item._id, fd);
     setSaving(false);
     onItemSaved(item._id, { image, alt, title, description: desc, type, overlayClass: overlay, sortOrder });
+    toast.success("Gallery item updated");
     setExpanded(false);
   }
 
@@ -123,6 +128,7 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted, canEdit, canDelete }
     setDeleting(true);
     await deleteGalleryItem(tabId, item._id);
     onItemDeleted(item._id);
+    toast.success("Gallery item deleted");
   }
 
   return (
@@ -184,6 +190,7 @@ function AddItemForm({ tabId, onItemAdded, canCreate }: {
   onItemAdded: (item: GalleryItem) => void;
   canCreate: boolean;
 }) {
+  const toast = useToast();
   const [show,    setShow]    = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [image,   setImage]   = useState("");
@@ -196,7 +203,7 @@ function AddItemForm({ tabId, onItemAdded, canCreate }: {
 
   async function handleAdd() {
     if (!canCreate) return;
-    if (!image || !title) { alert("Image and title are required."); return; }
+    if (!image || !title) { toast.error("Please correct the highlighted fields", "Image and title are required."); return; }
     setSaving(true);
     const fd = new FormData();
     fd.append("image", image); fd.append("alt", alt); fd.append("title", title);
@@ -205,6 +212,7 @@ function AddItemForm({ tabId, onItemAdded, canCreate }: {
     await addGalleryItem(tabId, fd);
     setSaving(false); setShow(false);
     onItemAdded({ _id: `temp-${Date.now()}`, image, alt, title, description: desc, type, overlayClass: overlay, sortOrder: sort });
+    toast.success("Gallery item created");
     setImage(""); setTitle(""); setDesc(""); setAlt(""); setType("wide"); setOverlay(""); setSort(0);
   }
 
@@ -264,6 +272,7 @@ function AddTabForm({ existingCount, onTabCreated, onClose, canCreate }: {
   onClose: () => void;
   canCreate: boolean;
 }) {
+  const toast = useToast();
   const [label,     setLabel]     = useState("");
   const [tabKey,    setTabKey]    = useState("");
   const [sortOrder, setSortOrder] = useState(existingCount);
@@ -295,6 +304,7 @@ function AddTabForm({ existingCount, onTabCreated, onClose, canCreate }: {
     const res = await upsertGalleryTab(fd);
     setSaving(false);
     if (res?.error) { setError(res.error); return; }
+    toast.success("Gallery tab created");
     const newTab: GalleryTab = {
       _id:         `temp-${Date.now()}`,
       tabKey:      tabKey.trim(),
@@ -357,6 +367,7 @@ function AddTabForm({ existingCount, onTabCreated, onClose, canCreate }: {
 // ════════════════════════════════════════════════════════════
 export default function GalleryClient({ tabs: initialTabs, perms }: { tabs: GalleryTab[]; perms?: Perms }) {
   const router = useRouter();
+  const toast = useToast();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.gallery?.[action]);
   
   const canView = can("view");
@@ -393,6 +404,7 @@ export default function GalleryClient({ tabs: initialTabs, perms }: { tabs: Gall
       return updated;
     });
     router.refresh();
+    toast.success("Gallery tab deleted");
   }
 
   async function handleDeleteTab() {
@@ -418,8 +430,9 @@ export default function GalleryClient({ tabs: initialTabs, perms }: { tabs: Gall
 
   async function handleToggleTab(id: string, current: boolean) {
     if (!canEdit) return;
-    setTabs(prev => prev.map(t => t._id === id ? { ...t, isActive: !current } : t));
     await toggleGalleryTabActive(id, current);
+    setTabs(prev => prev.map(t => t._id === id ? { ...t, isActive: !current } : t));
+    toast.success(current ? "Gallery tab unpublished" : "Gallery tab published");
   }
 
   async function handleSaveTab() {
@@ -440,6 +453,7 @@ export default function GalleryClient({ tabs: initialTabs, perms }: { tabs: Gall
     await upsertGalleryTab(fd);
     setSavingTab(false);
     setTabs(prev => prev.map((t, i) => i === activeTabIdx ? { ...t, label, bannerImage, bannerAlt } : t));
+    toast.success("Gallery tab updated");
   }
 
   // ── Item CRUD — all optimistic ────────────────────────────

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Save, Loader2, Plus, Trash2, ChevronRight, Upload, X, ImageOff } from "lucide-react";
 import { createMenuItem, updateMenuItem } from "@/app/actions/menu";
+import { useToast } from "@/components/admin/Toast";
 
 interface Variant { label: string; price: number }
 
@@ -82,6 +83,7 @@ const VARIANT_TYPE_INFO: Record<VariantType, { label: string; hint: string; icon
 };
 
 export default function MenuItemForm({ categories, item }: Props) {
+  const toast = useToast();
   const isEdit = !!item;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -200,7 +202,8 @@ export default function MenuItemForm({ categories, item }: Props) {
       const res = isEdit
         ? await updateMenuItem(item._id, fd)
         : await createMenuItem(fd);
-      if (res?.error) setError(res.error);
+      if (res?.error) { setError(res.error); toast.error("Unable to save menu item"); }
+      else toast.success(isEdit ? "Menu item updated" : "Menu item created");
     });
   }
 

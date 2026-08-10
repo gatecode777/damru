@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Phone, Mail, CalendarDays, Users, MessageSquare, Trash2, X, CheckCircle, Clock, PhoneCall, XCircle, ChevronDown, ChevronUp, Building2 } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -175,6 +176,7 @@ function BookingRow({ booking, onUpdate, onDelete, canEdit, canDelete }: {
 }
 
 export default function BookingsClient({ initialBookings, perms }: { initialBookings: Booking[]; perms?: Perms }) {
+  const sharedToast = useToast();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.banquetBookings?.[action]);
   
   const canView = can("view");
@@ -185,9 +187,8 @@ export default function BookingsClient({ initialBookings, perms }: { initialBook
   const [filter,       setFilter]       = useState<"all" | Status>("all");
   const [search,       setSearch]       = useState("");
   const [deleteId,     setDeleteId]     = useState<string | null>(null);
-  const [toast,        setToast]        = useState("");
 
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(""), 3000); }
+  function showToast(msg: string) { sharedToast.success(msg === "Updated!" ? "Booking updated" : msg === "Deleted!" ? "Booking deleted" : msg); }
 
   async function handleUpdate(id: string, status: Status, adminNote: string) {
     if (!canEdit) return;
@@ -306,15 +307,6 @@ export default function BookingsClient({ initialBookings, perms }: { initialBook
         </div>
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, background: "#111827", color: "#fff",
-          padding: "12px 20px", borderRadius: 10, fontFamily: "DM Sans, sans-serif", fontSize: 13,
-          zIndex: 99999, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

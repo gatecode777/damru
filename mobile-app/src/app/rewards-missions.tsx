@@ -5,6 +5,7 @@ import { colors } from "@/config";
 import { EmptyState } from "@/components/ui";
 import { getMissions } from "@/services/rewardsApi";
 import type { Mission } from "@/types/rewards";
+import { getApiErrorMessage } from "@/lib/api";
 
 function formatTimeRemaining(ms: number | null): string | null {
   if (ms === null) return null;
@@ -28,8 +29,8 @@ export default function RewardsMissionsScreen() {
       const data = await getMissions();
       setMissions(data.missions);
       setSummary(data.summary);
-    } catch (err: any) {
-      setError(err?.message || "Could not load missions.");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, "Unable to load missions."));
     } finally {
       setLoading(false);
       setRefreshing(false);

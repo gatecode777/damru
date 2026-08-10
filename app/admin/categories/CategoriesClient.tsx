@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { deleteCategory, toggleCategoryActive } from "@/app/actions/categories";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 
 interface Category {
   _id: string; name: string; slug: string;
@@ -22,6 +23,7 @@ interface Props { categories: Category[]; perms?: Perms; }
 const PAGE_SIZE = 15;
 
 export default function CategoriesClient({ categories, perms }: Props) {
+  const toast = useToast();
   const router = useRouter();
   
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.categories?.[action]);
@@ -74,7 +76,7 @@ export default function CategoriesClient({ categories, perms }: Props) {
     if (!confirm(`Delete ${selected.size} categor${selected.size > 1 ? "ies" : "y"}? This cannot be undone.`)) return;
     setBulkLoading(true);
     for (const id of selected) await deleteCategory(id);
-    setBulkLoading(false); clearSel(); router.refresh();
+    setBulkLoading(false); clearSel(); toast.success("Categories deleted"); router.refresh();
   }
 
   async function handleBulkToggle(activate: boolean) {
@@ -82,19 +84,19 @@ export default function CategoriesClient({ categories, perms }: Props) {
     setBulkLoading(true);
     const toChange = categories.filter(c => selected.has(c._id) && c.isActive !== activate);
     for (const c of toChange) await toggleCategoryActive(c._id, c.isActive);
-    setBulkLoading(false); clearSel(); router.refresh();
+    setBulkLoading(false); clearSel(); toast.success(activate ? "Categories enabled" : "Categories disabled"); router.refresh();
   }
 
   // ── Single actions ───────────────────────────────────────────
   async function handleDelete(id: string, name: string) {
     if (!can("delete")) return;
     if (!confirm(`Delete category "${name}"?\nAll menu items in this category will become uncategorised.`)) return;
-    await deleteCategory(id); router.refresh();
+    await deleteCategory(id); toast.success("Category deleted"); router.refresh();
   }
 
   async function handleToggleActive(id: string, current: boolean) {
     if (!can("edit")) return;
-    await toggleCategoryActive(id, current); router.refresh();
+    await toggleCategoryActive(id, current); toast.success(current ? "Category disabled" : "Category enabled"); router.refresh();
   }
 
   // ── Export CSV ───────────────────────────────────────────────

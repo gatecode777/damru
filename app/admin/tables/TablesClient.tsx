@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Search, Plus, Trash2, Edit3, QrCode, Printer,
-  Download, RefreshCw, X, Grid, Check, Loader2, Info
+  Download, RefreshCw, X, Grid, Loader2, Info
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 
 interface TableData {
   _id: string;
@@ -30,6 +31,7 @@ interface TablesClientProps {
 
 export default function TablesClient({ initialTables, perms }: TablesClientProps) {
   const router = useRouter();
+  const toast = useToast();
 
   const canEdit = perms.isSuperAdmin || Boolean(perms.permissions?.tables?.edit);
   const canCreate = perms.isSuperAdmin || Boolean(perms.permissions?.tables?.create);
@@ -41,8 +43,6 @@ export default function TablesClient({ initialTables, perms }: TablesClientProps
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -76,15 +76,9 @@ export default function TablesClient({ initialTables, perms }: TablesClientProps
     return () => clearInterval(interval);
   }, []);
 
-  const notifySuccess = (msg: string) => {
-    setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(""), 3000);
-  };
+  const notifySuccess = (msg: string) => toast.success(msg);
 
-  const notifyError = (msg: string) => {
-    setErrorMsg(msg);
-    setTimeout(() => setErrorMsg(""), 4000);
-  };
+  const notifyError = (msg: string) => toast.error("Something went wrong", msg);
 
   // Add table handler
   const handleAddTable = async (e: React.FormEvent) => {
@@ -92,7 +86,6 @@ export default function TablesClient({ initialTables, perms }: TablesClientProps
     if (!addForm.tableNumber.trim()) return;
 
     setLoading(true);
-    setErrorMsg("");
     try {
       const res = await fetch("/api/admin/tables", {
         method: "POST",
@@ -122,7 +115,6 @@ export default function TablesClient({ initialTables, perms }: TablesClientProps
   const handleBulkGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setErrorMsg("");
     try {
       const res = await fetch("/api/admin/tables", {
         method: "POST",
@@ -167,7 +159,6 @@ export default function TablesClient({ initialTables, perms }: TablesClientProps
     if (!selectedTable) return;
 
     setLoading(true);
-    setErrorMsg("");
     try {
       const res = await fetch(`/api/admin/tables/${selectedTable._id}`, {
         method: "PUT",
@@ -386,18 +377,6 @@ export default function TablesClient({ initialTables, perms }: TablesClientProps
 
   return (
     <>
-      {/* Messages */}
-      {successMsg && (
-        <div style={{ position: "fixed", top: 80, right: 24, zIndex: 9999, background: "#f0fdf4", border: "1.5px solid #bbf7d0", color: "#16a34a", padding: "12px 20px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-          <Check size={16} /> <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{successMsg}</span>
-        </div>
-      )}
-      {errorMsg && (
-        <div style={{ position: "fixed", top: 80, right: 24, zIndex: 9999, background: "#fef2f2", border: "1.5px solid #fecaca", color: "#dc2626", padding: "12px 20px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-          <X size={16} /> <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{errorMsg}</span>
-        </div>
-      )}
-
       {/* Stat Bar */}
       <div className="user-stats" style={{ marginBottom: 8 }}>
         <div className="user-stat">

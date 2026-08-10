@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Save, Loader2, Upload, X, Eye, EyeOff, ChevronRight, User } from "lucide-react";
 import { createUser, updateUser } from "@/app/actions/users";
+import { useToast } from "@/components/admin/Toast";
 
 interface UserData {
   _id: string; name: string; email: string;
@@ -23,6 +24,7 @@ const STATUS_OPTIONS: { value: Status; label: string; cls: string; dot: string }
 ];
 
 export default function UserForm({ user }: Props) {
+  const toast = useToast();
   const isEdit = !!user;
   const [isPending, startTransition] = useTransition();
   const [error,  setError]  = useState<string | null>(null);
@@ -103,7 +105,8 @@ export default function UserForm({ user }: Props) {
       const res = isEdit
         ? await updateUser(user._id, fd)
         : await createUser(fd);
-      if (res?.error) setError(res.error);
+      if (res?.error) { setError(res.error); toast.error("Unable to save user"); }
+      else toast.success(isEdit ? "User updated successfully" : "User created successfully");
     });
   }
 

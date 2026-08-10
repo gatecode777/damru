@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, MessageSquareWarning, Trash2, Loader2, ChevronDown, Save } from "lucide-react";
 import type { ComplaintRow } from "./page";
+import { useToast } from "@/components/admin/Toast";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -30,6 +31,7 @@ function fmtDate(d: string) {
 
 // ── Fixed-position status dropdown ───────────────────────────
 function StatusDropdown({ complaint, onUpdated, canEdit }: { complaint: ComplaintRow; onUpdated: (id: string, patch: Partial<ComplaintRow>) => void; canEdit: boolean }) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState({ top: 0, left: 0 });
   const [isPending, startTransition] = useTransition();
@@ -51,7 +53,8 @@ function StatusDropdown({ complaint, onUpdated, canEdit }: { complaint: Complain
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (res.ok) onUpdated(complaint._id, { status });
+      if (res.ok) { onUpdated(complaint._id, { status }); toast.success(status === "resolved" ? "Complaint resolved" : "Complaint status updated"); }
+      else toast.error("Unable to update complaint status");
     });
   }
 
@@ -100,6 +103,7 @@ function StatusDropdown({ complaint, onUpdated, canEdit }: { complaint: Complain
 
 // ── Expanded detail panel ─────────────────────────────────────
 function DetailPanel({ complaint, onUpdated, canEdit }: { complaint: ComplaintRow; onUpdated: (id: string, patch: Partial<ComplaintRow>) => void; canEdit: boolean }) {
+  const toast = useToast();
   const [note,     setNote]     = useState(complaint.adminNote || "");
   const [saving,   setSaving]   = useState(false);
   const [isPending,startTransition] = useTransition();
@@ -112,7 +116,8 @@ function DetailPanel({ complaint, onUpdated, canEdit }: { complaint: ComplaintRo
       body: JSON.stringify({ adminNote: note }),
     });
     setSaving(false);
-    if (res.ok) onUpdated(complaint._id, { adminNote: note });
+    if (res.ok) { onUpdated(complaint._id, { adminNote: note }); toast.success("Complaint note saved"); }
+    else toast.error("Unable to save complaint note");
   }
 
   const inp: React.CSSProperties = { width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontFamily: "DM Sans,sans-serif", fontSize: "0.84rem", color: "#111827", outline: "none", boxSizing: "border-box", background: "#fff", resize: "vertical" };
@@ -189,6 +194,7 @@ function DetailPanel({ complaint, onUpdated, canEdit }: { complaint: ComplaintRo
 // ════════════════════════════════════════════════════════════
 export default function ComplaintsClient({ complaints: initial, perms }: { complaints: ComplaintRow[]; perms?: Perms }) {
   const router = useRouter();
+  const toast = useToast();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.complaints?.[action]);
   
   const [complaints,  setComplaints]  = useState<ComplaintRow[]>(initial);
@@ -224,11 +230,13 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
     if (!can("delete")) return;
     if (!confirm(`Delete complaint "${subject}"? This cannot be undone.`)) return;
     setDeletingId(id);
-    await fetch(`/api/complaints/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/complaints/${id}`, { method: "DELETE" });
+    if (!res.ok) { setDeletingId(null); toast.error("Unable to delete complaint"); return; }
     setComplaints(prev => prev.filter(c => c._id !== id));
     setDeletingId(null);
     if (expandedId === id) setExpandedId(null);
     router.refresh();
+    toast.success("Complaint deleted");
   }
 
   return (

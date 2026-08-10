@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { deleteMenuItem, toggleMenuItemActive } from "@/app/actions/menu";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 
 interface Variant  { label: string; price: number }
 interface Category { _id: string; name: string }
@@ -31,6 +32,7 @@ const VARIANT_LABELS: Record<string, string> = {
 const PAGE_SIZE = 12;
 
 export default function MenuClient({ items, categories, perms }: Props) {
+  const toast = useToast();
   const router = useRouter();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.menu?.[action]);
 
@@ -99,25 +101,25 @@ export default function MenuClient({ items, categories, perms }: Props) {
     if (!confirm(`Delete ${selected.size} item(s)? Cannot be undone.`)) return;
     setBulkLoading(true);
     for (const id of selected) await deleteMenuItem(id);
-    setBulkLoading(false); clearSel(); router.refresh();
+    setBulkLoading(false); clearSel(); toast.success("Menu items deleted"); router.refresh();
   }
   async function handleBulkToggle(activate: boolean) {
     if (!can("edit")) return;
     setBulkLoading(true);
     const toChange = items.filter(i => selected.has(i._id) && i.isActive !== activate);
     for (const i of toChange) await toggleMenuItemActive(i._id, i.isActive);
-    setBulkLoading(false); clearSel(); router.refresh();
+    setBulkLoading(false); clearSel(); toast.success("Availability updated"); router.refresh();
   }
 
   // ── Single actions ───────────────────────────────────────────
   async function handleDelete(id: string, name: string) {
     if (!can("delete")) return;
     if (!confirm(`Delete "${name}"? Cannot be undone.`)) return;
-    await deleteMenuItem(id); router.refresh();
+    await deleteMenuItem(id); toast.success("Menu item deleted"); router.refresh();
   }
   async function handleToggleActive(id: string, current: boolean) {
     if (!can("edit")) return;
-    await toggleMenuItemActive(id, current); router.refresh();
+    await toggleMenuItemActive(id, current); toast.success("Availability updated"); router.refresh();
   }
 
   // ── Export CSV ───────────────────────────────────────────────

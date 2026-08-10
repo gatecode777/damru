@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Save, ArrowLeft, Eye, EyeOff, Shield, User } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
 
 const MODULES = [
   { key:"dashboard",      label:"Dashboard",        group:"Main" },
@@ -168,6 +169,7 @@ interface Props {
 
 export default function ManagerForm({ initial }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const isEdit = !!initial?._id;
 
   const [form, setForm] = useState({
@@ -217,10 +219,11 @@ export default function ManagerForm({ initial }: Props) {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (data.error) { setError(data.error); return; }
+      if (data.error) { setError(data.error); toast.error("Save failed", data.error); return; }
+      toast.success(isEdit ? "Admin updated" : "Admin created");
       router.push("/admin/managers");
       router.refresh();
-    } catch { setError("Server error. Please try again."); }
+    } catch { setError("Server error. Please try again."); toast.error("Save failed", "Server error. Please try again."); }
     finally { setSaving(false); }
   }
 

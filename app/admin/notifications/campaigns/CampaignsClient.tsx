@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Send, Calendar, X, Loader2 } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
+import { getAdminResponseError } from "@/lib/admin-error";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, { view?: boolean; create?: boolean; edit?: boolean; delete?: boolean }>; }
 
@@ -42,6 +44,7 @@ const EMPTY_FORM = {
 };
 
 export default function CampaignsClient({ perms }: { perms: Perms }) {
+  const toast = useToast();
   const canCreate = perms.isSuperAdmin || perms.permissions?.notifications?.create;
   const canEdit = perms.isSuperAdmin || perms.permissions?.notifications?.edit;
 
@@ -106,9 +109,10 @@ export default function CampaignsClient({ perms }: { perms: Perms }) {
     });
     const d = await r.json();
     setSaving(false);
-    if (!r.ok) { setError(d.error || "Could not create campaign."); return; }
+    if (!r.ok) { const message = await getAdminResponseError(r, "Could not create campaign."); setError(message); toast.error("Unable to create campaign", message); return; }
     setForm(EMPTY_FORM);
     setEstimatedRecipients(null);
+    toast.success(form.scheduleMode === "later" ? "Campaign scheduled successfully" : "Campaign draft created");
     await load();
   }
 
@@ -116,12 +120,15 @@ export default function CampaignsClient({ perms }: { perms: Perms }) {
     setConfirmSendId(null);
     const r = await fetch(`/api/admin/notifications/campaigns/${id}/send`, { method: "POST" });
     const d = await r.json();
-    if (!r.ok) setError(d.error || "Could not send campaign.");
+    if (!r.ok) { const message = await getAdminResponseError(r, "Could not send campaign."); setError(message); toast.error("Unable to send campaign", message); }
+    else toast.success(d.status === "COMPLETED" ? "Campaign sent successfully" : "Campaign queued for sending");
     await load();
   }
 
   async function cancel(id: string) {
-    await fetch(`/api/admin/notifications/campaigns/${id}/cancel`, { method: "POST" });
+    const r = await fetch(`/api/admin/notifications/campaigns/${id}/cancel`, { method: "POST" });
+    if (r.ok) toast.success("Campaign cancelled");
+    else toast.error("Unable to cancel campaign", await getAdminResponseError(r, "Please try again."));
     await load();
   }
 

@@ -5,8 +5,12 @@ import { colors } from "@/config";
 import { EmptyState } from "@/components/ui";
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from "@/services/notificationsApi";
 import type { AppNotification } from "@/types/notifications";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function NotificationsScreen() {
+  const queryClient = useQueryClient();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -25,8 +29,8 @@ export default function NotificationsScreen() {
       setItems(prev => (mode === "more" ? [...prev, ...data.notifications] : data.notifications));
       setPage(data.page);
       setTotalPages(data.totalPages);
-    } catch (err: any) {
-      setError(err?.message || "Could not load notifications.");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, "Unable to load notifications."));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -44,7 +48,12 @@ export default function NotificationsScreen() {
   async function handlePress(item: AppNotification) {
     if (!item.isRead) {
       setItems(prev => prev.map(n => (n._id === item._id ? { ...n, isRead: true } : n)));
-      markNotificationRead(item._id).catch(() => {});
+      try {
+        await markNotificationRead(item._id);
+        queryClient.invalidateQueries({ queryKey: queryKeys.notifications.unreadCount() });
+      } catch {
+        setItems(prev => prev.map(n => (n._id === item._id ? { ...n, isRead: false } : n)));
+      }
     }
     if (item.action?.route) router.push(item.action.route as any);
   }
@@ -53,6 +62,7 @@ export default function NotificationsScreen() {
     setItems(prev => prev.map(n => ({ ...n, isRead: true })));
     try {
       await markAllNotificationsRead();
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.unreadCount() });
     } catch {
       // Best-effort — a failed mark-all-read is not worth surfacing an error over; the next load() call reconciles state.
     }

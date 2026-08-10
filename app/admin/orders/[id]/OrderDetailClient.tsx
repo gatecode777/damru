@@ -8,6 +8,8 @@ import {
   ShoppingBag, CreditCard, Package, CheckCircle, Truck, XCircle, Clock, RotateCcw, Undo2,
 } from "lucide-react";
 import { updateOrderStatus, updatePaymentStatus, cancelOrder } from "@/app/actions/orders";
+import { useToast } from "@/components/admin/Toast";
+import { getAdminResponseError } from "@/lib/admin-error";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -65,13 +67,13 @@ function CardHeader({ title, subtitle }: { title: string; subtitle?: string }) {
 
 export default function OrderDetailClient({ order: initialOrder, perms }: { order: any; perms?: Perms }) {
   const router = useRouter();
+  const toast = useToast();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.orders?.[action]);
   
   const [order,      setOrder]      = useState(initialOrder);
   const [isPending,  startTransition] = useTransition();
   const [showStatus, setShowStatus] = useState(false);
   const [showPay,    setShowPay]    = useState(false);
-  const [feedback,   setFeedback]   = useState("");
 
   // Refund modal
   const [showRefundModal, setShowRefundModal] = useState(false);
@@ -100,7 +102,7 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
   const sc = STATUS_COLORS[order.status] ?? STATUS_COLORS.pending;
   const currentStatusDef = statusesToUse.find(s => s.key === order.status);
 
-  function notify(msg: string) { setFeedback(msg); setTimeout(() => setFeedback(""), 3000); }
+  function notify(msg: string) { toast.success(msg); }
 
   function handleStatusChange(status: string) {
     if (!can("edit")) return;
@@ -173,11 +175,11 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
         }),
       });
       const data = await res.json();
-      if (data.error) { setRefundError(data.error); return; }
+      if (!res.ok || data.error) { const message = await getAdminResponseError(res, "Refund could not be initiated. Please try again or check the payment status."); setRefundError(message); toast.error("Unable to submit refund", message); return; }
 
       refundRequestIdRef.current = null; // this attempt is done — a fresh refund gets a new id
       setShowRefundModal(false);
-      notify(data.refund?.status === "processed" ? "Refund processed." : "Refund submitted — processing.");
+      notify(data.refund?.status === "processed" ? "Refund processed" : "Refund request submitted");
       router.refresh();
     } catch {
       setRefundError("Something went wrong. Please try again.");
@@ -192,11 +194,11 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
     try {
       const res = await fetch(`/api/admin/orders/${order._id}/reconcile-payment`, { method: "POST" });
       const data = await res.json();
-      if (data.error) { notify(data.error); return; }
-      notify(data.outcome || "Checked.");
+      if (!res.ok || data.error) { toast.error("Unable to refresh payment status", await getAdminResponseError(res, "Please try again.")); return; }
+      toast.success("Payment status refreshed");
       if (data.reconciled) router.refresh();
     } catch {
-      notify("Could not check payment status. Please try again.");
+      toast.error("Unable to refresh payment status", "Please try again.");
     } finally {
       setReconciling(false);
     }
@@ -309,13 +311,6 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
           </div>
         )}
       </div>
-
-      {/* Feedback toast */}
-      {feedback && (
-        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d", padding: "10px 16px", borderRadius: 10, fontFamily: "DM Sans,sans-serif", fontSize: "0.875rem", fontWeight: 500 }}>
-          ✓ {feedback}
-        </div>
-      )}
 
       {/* Progress pipeline - visible even without edit perms */}
       {!isCancelled && (

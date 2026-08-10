@@ -22,6 +22,7 @@ export interface IAdminPermissions {
   banquetBookings:IPermissionModule;
   coupons:        IPermissionModule;
   rewards:        IPermissionModule;
+  notifications:  IPermissionModule;
   analytics:      IPermissionModule;
   settings:       IPermissionModule;
   tables:         IPermissionModule;
@@ -79,6 +80,7 @@ const AdminSchema = new Schema<IAdmin>(
       banquetBookings:{ type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       coupons:        { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       rewards:        { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
+      notifications:  { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       analytics:      { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       tables:         { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },
       // settings:       { type: permModule, default: () => ({ view: false, create: false, edit: false, delete: false }) },

@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Plus, Upload, X, ChevronDown, ChevronUp, Trash2, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/components/admin/Toast";
 
 interface HallCard {
   _id?: string;
@@ -286,6 +287,7 @@ function HallCardEditor({ card, index, onChange, onDelete }: {
 // ── Main Form ────────────────────────────────────────────────────────────────
 export default function BranchForm({ initial }: { initial?: BranchData }) {
   const router = useRouter();
+  const toast = useToast();
   const isEdit = !!initial?._id;
   const [data, setData] = useState<BranchData>(initial ?? EMPTY_BRANCH);
   const [saving, setSaving] = useState(false);
@@ -307,7 +309,8 @@ export default function BranchForm({ initial }: { initial?: BranchData }) {
         body: JSON.stringify(isEdit ? { id: data._id, ...data } : data),
       });
       const d = await res.json();
-      if (d.error) { setError(d.error); return; }
+      if (d.error) { setError(d.error); toast.error("Unable to save branch"); return; }
+      toast.success(isEdit ? "Branch updated" : "Branch created");
       router.push("/admin/branches");
       router.refresh();
     } catch { setError("Failed to save. Please try again."); }

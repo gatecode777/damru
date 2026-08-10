@@ -10,6 +10,7 @@ import {
   createCoupon, updateCoupon, deleteCoupon,
   toggleCouponActive, generateCouponCode,
 } from "@/app/actions/coupons";
+import { useToast } from "@/components/admin/Toast";
 
 interface Coupon {
   _id: string; code: string; description: string; type: string;
@@ -372,6 +373,7 @@ function DeleteConfirm({ coupon, onClose, onDeleted }: {
 // ════════════════════════════════════════════════════════════
 export default function CouponsClient({ coupons: initialCoupons, perms }: { coupons: Coupon[]; perms?: Perms }) {
   const router = useRouter();
+  const toast = useToast();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.coupons?.[action]);
   
   const [coupons,      setCoupons]      = useState<Coupon[]>(initialCoupons);
@@ -395,6 +397,7 @@ export default function CouponsClient({ coupons: initialCoupons, perms }: { coup
   }, [coupons, statusFilter, search]);
 
   function handleSaved(saved: Coupon) {
+    const existed = coupons.some(c => c._id === saved._id);
     setCoupons(prev => {
       const exists = prev.find(c => c._id === saved._id);
       if (exists) return prev.map(c => c._id === saved._id ? { ...c, ...saved } : c);
@@ -402,19 +405,25 @@ export default function CouponsClient({ coupons: initialCoupons, perms }: { coup
     });
     setShowForm(false); setEditCoupon(null);
     router.refresh();
+    toast.success(existed ? "Coupon updated successfully" : "Coupon created successfully");
   }
 
   function handleDeleted(id: string) {
     setCoupons(prev => prev.filter(c => c._id !== id));
     setDeleteTarget(null);
     router.refresh();
+    toast.success("Coupon deleted");
   }
 
   async function handleToggle(coupon: Coupon) {
     if (!can("edit")) return;
-    // Optimistic
-    setCoupons(prev => prev.map(c => c._id === coupon._id ? { ...c, isActive: !c.isActive } : c));
-    await toggleCouponActive(coupon._id, coupon.isActive);
+    try {
+      await toggleCouponActive(coupon._id, coupon.isActive);
+      setCoupons(prev => prev.map(c => c._id === coupon._id ? { ...c, isActive: !c.isActive } : c));
+      toast.success(coupon.isActive ? "Coupon disabled" : "Coupon enabled");
+    } catch {
+      toast.error("Unable to update coupon");
+    }
   }
 
   function openCreate() { 

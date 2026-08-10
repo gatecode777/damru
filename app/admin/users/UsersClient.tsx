@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { deleteUser, toggleUserStatus } from "@/app/actions/users";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/admin/Toast";
 
 interface User {
   _id: string; name: string; email: string;
@@ -33,6 +34,7 @@ const STATUS_BADGE: Record<string, { cls: string; dot: string }> = {
 };
 
 export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
+  const toast = useToast();
   const router   = useRouter();
   const [, startTransition] = useTransition();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.users?.[action]);
@@ -131,6 +133,7 @@ export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
     for (const id of selected) { await deleteUser(id); }
     setBulkLoading(false);
     setSelected(new Set());
+    toast.success("Users deleted");
     router.refresh();
   }
 
@@ -142,6 +145,7 @@ export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
     for (const u of toChange) { await toggleUserStatus(u._id, u.status); }
     setBulkLoading(false);
     setSelected(new Set());
+    toast.success(targetStatus === "active" ? "Users activated" : "Users deactivated");
     router.refresh();
   }
 
@@ -150,6 +154,7 @@ export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
     if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
     startTransition(async () => {
       await deleteUser(id);
+      toast.success("User deleted");
       router.refresh();
     });
   }

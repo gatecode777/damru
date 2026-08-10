@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AdminSessionProvider from "@/components/admin/AdminSessionProvider";
+import { ToastProvider } from "@/components/admin/Toast";
 
 import "@/styles/admin/table.css";
 import "@/styles/admin/category.css";
@@ -49,7 +50,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       `}</style>
 
       <AdminSessionProvider>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </AdminSessionProvider>
     </>
   );

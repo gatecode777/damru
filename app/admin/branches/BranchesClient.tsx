@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, ExternalLink } from "lucide-react";
+import { useToast } from "@/components/admin/Toast";
 
 interface Branch {
   _id: string; name: string; slug: string; description: string;
@@ -15,13 +16,13 @@ interface Branch {
 interface PermsData { role:string; isSuperAdmin:boolean; permissions:Record<string,any>; }
 export default function BranchesClient({ initialBranches, perms }: { initialBranches: Branch[]; perms?: PermsData; }) {
   const router = useRouter();
+  const sharedToast = useToast();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.["branches"]?.[action]);
   const [branches, setBranches]       = useState<Branch[]>(initialBranches);
   const [deleteId, setDeleteId]       = useState<string | null>(null);
   const [deleting, setDeleting]       = useState(false);
-  const [toast,    setToast]          = useState("");
 
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(""), 3000); }
+  function showToast(msg: string) { if (/fail/i.test(msg)) sharedToast.error("Unable to update branch"); else sharedToast.success(msg.replace(/!$/, "")); }
 
   async function handleDelete(id: string) {
     setDeleting(true);
@@ -178,15 +179,6 @@ export default function BranchesClient({ initialBranches, perms }: { initialBran
         </div>
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, background: "#111827", color: "#fff",
-          padding: "12px 20px", borderRadius: 10, fontFamily: "DM Sans, sans-serif", fontSize: 13,
-          zIndex: 99999, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

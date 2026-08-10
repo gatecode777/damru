@@ -19,6 +19,7 @@ export const getMissions = () => get<MissionsResponse>("/api/rewards/missions");
 export const getReferrals = (page = 1, limit = 20) =>
   get<ReferralsResponse>(`/api/rewards/referrals?page=${page}&limit=${limit}`);
 export const getLoyalty = () => get<LoyaltyResponse>("/api/rewards/loyalty");
+export const getRewardsExpiry = () => get<RewardsDashboard["expiry"] & { breakdown?: unknown[] }>("/api/rewards/expiry");
 
 export async function redeemDamru(orderId: string, amount: number): Promise<RedeemResult> {
   try {
