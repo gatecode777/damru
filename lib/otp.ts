@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { getRequiredSecret } from "@/lib/env";
+import { getJwtSecret } from "@/lib/env";
 
 const OTP_EXPIRY_MINUTES = 10;
 
@@ -13,14 +13,14 @@ export function generateOtp(): string {
 export function signOtpToken(email: string, otp: string): string {
   return jwt.sign(
     { email: email.toLowerCase(), otp, purpose: "user-otp" },
-    getRequiredSecret("JWT_SECRET"),
+    getJwtSecret(),
     { expiresIn: `${OTP_EXPIRY_MINUTES}m` }
   );
 }
 
 /** Verify an OTP token — returns email if valid, throws otherwise */
 export function verifyOtpToken(token: string, submittedOtp: string): string {
-  const payload = jwt.verify(token, getRequiredSecret("JWT_SECRET")) as {
+  const payload = jwt.verify(token, getJwtSecret()) as {
     email: string;
     otp:   string;
     purpose: string;
@@ -34,14 +34,14 @@ export function verifyOtpToken(token: string, submittedOtp: string): string {
 export function signResetToken(email: string): string {
   return jwt.sign(
     { email: email.toLowerCase(), purpose: "password-reset" },
-    getRequiredSecret("JWT_SECRET"),
+    getJwtSecret(),
     { expiresIn: "15m" }
   );
 }
 
 /** Verify a reset token */
 export function verifyResetToken(token: string): string {
-  const payload = jwt.verify(token, getRequiredSecret("JWT_SECRET")) as { email: string; purpose: string };
+  const payload = jwt.verify(token, getJwtSecret()) as { email: string; purpose: string };
   if (payload.purpose !== "password-reset") throw new Error("Invalid token");
   return payload.email;
 }
