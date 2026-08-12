@@ -26,3 +26,6 @@ export const verifyRazorpayPayment = (input: {
   razorpay_order_id: string;
   razorpay_signature: string;
 }) => post<{ success: true; alreadyFinalized: boolean }>("/api/payments/razorpay/verify", input);
+
+export const reportRazorpayPaymentFailed = (input: { orderId: string; razorpayOrderId: string }) =>
+  post<{ success: true }>("/api/payments/razorpay/fail", input);

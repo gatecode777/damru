@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
-
+import { useToast } from "@/components/website/Toast";
 interface Variant { label: string; price: number }
 
 interface Props {
@@ -24,6 +24,7 @@ export default function MenuItemCard({
   variantType, variants, isVeg, reverse = false,
 }: Props) {
   const { addItem, clearCart, isLoggedIn } = useCart();
+  const toast = useToast();
   const router = useRouter();
 
   // qty is only used for fixed-price items (added directly)
@@ -32,7 +33,6 @@ export default function MenuItemCard({
   const [modalOpen,       setModalOpen]       = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<number>(0);
   const [checkedAddons,   setCheckedAddons]   = useState<boolean[]>(variants.map(() => false));
-  const [added,           setAdded]           = useState(false); // brief feedback
   const [isOrderNowFlow,  setIsOrderNowFlow]  = useState(false);
 
   // Fix double-increment: use separate handlers with stopPropagation
@@ -62,7 +62,7 @@ export default function MenuItemCard({
   function closeModal() { setModalOpen(false); }
 
   // Add fixed-price item directly to cart
-  function handleAddToCart(e: React.MouseEvent) {
+  async function handleAddToCart(e: React.MouseEvent) {
     e.stopPropagation();
     setIsOrderNowFlow(false);
     if (!isLoggedIn) {
@@ -70,9 +70,8 @@ export default function MenuItemCard({
       return;
     }
     if (variantType === "none") {
-      addItem({ id: `${menuItemId}-plain`, menuItemId, name, custom: "", price: basePrice, image, variantType: "none" }, qty);
-      setAdded(true);
-      setTimeout(() => setAdded(false), 2000);
+      try { await addItem({ id: `${menuItemId}-plain`, menuItemId, name, custom: "", price: basePrice, image, variantType: "none" }, qty); toast.success("Added to cart", `${qty} × ${name}`, { id: `cart-add-${menuItemId}` }); }
+      catch { toast.error("Item not added", "Please try again.", { id: `cart-add-${menuItemId}` }); }
     } else {
       openModal();
     }
@@ -123,10 +122,8 @@ export default function MenuItemCard({
       closeModal();
       router.push("/checkout");
     } else {
-      await addItem({ id, menuItemId, name, custom, price, image, variantType });
-      closeModal();
-      setAdded(true);
-      setTimeout(() => setAdded(false), 2000);
+      try { await addItem({ id, menuItemId, name, custom, price, image, variantType }); closeModal(); toast.success("Added to cart", name, { id: `cart-add-${menuItemId}` }); }
+      catch { toast.error("Item not added", "Please try again.", { id: `cart-add-${menuItemId}` }); }
     }
   }
 
@@ -345,39 +342,6 @@ export default function MenuItemCard({
           )}
         </div>
       )}
-      {/* ── Small bottom-center toast ── */}
-      {added && (
-        <div style={{
-          position: "fixed",
-          bottom: 28,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 999999,
-          background: "#1a1a1a",
-          color: "#fff",
-          padding: "10px 22px",
-          borderRadius: 100,
-          fontSize: "0.85rem",
-          fontFamily: "Poppins, sans-serif",
-          fontWeight: 500,
-          whiteSpace: "nowrap",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
-          animation: "damruToastIn 0.25s ease",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-        }}>
-          <span style={{ color: "#4ade80", fontSize: "1rem" }}>✓</span>
-          {name} added to cart
-        </div>
-      )}
-
-      <style>{`
-        @keyframes damruToastIn {
-          from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-      `}</style>
     </>
   );
 }

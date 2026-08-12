@@ -8,6 +8,52 @@ import BlogModel from "@/models/Blog";
 import { fmtDate } from "@/lib/formatDate";
 import BranchModel from "@/models/Branch";
 
+type SpecialFeatureIcon = "quality" | "seasonal" | "fruit";
+
+function SpecialFeatureIllustration({ type }: { type: SpecialFeatureIcon }) {
+  if (type === "quality") {
+    return (
+      <svg viewBox="0 0 112 112" aria-hidden="true" focusable="false">
+        <path className="feature-art-leaf" d="M33 50C20 43 20 29 27 20c11 4 17 14 13 27M45 47c-7-16 1-29 13-35 9 11 7 26-6 36" />
+        <path className="feature-art-line" d="M30 24c5 7 7 14 7 24M57 18c-5 8-7 17-7 28" />
+        <path className="feature-art-warm" d="M64 48c4-10 12-17 23-17 1 11-5 20-17 23" />
+        <path className="feature-art-line" d="M73 49c3-6 8-10 14-13M22 52h68l-5 25c-2 10-11 17-21 17H48c-10 0-19-7-21-17l-5-25Z" />
+        <path className="feature-art-soft" d="M30 59h52l-4 17c-2 7-8 11-15 11H49c-7 0-13-4-15-11l-4-17Z" />
+        <path className="feature-art-line" d="M37 64c7 5 13 5 19 0 7 5 13 5 19 0M43 94h26M40 52c3-11 13-18 24-16 10 2 16 10 16 16" />
+        <circle className="feature-art-dot" cx="67" cy="43" r="3" />
+      </svg>
+    );
+  }
+
+  if (type === "seasonal") {
+    return (
+      <svg viewBox="0 0 112 112" aria-hidden="true" focusable="false">
+        <path className="feature-art-leaf" d="M55 26C40 25 34 15 34 7c13-2 23 4 26 17M58 25C61 12 71 7 83 9c-1 12-9 20-23 20" />
+        <path className="feature-art-line" d="M56 26 43 14M58 26 75 15M57 26v22" />
+        <path className="feature-art-soft" d="m28 49 29-17 29 17v26H28V49Z" />
+        <path className="feature-art-line" d="m21 52 36-21 36 21M29 49v27h56V49M46 76V58h20v18M35 62h6M73 62h6" />
+        <path className="feature-art-line" d="M13 88c16-10 30-10 43 0 13-10 27-10 43 0M17 98c15-9 28-9 39 0 12-9 25-9 40 0" />
+        <path className="feature-art-warm" d="M84 76c3-8 9-11 16-10 0 7-5 12-13 13" />
+        <circle className="feature-art-dot" cx="57" cy="65" r="2.5" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 112 112" aria-hidden="true" focusable="false">
+      <path className="feature-art-leaf" d="M50 26C37 24 31 15 32 6c12-1 21 5 24 18M56 27c4-13 13-18 25-16-2 12-10 19-24 19" />
+      <path className="feature-art-line" d="M54 28 42 14M56 28 73 16M55 27v17" />
+      <circle className="feature-art-warm" cx="43" cy="61" r="24" />
+      <path className="feature-art-line" d="M43 37a24 24 0 1 0 0 48 24 24 0 0 0 0-48Zm-10 11 3 3m15-5-2 4M31 63h4m12 10 3 3" />
+      <path className="feature-art-fruit" d="M63 84c9-23 23-34 42-34-2 21-15 34-42 34Z" />
+      <path className="feature-art-line" d="M64 84c9-23 22-34 41-34M75 78l4-4m8-6 4-4m4-7 3-2" />
+      <path className="feature-art-seed" d="m83 76 2-4m8-4 2-4m-4 13 2-3" />
+      <circle className="feature-art-dot" cx="38" cy="58" r="2.3" />
+      <circle className="feature-art-dot" cx="49" cy="67" r="2.3" />
+    </svg>
+  );
+}
+
 export const metadata: Metadata = {
   title: "Damru By Namo | Restaurant & Banquet Hall, Jaipur",
   description:
@@ -361,32 +407,46 @@ export default async function HomePage() {
       {/* ── Special Features + Blog Cards ── */}
       <section className="special-feature-section">
         <div className="container">
-          <div className="features-grid">
-            {[
-              {
-                icon: "https://cdn-icons-png.flaticon.com/512/2927/2927347.png",
-                title: "Premium Quality",
-                desc: "We use only the finest ingredients to deliver rich taste and top-notch quality in every bite.",
-              },
-              {
-                icon: "https://cdn-icons-png.flaticon.com/512/2329/2329895.png",
-                title: "Seasonal Vegetables",
-                desc: "Fresh, locally sourced seasonal vegetables for natural taste and maximum nutrition.",
-              },
-              {
-                icon: "https://cdn-icons-png.flaticon.com/512/3194/3194591.png",
-                title: "Fresh Fruit",
-                desc: "Handpicked fresh fruits to ensure purity, sweetness, and refreshing flavor every time.",
-              },
-            ].map((f) => (
-              <div key={f.title} className="feature-item">
-                <div className="feature-icon-circle">
-                  <img src={f.icon} alt={f.title} />
-                </div>
-                <h3>{f.title}</h3>
-                <p>{f.desc}</p>
-              </div>
-            ))}
+          <div className="special-features-showcase">
+            <header className="special-features-header">
+              <p className="special-features-eyebrow">What Makes Us Special</p>
+              <h2>Crafted with Care, Served with Love</h2>
+              <span className="special-heading-ornament" aria-hidden="true"><i /></span>
+            </header>
+
+            <div className="special-features-grid">
+              {([
+                {
+                  icon: "quality",
+                  title: "Premium Quality",
+                  desc: "We use only the finest ingredients to deliver rich taste and top-notch quality in every bite.",
+                },
+                {
+                  icon: "seasonal",
+                  title: "Seasonal Vegetables",
+                  desc: "Fresh, locally sourced seasonal vegetables for natural taste and maximum nutrition.",
+                },
+                {
+                  icon: "fruit",
+                  title: "Fresh Fruit",
+                  desc: "Handpicked fresh fruits to ensure purity, sweetness, and refreshing flavor every time.",
+                },
+              ] satisfies { icon: SpecialFeatureIcon; title: string; desc: string }[]).map((feature, index) => (
+                <article key={feature.title} className="special-feature-item">
+                  <div className="special-feature-icon-wrap">
+                    <div className="special-feature-icon-arch">
+                      <SpecialFeatureIllustration type={feature.icon} />
+                      <span className="feature-sparkle feature-sparkle-one" aria-hidden="true">&#10022;</span>
+                      <span className="feature-sparkle feature-sparkle-two" aria-hidden="true">&#10022;</span>
+                    </div>
+                    <span className="special-feature-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                  </div>
+                  <h3>{feature.title}</h3>
+                  <span className="special-feature-ornament" aria-hidden="true"><i /></span>
+                  <p>{feature.desc}</p>
+                </article>
+              ))}
+            </div>
           </div>
 
           <h2 className="menu-title">Our Blogs</h2>
@@ -435,8 +495,9 @@ export default async function HomePage() {
             <img src="/assets/images/Excelentcook.png" alt="Excellent Cook" className="chef-static-img" />
           </div>
           <div className="cook-content">
+            <span className="cook-eyebrow">Crafted with care</span>
             <h2 className="excellent-title">
-              Excellent <br />cook
+              Excellence in <br />every plate
             </h2>
             <p className="excellent-desc">
               Our expert chefs bring passion and precision to every dish,
@@ -447,6 +508,9 @@ export default async function HomePage() {
               excellence transforms every meal into a delightful and memorable
               dining experience for every customer.
             </p>
+            <Link href="/menu" className="cook-menu-link">
+              Explore our menu <span aria-hidden="true">→</span>
+            </Link>
           </div>
         </div>
         <div className="leaf-container leaf-bottom">

@@ -4,6 +4,8 @@ import type {
 } from "@/types/rewards";
 
 export const getRewardsDashboard = () => get<RewardsDashboard>("/api/rewards/dashboard");
+export type ActiveRewardCampaign={_id:string;name:string;description:string;campaignType:string;rewardMode:string;rewardValue:number;minimumOrderAmount:number;endsAt:string};
+export const getActiveRewardCampaigns=()=>get<{campaigns:ActiveRewardCampaign[]}>("/api/rewards/campaigns");
 
 export const getRewardHistory = (page = 1, limit = 20) =>
   get<RewardsHistoryPage>(`/api/rewards/history?page=${page}&limit=${limit}`);

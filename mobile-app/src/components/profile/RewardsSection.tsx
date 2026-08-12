@@ -6,7 +6,7 @@ import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { colors } from "@/config";
 import { queryKeys } from "@/lib/queryClient";
-import { getRewardsDashboard, getUpcomingRewards, updateOccasionDetails } from "@/services/rewardsApi";
+import { getActiveRewardCampaigns, getRewardsDashboard, getUpcomingRewards, updateOccasionDetails } from "@/services/rewardsApi";
 import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import { EmptyState } from "@/components/ui";
 import type { RewardsDashboard, RewardsUpcoming } from "@/types/rewards";
@@ -84,13 +84,14 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
     queryFn: getUpcomingRewards,
     staleTime: 30 * 1000,
   });
+  const campaignsQuery=useQuery({queryKey:["rewards","campaigns"],queryFn:getActiveRewardCampaigns,staleTime:60*1000});
 
   React.useEffect(() => { trackRewardEvent("rewards_viewed"); }, []);
 
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      await Promise.all([dashboardQuery.refetch(), upcomingQuery.refetch()]);
+      await Promise.all([dashboardQuery.refetch(), upcomingQuery.refetch(),campaignsQuery.refetch()]);
     } finally {
       setRefreshing(false);
     }
@@ -149,6 +150,7 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
       contentContainerStyle={styles.scrollContent}
       refreshControl={React.createElement(RefreshControl as any, { refreshing, onRefresh: handleRefresh, colors: [colors.orange] })}
     >
+      {!!campaignsQuery.data?.campaigns.length&&<><Text style={styles.sectionTitle}>Active Offers</Text>{campaignsQuery.data.campaigns.map(c=><View key={c._id} style={styles.campaignCard}><Text style={styles.campaignTitle}>🔥 {c.name}</Text><Text style={styles.campaignText}>{c.description||`${c.rewardMode.replace(/_/g," ")} ${c.rewardValue}`}</Text><Text style={styles.campaignEnds}>Ends {new Date(c.endsAt).toLocaleString("en-IN")}</Text></View>)}</>}
       {/* Wallet */}
       <View style={styles.walletGrid}>
         <View style={styles.walletStat}>
@@ -168,6 +170,7 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
           <Text style={styles.walletValue}>{LEVEL_LABEL[dashboard.loyaltyLevel] || dashboard.loyaltyLevel}</Text>
         </View>
       </View>
+      {dashboard.rewardDebt > 0 && <Text style={styles.expiryHint}>Future rewards will first settle {dashboard.rewardDebt} Damru from a prior reward adjustment.</Text>}
       {dashboard.nextLevel && (
         <Text style={styles.nextLevelText}>{dashboard.damruToNextLevel} Damru to reach {LEVEL_LABEL[dashboard.nextLevel]}</Text>
       )}
@@ -408,6 +411,7 @@ const styles = StyleSheet.create({
   loyaltyCard: { backgroundColor: "#fff7ed", borderWidth: 1, borderColor: "#fde3c8", borderRadius: 16, padding: 14, marginTop: 14 },
   loyaltyName: { fontFamily: "Poppins_700Bold", fontSize: 17, color: colors.orange },
   sectionTitle: { fontFamily: "Poppins_700Bold", fontSize: 16, color: colors.ink, marginTop: 22, marginBottom: 10 },
+  campaignCard:{backgroundColor:"#fff7ed",borderWidth:1,borderColor:"#fed7aa",borderRadius:14,padding:14,marginBottom:8},campaignTitle:{fontFamily:"Poppins_700Bold",fontSize:15,color:colors.orange},campaignText:{fontFamily:"Poppins_400Regular",fontSize:12,color:"#756860",marginTop:4},campaignEnds:{fontFamily:"Poppins_500Medium",fontSize:11,color:"#9a7b52",marginTop:6},
   sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 22 },
   viewAllText: { fontFamily: "Poppins_600SemiBold", fontSize: 12, color: colors.orange },
   streakCard: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#eee3da", borderRadius: 16, padding: 14 },

@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       loyalty,
     ] = await Promise.all([
       User.findById(sessionUser.id)
-        .select("damruBalance damruTotalEarned damruTotalRedeemed loyaltyLevel currentStreak longestStreak lastEligibleActivityDate")
+        .select("damruBalance damruTotalEarned damruTotalRedeemed rewardDebt loyaltyLevel currentStreak longestStreak lastEligibleActivityDate")
         .lean(),
       getDamruConfig(),
       Coupon.find({
@@ -146,6 +146,7 @@ export async function GET(req: NextRequest) {
       damruBalance: u.damruBalance,
       damruTotalEarned: u.damruTotalEarned,
       damruTotalRedeemed: u.damruTotalRedeemed,
+      rewardDebt: u.rewardDebt || 0,
       loyaltyLevel: u.loyaltyLevel,
       nextLevel,
       damruToNextLevel,

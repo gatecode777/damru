@@ -17,6 +17,7 @@ async function makeUser(overrides: Partial<{ damruBalance: number }> = {}) {
     email: `notif-test-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@example.test`,
     password: "not-a-real-hash",
     damruBalance: overrides.damruBalance ?? 0,
+    notificationPreferences: { rewardUpdates: false, orderUpdates: false },
   });
 }
 

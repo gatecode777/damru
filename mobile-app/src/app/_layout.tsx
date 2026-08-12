@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -12,21 +12,27 @@ import {
   Poppins_700Bold,
 } from "@expo-google-fonts/poppins";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import * as SplashScreen from "expo-splash-screen";
 import { AppProvider } from "@/providers/AppProvider";
 import { colors } from "@/config";
-import { StatusBar, AppState, type AppStateStatus, Platform } from "react-native";
-
-SplashScreen.preventAutoHideAsync().catch(() => {});
+import { ActivityIndicator, AppState, Image, Platform, StatusBar, StyleSheet, View, type AppStateStatus } from "react-native";
 
 import { GlobalBottomBar } from "@/components/navigation/GlobalBottomBar";
-
-const appStartTime = Date.now();
 
 import { useApp } from "@/providers/AppProvider";
 
 function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: any }) {
   const { ready } = useApp();
+  const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(false);
+  const [startupTimeoutElapsed, setStartupTimeoutElapsed] = useState(false);
+
+  useEffect(() => {
+    const minimumTimer = setTimeout(() => setMinimumSplashElapsed(true), 1200);
+    const timeoutTimer = setTimeout(() => setStartupTimeoutElapsed(true), 4000);
+    return () => {
+      clearTimeout(minimumTimer);
+      clearTimeout(timeoutTimer);
+    };
+  }, []);
 
   useEffect(() => {
     function onAppStateChange(status: AppStateStatus) {
@@ -38,17 +44,20 @@ function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; f
     return () => subscription.remove();
   }, []);
 
-  useEffect(() => {
-    if ((fontsLoaded || fontError) && ready) {
-      if (__DEV__) {
-        console.info(`[Startup] Splash screen hidden in ${(Date.now() - appStartTime).toFixed(2)}ms (fonts: ${fontsLoaded}, ready: ${ready})`);
-      }
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [fontsLoaded, fontError, ready]);
+  const startupReady = ((fontsLoaded || Boolean(fontError)) && ready) || startupTimeoutElapsed;
 
-  if ((!fontsLoaded && !fontError) || !ready) {
-    return null;
+  if (!minimumSplashElapsed || !startupReady) {
+    return (
+      <View style={styles.splash}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFF9F4" />
+        <Image
+          source={require("../../assets/images/splash-icon.png")}
+          style={styles.splashLogo}
+          resizeMode="contain"
+        />
+        <ActivityIndicator color={colors.orange} size="small" />
+      </View>
+    );
   }
 
   return (
@@ -78,6 +87,20 @@ function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; f
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 20,
+    backgroundColor: "#FFF9F4",
+  },
+  splashLogo: {
+    width: 96,
+    height: 96,
+  },
+});
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

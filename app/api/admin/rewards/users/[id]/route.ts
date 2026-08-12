@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { checkApiPerm } from "@/lib/checkApiPerm";
 import User from "@/models/User";
 import DamruTransaction from "@/models/DamruTransaction";
+import RewardReversal from "@/models/RewardReversal";
 
 export async function GET(
   req: NextRequest,
@@ -15,7 +16,7 @@ export async function GET(
   try {
     await connectDB();
     const user = await User.findById(id)
-      .select("name email phone damruBalance damruTotalEarned damruTotalRedeemed loyaltyLevel dateOfBirth dobLocked marriageAnniversary anniversaryLocked")
+      .select("name email phone damruBalance damruTotalEarned damruTotalRedeemed rewardDebt loyaltyLevel dateOfBirth dobLocked marriageAnniversary anniversaryLocked")
       .lean();
     if (!user) return NextResponse.json({ error: "User not found." }, { status: 404 });
 
@@ -31,10 +32,12 @@ export async function GET(
         .lean(),
       DamruTransaction.countDocuments({ userId: id }),
     ]);
+    const reversedIds = new Set((await RewardReversal.find({ originalTransactionId: { $in: transactions.map(tx => tx._id) } }).distinct("originalTransactionId")).map(String));
+    const transactionRows = transactions.map(tx => ({ ...tx, reversed: reversedIds.has(String(tx._id)) }));
 
     return NextResponse.json({
       user: JSON.parse(JSON.stringify(user)),
-      transactions: JSON.parse(JSON.stringify(transactions)),
+      transactions: JSON.parse(JSON.stringify(transactionRows)),
       page,
       limit,
       total,

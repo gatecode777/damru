@@ -1,0 +1,3 @@
+import type { IRewardCampaign,RewardMode } from "@/models/RewardCampaign";
+export function calculateCampaignBonus(mode:RewardMode,value:number,baseReward:number,max:number|null=null){let bonus=mode==="FIXED_DAMRU"?value:mode==="MULTIPLIER"?baseReward*Math.max(0,value-1):baseReward*(value/100);bonus=Math.floor(Math.max(0,bonus));return max===null?bonus:Math.min(bonus,max)}
+export function selectCampaignBonuses<T extends{bonus:number;priority:number;code:string;stackingPolicy:IRewardCampaign["stackingPolicy"]}>(rows:T[]){const ordered=[...rows].sort((a,b)=>b.bonus-a.bonus||b.priority-a.priority||a.code.localeCompare(b.code));if(ordered.length<2)return ordered;if(ordered.some(r=>r.stackingPolicy!=="STACK_ALLOWED"))return ordered.slice(0,1);return ordered}

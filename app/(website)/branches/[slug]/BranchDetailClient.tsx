@@ -1,4 +1,6 @@
 "use client";
+import { useToast } from "@/components/website/Toast";
+import { getUserErrorMessage, getUserResponseError } from "@/lib/getUserErrorMessage";
 
 import { useEffect, useState } from "react";
 
@@ -187,6 +189,7 @@ export default function BranchDetailClient({ branch, hallCards }: { branch: any;
 function BookingForm({ branchSlug, branchName, ctaTitle, ctaSubtitle }: {
   branchSlug?: string; branchName?: string; ctaTitle?: string; ctaSubtitle?: string;
 }) {
+  const toast = useToast();
   const [form, setForm] = useState({ fullName: "", phone: "", email: "", eventType: "", eventDate: "", guestCount: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone]             = useState(false);
@@ -207,9 +210,10 @@ function BookingForm({ branchSlug, branchName, ctaTitle, ctaSubtitle }: {
         body: JSON.stringify({ ...form, branchSlug, branchName }),
       });
       const data = await res.json();
-      if (data.error) { setErr(data.error); return; }
+      if (!res.ok || data.error) { const message=getUserResponseError(res,data,"Unable to submit your request.");setErr(message);toast.error("Request not submitted",message,{id:"branch-request"});return; }
       setDone(true);
-    } catch { setErr("Failed to submit. Please try again."); }
+      toast.success("Request submitted", "Our event team will contact you shortly.", { id: "branch-request" });
+    } catch (error) { const message=getUserErrorMessage(error,"Unable to submit your request.");setErr(message);toast.error("Request not submitted",message,{id:"branch-request"}); }
     finally { setSubmitting(false); }
   }
 

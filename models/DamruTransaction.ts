@@ -18,7 +18,10 @@ export type DamruTransactionCategory =
   | "admin_debit"
   | "refund_restore"
   | "expiry"
-  | "legacy_opening_balance";
+  | "legacy_opening_balance"
+  | "campaign"
+  | "reward_reversal"
+  | "reward_debt_recovery";
 
 export interface IDamruAllocation {
   creditTransactionId: mongoose.Types.ObjectId;
@@ -38,6 +41,16 @@ export interface IDamruTransaction extends Document {
   couponId?: mongoose.Types.ObjectId;
   adjustedBy?: mongoose.Types.ObjectId;
   adjustmentReason?: string;
+  campaignId?: mongoose.Types.ObjectId;
+  campaignCode?: string;
+  campaignSnapshot?: Record<string, unknown>;
+  originalTransactionId?: mongoose.Types.ObjectId;
+  originalCategory?: string;
+  sourceType?: string;
+  sourceId?: string;
+  refundId?: mongoose.Types.ObjectId;
+  reversalReason?: string;
+  reversalNote?: string;
   // Expiry "lot" fields — only ever set on credit transactions that are subject to
   // expiry policy (see lib/rewards/damruAllocation.ts). Absent (not merely null) on
   // every transaction created before this feature shipped and on non-expiring
@@ -80,6 +93,9 @@ const DamruTransactionSchema = new Schema<IDamruTransaction>(
         "refund_restore",
         "expiry",
         "legacy_opening_balance",
+        "campaign",
+        "reward_reversal",
+        "reward_debt_recovery",
       ],
       required: true,
     },
@@ -92,6 +108,16 @@ const DamruTransactionSchema = new Schema<IDamruTransaction>(
     couponId: { type: Schema.Types.ObjectId, ref: "Coupon" },
     adjustedBy: { type: Schema.Types.ObjectId, ref: "Admin" },
     adjustmentReason: { type: String },
+    campaignId: { type: Schema.Types.ObjectId, ref: "RewardCampaign" },
+    campaignCode: { type: String },
+    campaignSnapshot: { type: Schema.Types.Mixed },
+    originalTransactionId: { type: Schema.Types.ObjectId, ref: "DamruTransaction" },
+    originalCategory: { type: String },
+    sourceType: { type: String },
+    sourceId: { type: String },
+    refundId: { type: Schema.Types.ObjectId, ref: "PaymentRefund" },
+    reversalReason: { type: String },
+    reversalNote: { type: String },
     expiresAt: { type: Date, default: undefined },
     originalAmount: { type: Number, default: undefined },
     remainingAmount: { type: Number, default: undefined },
@@ -107,6 +133,11 @@ const DamruTransactionSchema = new Schema<IDamruTransaction>(
 );
 
 DamruTransactionSchema.index({ userId: 1, createdAt: -1 });
+DamruTransactionSchema.index({ orderId: 1, type: 1, category: 1 });
+DamruTransactionSchema.index({ originalTransactionId: 1 }, { sparse: true });
+DamruTransactionSchema.index({ adjustedBy: 1, createdAt: -1 }, { sparse: true });
+// Bounded admin analytics scans filter by time before grouping by category.
+DamruTransactionSchema.index({ createdAt: -1, type: 1, category: 1 });
 // FEFO allocator's per-user lot lookup (redemption, admin debit). Sparse because
 // only lot-tracked credits (post-migration / post-deploy) carry remainingAmount —
 // legacy history is deliberately excluded from this index.

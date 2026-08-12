@@ -13,7 +13,7 @@ export type ReservationRow = {
   _id: string;
   userName: string; userEmail: string; userPhone: string;
   date: string; time: string; persons: string; notes: string;
-  status: string; createdAt: string;
+  status: string; declineReason: string; createdAt: string;
 };
 
 export default async function ReservationsPage() {
@@ -31,7 +31,7 @@ export default async function ReservationsPage() {
     const raw = await Reservation.find()
       .sort({ date: -1, createdAt: -1 })
       .lean();
-    reservations = JSON.parse(JSON.stringify(raw)).map((r: any) => ({
+    reservations = raw.map((r) => ({
       _id:       String(r._id),
       userName:  r.userName,
       userEmail: r.userEmail,
@@ -41,6 +41,7 @@ export default async function ReservationsPage() {
       persons:   r.persons,
       notes:     r.notes || "",
       status:    r.status,
+      declineReason: r.declineReason || "",
       createdAt: String(r.createdAt),
     }));
   } catch { /* empty on first run */ }
@@ -81,7 +82,7 @@ export default async function ReservationsPage() {
               { label: "Upcoming",  value: stats.upcoming,  color: "#8b5cf6" },
               { label: "Pending",   value: stats.pending,   color: "#f59e0b" },
               { label: "Confirmed", value: stats.confirmed, color: "#16a34a" },
-              { label: "Cancelled", value: stats.cancelled, color: "#dc2626" },
+              { label: "Declined",  value: stats.cancelled, color: "#dc2626" },
             ].map(s => (
               <div key={s.label} className="menu-stat">
                 <span className="ms-value" style={{ color: s.color }}>{s.value}</span>

@@ -8,23 +8,13 @@ export const queryClient = new QueryClient({
         console.info(`[React Query Success] Key: ${JSON.stringify(query.queryKey)}`);
       }
     },
-    onError: (error, query) => {
-      if (__DEV__) {
-        const status = error instanceof ApiRequestError ? error.status : "unknown";
-        console.warn(`[React Query] request failed`, { queryKey: query.queryKey, status });
-      }
-    },
+    // Screens own user-safe error feedback. Avoid console warnings here because
+    // React Native renders query internals in its LogBox overlay.
   }),
   mutationCache: new MutationCache({
     onSuccess: (data, variables, context, mutation) => {
       if (__DEV__) {
         console.info(`[React Query Mutation Success] Key: ${JSON.stringify(mutation.options.mutationKey)}`);
-      }
-    },
-    onError: (error, variables, context, mutation) => {
-      if (__DEV__) {
-        const status = error instanceof ApiRequestError ? error.status : "unknown";
-        console.warn(`[React Query] mutation failed`, { mutationKey: mutation.options.mutationKey, status });
       }
     },
   }),
@@ -77,7 +67,10 @@ export const queryKeys = {
     orders: () => ["profile", "orders"] as const,
     coupons: () => ["profile", "coupons"] as const,
     complaints: () => ["profile", "complaints"] as const,
-    paymentMethods: () => ["profile", "paymentMethods"] as const,
+  },
+  paymentMethods: {
+    all: () => ["paymentMethods"] as const,
+    primary: () => ["paymentMethods", "primary"] as const,
   },
   rewards: {
     dashboard: () => ["rewards", "dashboard"] as const,

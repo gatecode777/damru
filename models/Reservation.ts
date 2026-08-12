@@ -12,6 +12,8 @@ export interface IReservation extends Document {
   persons:   string;   // "2 Person"
   notes:     string;
   status:    ReservationStatus;
+  declineReason: string;
+  statusUpdatedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +29,8 @@ const ReservationSchema = new Schema<IReservation>(
     persons:   { type: String, required: true },
     notes:     { type: String, default: "", trim: true },
     status:    { type: String, enum: ["pending", "confirmed", "cancelled"], default: "pending" },
+    declineReason: { type: String, default: "", trim: true, maxlength: 500 },
+    statusUpdatedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

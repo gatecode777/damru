@@ -14,6 +14,7 @@ export interface IUser extends Document {
   damruBalance: number;
   damruTotalEarned: number;
   damruTotalRedeemed: number;
+  rewardDebt: number;
   loyaltyLevel: LoyaltyLevel;
   loyaltyTierId?: mongoose.Types.ObjectId;
   loyaltyTierCode?: string;
@@ -55,6 +56,7 @@ const UserSchema = new Schema<IUser>(
     damruBalance: { type: Number, default: 0 },
     damruTotalEarned: { type: Number, default: 0 },
     damruTotalRedeemed: { type: Number, default: 0 },
+    rewardDebt: { type: Number, default: 0, min: 0 },
     loyaltyLevel: { type: String, enum: ["bronze", "silver", "gold", "platinum"], default: "bronze" },
     loyaltyTierId: { type: Schema.Types.ObjectId, ref: "LoyaltyTier", index: true },
     loyaltyTierCode: { type: String },

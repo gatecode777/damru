@@ -1,11 +1,13 @@
 "use client";
 
-import { fmtDateLong, fmtINR } from "@/lib/formatDate";
-import { useState, useEffect } from "react";
+import { fmtINR } from "@/lib/formatDate";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
 import { useRewards } from "@/lib/rewards/RewardsProvider";
 import { trackRewardEvent } from "@/lib/rewards/rewardAnalytics";
+import { useToast } from "@/components/website/Toast";
+import { getSafeUserMessage, getUserErrorMessage, getUserResponseError } from "@/lib/getUserErrorMessage";
 
 // Minimal shape of the global Razorpay Checkout constructor loaded via the
 // external checkout.js script — not the full SDK, just what this page uses.
@@ -37,13 +39,15 @@ const emptyForm = {
 };
 
 export default function CheckoutPage() {
+  const toast = useToast();
   const router = useRouter();
-  const { items, totalPrice, clearCart, isLoggedIn } = useCart();
-  const { dashboard: rewardsDashboard, redeem: redeemDamru } = useRewards();
+  const { items, clearCart, isLoggedIn } = useCart();
+  const { dashboard: rewardsDashboard } = useRewards();
   const [requestedDamru, setRequestedDamru] = useState("");
-  const [taxRate, setTaxRate] = useState(5);
-  const [freeAbove, setFreeAbove] = useState(500);
-  const [deliveryCharge, setDeliveryCharge] = useState(50);
+  const [taxLabel, setTaxLabel] = useState("Tax");
+  const [quote, setQuote] = useState<{ subtotal: number; couponDiscount: number; deliveryFee: number; taxAmount: number; damruDiscount: number; finalAmount: number; freeDeliveryApplied: boolean } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState("");
 
   // ── Dine-in state ─────────────────────────────────────────
   const [isDineIn, setIsDineIn] = useState(false);
@@ -61,13 +65,18 @@ export default function CheckoutPage() {
   const [addrForm, setAddrForm] = useState({ ...emptyForm });
   const [addrSaving, setAddrSaving] = useState(false);
   const [addrError, setAddrError] = useState("");
+  const [addressToDelete, setAddressToDelete] = useState<Address | null>(null);
+  const [addrDeleting, setAddrDeleting] = useState(false);
 
   // ── Payment state ─────────────────────────────────────────
-  const [payMethod, setPayMethod] = useState<"cod" | "upi" | "card">("cod");
+  const [payMethod, setPayMethod] = useState<"cod" | "razorpay" | null>(null);
   const [notes, setNotes] = useState("");
   const [placing, setPlacing] = useState(false);
   const [orderError, setOrderError] = useState("");
   const [paymentError, setPaymentError] = useState("");
+  const [isPaymentStarting, setIsPaymentStarting] = useState(false);
+  const paymentStartingRef = useRef(false);
+  const retryHydratedRef = useRef(false);
   const [placedOrder, setPlacedOrder] = useState<{
     orderId: string; internalOrderId: string; total: number;
     redeemedAmount?: number; redeemedDiscount?: number; redeemError?: string;
@@ -75,6 +84,23 @@ export default function CheckoutPage() {
     // which the success screen below treats identically to "paid".
     paymentStatus?: "paid" | "pending" | "failed";
   } | null>(null);
+
+  useEffect(() => {
+    if (retryHydratedRef.current) return;
+    retryHydratedRef.current = true;
+    const retryOrderId = new URLSearchParams(window.location.search).get("retryOrder");
+    if (!retryOrderId) return;
+    fetch("/api/orders").then(async (response) => {
+      const data = await response.json();
+      const order = (data.orders || []).find((item: { _id: string }) => item._id === retryOrderId);
+      if (!order || order.paymentMethod === "cod" || order.paymentStatus === "paid" || order.status === "cancelled") {
+        setOrderError("This order is not available for payment retry.");
+        return;
+      }
+      setPayMethod("razorpay");
+      setPlacedOrder({ orderId: order.orderId, internalOrderId: order._id, total: order.paymentAmount ?? order.total, paymentStatus: order.paymentStatus === "failed" ? "failed" : "pending" });
+    }).catch(() => setOrderError("Unable to load the order for payment retry."));
+  }, []);
 
   // Loads Razorpay's Checkout script on demand — never globally, only when an
   // online payment is actually about to start.
@@ -93,11 +119,18 @@ export default function CheckoutPage() {
   // Damru already redeemed for this order) — this only ever opens Razorpay
   // Checkout for that server-returned amount, never a frontend-computed one.
   async function startRazorpayPayment(internalOrderId: string) {
+    if (paymentStartingRef.current) return;
+    paymentStartingRef.current = true;
+    setIsPaymentStarting(true);
     setPaymentError("");
+    toast.info("Preparing secure payment…", "Please wait while Razorpay is initialized.", { id: `payment-${internalOrderId}` });
     const loaded = await loadRazorpayScript();
     if (!loaded) {
       setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
-      setPaymentError("Could not load the payment gateway. Please retry, or choose Cash on Delivery.");
+      setPaymentError("Unable to load Razorpay. Please try again.");
+      toast.error("Payment could not start", "Unable to load Razorpay. Please try again.", { id: `payment-${internalOrderId}` });
+      paymentStartingRef.current = false;
+      setIsPaymentStarting(false);
       return;
     }
 
@@ -110,7 +143,10 @@ export default function CheckoutPage() {
       const data = await res.json();
       if (data.error) {
         setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
-        setPaymentError(data.error);
+        setPaymentError("Unable to prepare payment.");
+        toast.error("Payment could not start", getUserResponseError(res,data,"Unable to prepare payment."), { id: `payment-${internalOrderId}` });
+        paymentStartingRef.current = false;
+        setIsPaymentStarting(false);
         return;
       }
 
@@ -118,12 +154,18 @@ export default function CheckoutPage() {
       // it as paid; never open a gateway popup for ₹0.
       if (data.zeroPayable) {
         setPlacedOrder(prev => prev && { ...prev, paymentStatus: "paid" });
+        toast.success("Order confirmed", "No additional payment was required.", { id: `payment-${internalOrderId}` });
+        paymentStartingRef.current = false;
+        setIsPaymentStarting(false);
         return;
       }
 
       if (!window.Razorpay) {
         setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
-        setPaymentError("Could not load the payment gateway. Please retry, or choose Cash on Delivery.");
+        setPaymentError("Unable to load Razorpay. Please try again.");
+        toast.error("Payment could not start", "Unable to load Razorpay. Please try again.", { id: `payment-${internalOrderId}` });
+        paymentStartingRef.current = false;
+        setIsPaymentStarting(false);
         return;
       }
       const rzp = new window.Razorpay({
@@ -148,8 +190,10 @@ export default function CheckoutPage() {
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
               setPlacedOrder(prev => prev && { ...prev, paymentStatus: "paid" });
+              toast.success("Payment successful", "Your order is now confirmed.", { id: `payment-${internalOrderId}` });
             } else {
-              setPaymentError(verifyData.error || "Payment verification failed.");
+              setPaymentError("Payment could not be verified. If money was deducted, please check your order status or contact support.");
+              toast.error("Payment verification failed", "If money was deducted, check My Orders or contact support.", { id: `payment-${internalOrderId}` });
               setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
             }
           } catch {
@@ -157,43 +201,75 @@ export default function CheckoutPage() {
             // may still have gone through. Don't claim failure here; the
             // Razorpay webhook reconciles this asynchronously either way.
             setPaymentError("We couldn't confirm your payment right away. Check My Orders shortly — it updates automatically once confirmed.");
+            toast.info("Payment verification pending", "Check My Orders shortly; it will update automatically.", { id: `payment-${internalOrderId}` });
           }
         },
         modal: {
           ondismiss: () => {
+            void fetch("/api/payments/razorpay/fail", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: internalOrderId, razorpayOrderId: data.razorpayOrderId }) });
             setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
             setPaymentError("Payment was cancelled.");
+            toast.warning("Payment cancelled", "Your order is not confirmed. You can retry payment.", { id: `payment-${internalOrderId}` });
           },
         },
         theme: { color: "#e67e22" },
       });
       rzp.on("payment.failed", () => {
+        void fetch("/api/payments/razorpay/fail", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: internalOrderId, razorpayOrderId: data.razorpayOrderId }) });
         setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
         setPaymentError("Payment failed. You can retry below.");
+        toast.error("Payment failed", "No payment was confirmed. Please retry.", { id: `payment-${internalOrderId}` });
       });
       rzp.open();
-    } catch {
+      paymentStartingRef.current = false;
+      setIsPaymentStarting(false);
+    } catch (error) {
       setPlacedOrder(prev => prev && { ...prev, paymentStatus: "failed" });
       setPaymentError("Unable to start payment. Please try again.");
+      toast.error("Payment could not start", getUserErrorMessage(error), { id: `payment-${internalOrderId}` });
+      paymentStartingRef.current = false;
+      setIsPaymentStarting(false);
     }
   }
 
   // ── Coupon from cart (passed via sessionStorage) ──────────
   const [couponCode, setCouponCode] = useState("");
-  const [discount, setDiscount] = useState(0);
 
   useEffect(() => {
-    // Real tax/delivery config so the preview total matches what /api/orders will
-    // actually charge — falls back to the existing hardcoded defaults on failure.
+    // Display metadata only. All monetary values come from /api/checkout/quote.
     fetch("/api/checkout/config")
       .then(r => r.json())
-      .then(cfg => {
-        if (typeof cfg.taxRate === "number") setTaxRate(cfg.taxRate);
-        if (typeof cfg.freeDeliveryAbove === "number") setFreeAbove(cfg.freeDeliveryAbove);
-        if (typeof cfg.deliveryCharge === "number") setDeliveryCharge(cfg.deliveryCharge);
-      })
+      .then(cfg => setTaxLabel(cfg.tax?.label || "Tax"))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      if (!items.length || (!isDineIn && !selectedAddr)) { setQuote(null); setQuoteError(""); setQuoteLoading(false); return; }
+      setQuoteLoading(true); setQuoteError("");
+      try {
+        const response = await fetch("/api/checkout/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            addressId: selectedAddr,
+            couponCode,
+            requestedDamru: Number(requestedDamru || 0),
+            tableToken: isDineIn ? tableInfo?.token : undefined,
+            items: items.map(item => ({ menuItemId: item.menuItemId, custom: item.custom, qty: item.qty })),
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) { setQuote(data.partialTotals || null); setQuoteError(data.error || "Unable to calculate order total."); return; }
+        setQuote(data.totals);
+      } catch (error) {
+        if ((error as { name?: string }).name !== "AbortError") { setQuote(null); setQuoteError("Unable to calculate order total. Please try again."); }
+      } finally { if (!controller.signal.aborted) setQuoteLoading(false); }
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [items, selectedAddr, couponCode, requestedDamru, isDineIn, tableInfo]);
 
   useEffect(() => {
     // Check for dine-in table session
@@ -209,7 +285,7 @@ export default function CheckoutPage() {
 
     // Read applied coupon from sessionStorage if cart page set it
     const saved = sessionStorage.getItem("appliedCoupon");
-    if (saved) { const c = JSON.parse(saved); setCouponCode(c.code); setDiscount(c.discount); }
+    if (saved) { const c = JSON.parse(saved); setCouponCode(c.code); }
     loadAddresses(isDineInOrder);
   }, []);
 
@@ -243,8 +319,8 @@ export default function CheckoutPage() {
   function closeModal() { setShowAddrModal(false); setEditingAddr(null); setAddrError(""); }
 
   async function handleSaveAddress() {
-    if (!addrForm.fullName || !addrForm.phone || !addrForm.house || !addrForm.city || !addrForm.state || !addrForm.pincode) { setAddrError("All required fields must be filled."); return; }
-    if (!/^[6-9]\d{9}$/.test(addrForm.phone.trim())) { setAddrError("Please enter a valid 10-digit phone number."); return; }
+    if (!addrForm.fullName || !addrForm.phone || !addrForm.house || !addrForm.city || !addrForm.state || !addrForm.pincode) { setAddrError("All required fields must be filled."); toast.error("Address not saved", "All required fields must be filled."); return; }
+    if (!/^[6-9]\d{9}$/.test(addrForm.phone.trim())) { setAddrError("Please enter a valid 10-digit phone number."); toast.error("Address not saved", "Please enter a valid 10-digit phone number."); return; }
 
     setAddrSaving(true); setAddrError("");
     try {
@@ -254,35 +330,51 @@ export default function CheckoutPage() {
         body: JSON.stringify(editingAddr ? { id: editingAddr._id, ...addrForm } : addrForm),
       });
       const data = await res.json();
-      if (data.error) { setAddrError(data.error); return; }
+      if (!res.ok || data.error) { const message=getUserResponseError(res,data,"Unable to save address.");setAddrError(message);toast.error("Address not saved",message,{id:"checkout-address"});return; }
       await loadAddresses();
       if (data.address) setSelectedAddr(data.address._id);
+      toast.success(editingAddr ? "Address updated" : "Address added");
       closeModal();
-    } catch { setAddrError("Failed to save. Please try again."); }
+    } catch { setAddrError("Failed to save. Please try again."); toast.error("Address not saved", "Please try again."); }
     finally { setAddrSaving(false); }
   }
 
-  async function handleDeleteAddress(id: string) {
-    if (!confirm("Delete this address?")) return;
-    await fetch("/api/address", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    if (selectedAddr === id) setSelectedAddr(null);
-    await loadAddresses();
+  async function handleDeleteAddress() {
+    if (!addressToDelete || addrDeleting) return;
+    const id = addressToDelete._id;
+    setAddrDeleting(true);
+    try {
+      const response = await fetch("/api/address", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      if (!response.ok) { const data=await response.json().catch(()=>null);toast.error("Address not deleted",getUserResponseError(response,data,"Please try again."),{id:"checkout-address-delete"});return; }
+      if (selectedAddr === id) setSelectedAddr(null);
+      setAddressToDelete(null);
+      await loadAddresses();
+      toast.success("Address deleted");
+    } catch {
+      toast.error("Address not deleted", "Please check your connection and try again.", { id: "checkout-address-delete" });
+    } finally {
+      setAddrDeleting(false);
+    }
   }
 
   // ── Place order ───────────────────────────────────────────
   async function handlePlaceOrder() {
-    if (!isDineIn && !selectedAddr) { setOrderError("Please select a delivery address."); return; }
-    if (items.length === 0) { setOrderError("Your cart is empty."); return; }
+    if (!isDineIn && !selectedAddr) { setOrderError("Please select a delivery address."); toast.error("Order not placed", "Please select a delivery address."); return; }
+    if (items.length === 0) { setOrderError("Your cart is empty."); toast.error("Order not placed", "Your cart is empty."); return; }
+    if (!payMethod) { setOrderError("Please select Cash on Delivery or Pay Online."); toast.error("Choose a payment method", "Select Cash on Delivery or Pay Online."); return; }
+    if (!quote || quoteLoading || quoteError) { setOrderError(quoteError || "Please wait while we calculate your order total."); toast.error("Order total unavailable", quoteError || "Please wait and try again."); return; }
     if (payMethod !== "cod" && !isLoggedIn) {
       setOrderError("Online payment requires login. Please log in, or choose Cash on Delivery.");
+      toast.error("Login required", "Log in for online payment or choose Cash on Delivery.");
       return;
     }
     setPlacing(true); setOrderError(""); setPaymentError("");
     try {
-      const body: any = {
+      const body: Record<string, unknown> = {
         paymentMethod: payMethod,
         couponCode,
         notes,
+        requestedDamru: Number(requestedDamru || 0),
       };
 
       if (isDineIn && tableInfo) {
@@ -290,11 +382,7 @@ export default function CheckoutPage() {
         if (!isLoggedIn) {
           body.items = items.map(i => ({
             menuItemId: i.menuItemId,
-            name: i.name,
-            image: i.image,
-            variantType: i.variantType,
             custom: i.custom,
-            price: i.price,
             qty: i.qty
           }));
         }
@@ -308,7 +396,7 @@ export default function CheckoutPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (data.error) { setOrderError(data.error); return; }
+      if (!res.ok || data.error) { const message=getUserResponseError(res,data,"Unable to prepare your order.");setOrderError(message);toast.error("Order not placed",message,{id:"checkout-order"});return; }
 
       sessionStorage.removeItem("appliedCoupon");
       sessionStorage.removeItem("dinein_table");
@@ -321,21 +409,22 @@ export default function CheckoutPage() {
         orderId: data.order.orderId, internalOrderId: data.order._id, total: data.order.total,
       };
 
-      const damruAmount = Number(requestedDamru);
-      if (isLoggedIn && damruAmount > 0) {
-        const redeemResult = await redeemDamru(data.order._id, damruAmount);
-        if (redeemResult.success) {
-          result.redeemedAmount = damruAmount;
-          result.redeemedDiscount = redeemResult.discount;
-          trackRewardEvent("damru_redeemed", { amount: damruAmount });
+      if (data.redemption) {
+        if (data.redemption.success) {
+          result.redeemedAmount = data.redemption.amount;
+          result.redeemedDiscount = data.redemption.discount;
+          trackRewardEvent("damru_redeemed", { amount: data.redemption.amount });
+          toast.success("Damru redeemed", `${data.redemption.amount} Damru applied for a ₹${data.redemption.discount} discount.`, { id: "checkout-damru" });
         } else {
-          result.redeemError = redeemResult.error || "Redemption failed.";
+          result.redeemError = getSafeUserMessage(data.redemption.error,"Redemption failed.");
+          toast.error("Damru not redeemed", result.redeemError, { id: "checkout-damru" });
         }
       }
 
       await clearCart();
 
       if (payMethod === "cod") {
+        toast.success("Order confirmed", `Order #${result.orderId} is confirmed for Cash on Delivery.`, { id: "checkout-order" });
         setPlacedOrder(result);
       } else {
         // Damru redemption (if any) has already been recorded above, so the
@@ -343,7 +432,7 @@ export default function CheckoutPage() {
         setPlacedOrder({ ...result, paymentStatus: "pending" });
         await startRazorpayPayment(data.order._id);
       }
-    } catch { setOrderError("Something went wrong. Please try again."); }
+    } catch (error) { const message=getUserErrorMessage(error);setOrderError(message);toast.error("Order not placed",message,{id:"checkout-order"}); }
     finally { setPlacing(false); }
   }
 
@@ -374,12 +463,10 @@ export default function CheckoutPage() {
               </p>
             )}
             <div style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              {failed && (
-                <button onClick={() => startRazorpayPayment(placedOrder.internalOrderId)}
+              <button onClick={() => startRazorpayPayment(placedOrder.internalOrderId)} disabled={isPaymentStarting}
                   style={{ background: "#e67e22", color: "#fff", border: "none", borderRadius: 10, padding: "12px 32px", fontFamily: "Poppins,sans-serif", fontSize: "1rem", fontWeight: 600, cursor: "pointer" }}>
-                  Retry Payment
-                </button>
-              )}
+                  {isPaymentStarting ? "Preparing secure payment…" : failed ? "Retry Payment" : "Pay Now"}
+              </button>
               <button onClick={() => router.push("/my-profile?tab=orders")}
                 style={{ background: "#f5f5f5", color: "#333", border: "none", borderRadius: 10, padding: "12px 32px", fontFamily: "Poppins,sans-serif", fontSize: "1rem", fontWeight: 600, cursor: "pointer" }}>
                 View My Orders
@@ -401,7 +488,7 @@ export default function CheckoutPage() {
               : "Your order has been confirmed."}
           </p>
           <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "#e67e22", marginBottom: 4 }}>Order ID: {placedOrder.orderId}</p>
-          <p style={{ color: "#666", marginBottom: 16 }}>Total: ₹{placedOrder.total} · Payment: {payMethod === "cod" ? (isDineIn ? "Pay at Counter / Cash" : "Cash on Delivery") : `${payMethod.toUpperCase()} (Paid via Razorpay)`}</p>
+          <p style={{ color: "#666", marginBottom: 16 }}>Total: ₹{placedOrder.total} · Payment: {payMethod === "cod" ? (isDineIn ? "Pay at Counter / Cash" : "Cash on Delivery") : "Online Payment (Paid via Razorpay)"}</p>
 
           {placedOrder.redeemedAmount != null && (
             <p style={{ background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 16px", display: "inline-block", marginBottom: 12, fontSize: 14 }}>
@@ -425,10 +512,9 @@ export default function CheckoutPage() {
   }
 
   // ── Totals ────────────────────────────────────────────────
-  const subtotalAfterDiscount = Math.max(0, totalPrice - discount);
-  const shipping = isDineIn ? 0 : (items.length > 0 ? (subtotalAfterDiscount >= freeAbove ? 0 : deliveryCharge) : 0);
-  const tax = items.length > 0 ? Math.round(subtotalAfterDiscount * taxRate / 100) : 0;
-  const grandTotal = subtotalAfterDiscount + tax + shipping;
+  const shipping = quote?.deliveryFee ?? 0;
+  const tax = quote?.taxAmount ?? 0;
+  const grandTotal = quote?.finalAmount ?? 0;
 
   const selectedAddress = addresses.find(a => a._id === selectedAddr);
 
@@ -463,7 +549,10 @@ export default function CheckoutPage() {
           ) : (
             addresses.map(addr => (
               <div key={addr._id} className={`address-card${selectedAddr === addr._id ? " selected" : ""}`}
-                onClick={() => setSelectedAddr(addr._id)}>
+                onClick={() => {
+                  setSelectedAddr(addr._id);
+                  toast.info("Delivery address selected", addr.label, { id: "checkout-address-selected" });
+                }}>
                 <div className="radio-circle"></div>
                 <div className="info">
                   <b>{addr.fullName} <span className="tag">{addr.label}</span></b>
@@ -476,7 +565,7 @@ export default function CheckoutPage() {
                   <i className="fa-solid fa-pencil" style={{ color: "#e66a00", fontSize: 16, cursor: "pointer" }}
                     onClick={e => { e.stopPropagation(); openEdit(addr); }}></i>
                   <i className="fa-solid fa-xmark" style={{ color: "#888", fontSize: 16, cursor: "pointer" }}
-                    onClick={e => { e.stopPropagation(); handleDeleteAddress(addr._id); }}></i>
+                    onClick={e => { e.stopPropagation(); setAddressToDelete(addr); }}></i>
                 </div>
               </div>
             ))
@@ -489,7 +578,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className="btn-row">
-            <button className="btn btn-next" onClick={() => { if (!selectedAddr) { alert("Please select or add an address."); return; } setStep(2); }}>
+            <button className="btn btn-next" onClick={() => { if (!selectedAddr) { toast.error("Address required", "Please select or add an address."); return; } setStep(2); }}>
               Next
             </button>
           </div>
@@ -503,7 +592,7 @@ export default function CheckoutPage() {
           <div className="shipping-option">
             <div className="shipping-left">
               <div className="radio-circle" style={{ borderColor: "#e66a00", background: "#e66a00", boxShadow: "inset 0 0 0 4px #fff" }}></div>
-              <b>Free</b>
+              <b>{quoteLoading ? "Calculating…" : fmtINR(quote ? shipping : 0)}</b>
               <span style={{ color: "#666", fontSize: 13 }}>Regular shipment</span>
             </div>
           </div>
@@ -556,23 +645,25 @@ export default function CheckoutPage() {
 
               <div style={{ marginTop: 16, fontSize: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span>Subtotal</span><b>₹{totalPrice}</b>
+                  <span>Subtotal</span><b>{quote ? fmtINR(quote.subtotal) : fmtINR(0)}</b>
                 </div>
-                {discount > 0 && (
+                {(quote?.couponDiscount || 0) > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, color: "#16a34a" }}>
-                    <span>Discount ({couponCode})</span><b>− ₹{discount}</b>
+                    <span>Coupon ({couponCode})</span><b>− {fmtINR(quote!.couponDiscount)}</b>
                   </div>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span>Tax</span><b>₹{tax}</b>
+                  <span>{taxLabel}</span><b>{quote ? fmtINR(tax) : fmtINR(0)}</b>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span>Shipping</span><b>₹{shipping}</b>
+                  <span>Delivery</span><b>{fmtINR(quote ? shipping : 0)}</b>
                 </div>
+                {(quote?.damruDiscount || 0) > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, color: "#16a34a" }}><span>Damru</span><b>− {fmtINR(quote!.damruDiscount)}</b></div>}
                 <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #eee", paddingTop: 10 }}>
                   <span style={{ fontWeight: 700 }}>Total</span>
-                  <b style={{ fontSize: 18, color: "#e67e22" }}>₹{grandTotal}</b>
+                  <b style={{ fontSize: 18, color: "#e67e22" }}>{quoteLoading ? "Calculating…" : quote ? fmtINR(grandTotal) : fmtINR(0)}</b>
                 </div>
+                {quoteError && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{quoteError}</p>}
               </div>
 
               {/* Redeem Damru */}
@@ -588,7 +679,7 @@ export default function CheckoutPage() {
                     placeholder="0"
                     style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontFamily: "Poppins,sans-serif", fontSize: 13, boxSizing: "border-box" }}
                   />
-                  <p className="rewards__redeem-note">The exact discount is confirmed once your order is placed.</p>
+                  <p className="rewards__redeem-note">The backend validates your balance and shows the exact discount above.</p>
                 </div>
               )}
 
@@ -604,13 +695,14 @@ export default function CheckoutPage() {
             {/* Payment */}
             <div>
               <h3>Payment</h3>
-              <div className="tab-header">
-                {(["cod", "upi", "card"] as const).map(m => (
-                  <div key={m} className={`tab-link${payMethod === m ? " active" : ""}`} onClick={() => setPayMethod(m)}>
-                    {m === "cod" ? "Cash on Delivery" : m === "upi" ? "UPI" : "Credit Card"}
-                  </div>
+              <div className="tab-header" role="radiogroup" aria-label="Payment method">
+                {(["cod", "razorpay"] as const).map(m => (
+                  <button key={m} type="button" role="radio" aria-checked={payMethod === m} className={`tab-link${payMethod === m ? " active" : ""}`} onClick={() => setPayMethod(m)}>
+                    {m === "cod" ? "Cash on Delivery" : "Pay Online"}
+                  </button>
                 ))}
               </div>
+              {!payMethod && <p style={{color:"#b45309",fontFamily:"Poppins,sans-serif",fontSize:13,marginTop:10}}>Choose how you want to pay before placing the order.</p>}
 
               {/* COD */}
               {payMethod === "cod" && (
@@ -624,56 +716,71 @@ export default function CheckoutPage() {
                   {orderError && <p style={{ color: "#dc2626", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>⚠ {orderError}</p>}
                   <div className="btn-row">
                     {!isDineIn && <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>}
-                    <button className="btn btn-next" onClick={handlePlaceOrder} disabled={placing}>
+<button className="btn btn-next" onClick={handlePlaceOrder} disabled={placing || quoteLoading || !quote || Boolean(quoteError)}>
                       {placing ? "Placing…" : "Place Order"}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* UPI */}
-              {payMethod === "upi" && (
-                <div className="payment-method active" id="pay-upi">
-                  <div className="upi-options">
-                    <div className="upi-item"><img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="GPay" />Google Pay</div>
-                    <div className="upi-item"><img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/phonepe-logo-icon.png" alt="PhonePe" />PhonePe</div>
-                    <div className="upi-item"><img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" alt="Paytm" />Paytm</div>
-                    <p><strong>Note:</strong> You&apos;ll choose your UPI app inside the secure Razorpay payment window.</p>
+              {payMethod === "razorpay" && (
+                <div className="payment-method active" id="pay-razorpay">
+                  <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: 18, marginBottom: 16 }}>
+                    <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 6px" }}>Secure Online Payment</p>
+                    <p style={{ margin: "0 0 8px", color: "#555" }}>UPI · Credit/Debit Cards · Net Banking · Wallets</p>
+                    <p style={{ margin: 0, color: "#777", fontSize: 12 }}>Payments are securely processed by Razorpay. Damru does not store your card, CVV, or UPI credentials.</p>
                   </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eee" }}><span>Order total</span><strong>{fmtINR(grandTotal)}</strong></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}><span>Payable</span><strong>{fmtINR(grandTotal)}</strong></div>
                   {orderError && <p style={{ color: "#dc2626", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>⚠ {orderError}</p>}
                   <div className="btn-row">
                     {!isDineIn && <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>}
-                    <button className="btn btn-next" onClick={handlePlaceOrder} disabled={placing}>
-                      {placing ? "Placing…" : "Pay via UPI"}
+<button className="btn btn-next" onClick={handlePlaceOrder} disabled={placing || quoteLoading || !quote || Boolean(quoteError)}>
+                      {placing ? "Preparing secure payment…" : !quote || quoteError ? "Total unavailable" : `Pay ${fmtINR(grandTotal)} Securely`}
                     </button>
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Card */}
-              {payMethod === "card" && (
-                <div className="payment-method active" id="pay-card">
-                  <div className="card-visual">
-                    <div className="chip"></div>
-                    <div className="number">•••• •••• •••• ••••</div>
-                    <div className="bottom"><span>Cardholder</span>
-                      <img src="https://img.icons8.com/color/48/000000/mastercard-logo.png" width="35" alt="MC" />
-                    </div>
-                  </div>
-                  <div className="input-group"><input type="text" placeholder="Cardholder Name" style={{ background: "none", border: "1px solid #eee" }} /></div>
-                  <div className="input-group"><input type="text" placeholder="Card Number" style={{ background: "none", border: "1px solid #eee" }} /></div>
-                  <div className="input-group"><input type="text" placeholder="Exp Date" style={{ background: "none", border: "1px solid #eee" }} /></div>
-                  <div className="input-group"><input type="text" placeholder="CVV" style={{ background: "none", border: "1px solid #eee" }} /></div>
-                  <p style={{ color: "#aaa", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>Card details are entered securely inside the Razorpay payment window — nothing above is sent to us.</p>
-                  {orderError && <p style={{ color: "#dc2626", fontFamily: "Poppins,sans-serif", fontSize: 13 }}>⚠ {orderError}</p>}
-                  <div className="btn-row">
-                    {!isDineIn && <button className="btn btn-back" onClick={() => setStep(2)}>Back</button>}
-                    <button className="btn btn-next" onClick={handlePlaceOrder} disabled={placing}>
-                      {placing ? "Placing…" : "Pay"}
-                    </button>
-                  </div>
-                </div>
-              )}
+      {addressToDelete && (
+        <div
+          className="address-confirm-overlay"
+          onMouseDown={event => { if (event.target === event.currentTarget && !addrDeleting) setAddressToDelete(null); }}
+        >
+          <div className="address-confirm" role="dialog" aria-modal="true" aria-labelledby="delete-address-title">
+            <button
+              type="button"
+              className="address-confirm__close"
+              aria-label="Close delete address dialog"
+              disabled={addrDeleting}
+              onClick={() => setAddressToDelete(null)}
+            >
+              <i className="fa-solid fa-xmark" />
+            </button>
+
+            <div className="address-confirm__icon"><i className="fa-regular fa-trash-can" /></div>
+            <span className="address-confirm__eyebrow">Address book</span>
+            <h2 id="delete-address-title">Remove this address?</h2>
+            <p className="address-confirm__copy">This saved address will be removed from your Damru account.</p>
+
+            <div className="address-confirm__preview">
+              <div className="address-confirm__pin"><i className="fa-solid fa-location-dot" /></div>
+              <div>
+                <strong>{addressToDelete.label}</strong>
+                <span>{addressToDelete.fullName} · {addressToDelete.phone}</span>
+                <p>{addressToDelete.house}{addressToDelete.area ? `, ${addressToDelete.area}` : ""}, {addressToDelete.city}, {addressToDelete.state} {addressToDelete.pincode}</p>
+              </div>
+            </div>
+
+            <div className="address-confirm__actions">
+              <button type="button" className="address-confirm__cancel" disabled={addrDeleting} onClick={() => setAddressToDelete(null)}>Keep address</button>
+              <button type="button" className="address-confirm__delete" disabled={addrDeleting} onClick={handleDeleteAddress}>
+                {addrDeleting ? <><i className="fa-solid fa-spinner fa-spin" /> Removing…</> : <><i className="fa-regular fa-trash-can" /> Remove address</>}
+              </button>
             </div>
           </div>
         </div>

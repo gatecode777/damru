@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSettings } from "@/lib/getSettings";
+import { getCheckoutChargesConfig } from "@/lib/checkout/checkoutCharges";
 
 /**
  * Read-only, customer-facing checkout preview config. `app/api/orders/route.ts`
@@ -10,10 +10,20 @@ import { getSettings } from "@/lib/getSettings";
  * fields getSettings() also carries.
  */
 export async function GET() {
-  const settings = await getSettings();
+  const settings = await getCheckoutChargesConfig();
   return NextResponse.json({
-    taxRate: settings.taxRate,
-    freeDeliveryAbove: settings.freeDeliveryAbove,
-    deliveryCharge: settings.deliveryCharge,
+    currency: settings.currency,
+    tax: {
+      enabled: settings.tax.enabled,
+      label: settings.tax.name,
+      calculationType: settings.tax.calculationType,
+      rate: settings.tax.calculationType === "PERCENTAGE" ? settings.tax.rate : null,
+    },
+    delivery: {
+      enabled: settings.delivery.enabled,
+      mode: settings.delivery.mode,
+      freeDeliveryThreshold: settings.delivery.freeDeliveryThreshold,
+      minimumOrder: settings.delivery.minimumOrder,
+    },
   });
 }

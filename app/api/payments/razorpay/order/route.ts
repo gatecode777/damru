@@ -4,8 +4,9 @@ import { getUserFromCookie } from "@/lib/userSession";
 import { connectDB } from "@/lib/mongodb";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rateLimit";
 import { getRazorpayClient, getRazorpayPublicKeyId, isRazorpayConfigured, toRazorpayAmount } from "@/lib/payments/razorpay";
-import { computePayableAmount } from "@/lib/payments/finalizePayment";
+import { computePayableAmount, finalizeRazorpayPayment } from "@/lib/payments/finalizePayment";
 import Order from "@/models/Order";
+import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
 
 /**
  * POST /api/payments/razorpay/order — body: { orderId }
@@ -49,17 +50,24 @@ export async function POST(req: NextRequest) {
     // against — nothing was ever charged via the gateway, so nothing is
     // ever refundable here, by construction rather than a null-handling special case.
     if (payable <= 0) {
-      const now = new Date();
-      await Order.findOneAndUpdate(
-        { _id: order._id, paymentStatus: { $ne: "paid" } },
-        { $set: { paymentStatus: "paid", paidAt: now, paymentVerifiedAt: now, paymentAmount: 0 } }
-      );
+      const zeroPaymentOrderId = order.razorpayOrderId || `zero_${order._id}`;
+      if (!order.razorpayOrderId) {
+        await Order.findByIdAndUpdate(order._id, { razorpayOrderId: zeroPaymentOrderId, paymentAmount: 0 });
+      }
+      const finalized = await finalizeRazorpayPayment({
+        orderId: String(order._id),
+        razorpayOrderId: zeroPaymentOrderId,
+        razorpayPaymentId: `zero_${order._id}`,
+      });
+      if (!finalized.success) return NextResponse.json({ error: finalized.error }, { status: 400 });
       return NextResponse.json({ success: true, zeroPayable: true });
     }
 
     // Reuse an existing, still-valid Razorpay order for a retried click/refresh
     // instead of minting a new one every time (PRD: prevent duplicate orders).
     if (order.razorpayOrderId && order.paymentAmount === payable) {
+      await Order.findByIdAndUpdate(order._id, { $set: { paymentStatus: "pending", status: "pending" }, $unset: { paymentFailedAt: 1 } });
+      await notifyPaymentEvent({ userId: order.userId!, type: "PAYMENT_PENDING", sourceId: order._id, sourceType: "Order", orderNumber: order.orderId, amount: payable, dedupSuffix: order.razorpayOrderId, route: `/checkout?retryOrder=${order._id}` });
       return NextResponse.json({
         success: true,
         razorpayOrderId: order.razorpayOrderId,
@@ -78,8 +86,10 @@ export async function POST(req: NextRequest) {
 
     await Order.findOneAndUpdate(
       { _id: order._id, paymentStatus: { $ne: "paid" } },
-      { $set: { razorpayOrderId: razorpayOrder.id, paymentAmount: payable } }
+      { $set: { razorpayOrderId: razorpayOrder.id, paymentAmount: payable, paymentStatus: "pending", status: "pending" }, $unset: { paymentFailedAt: 1 } }
     );
+
+    await notifyPaymentEvent({ userId: order.userId!, type: "PAYMENT_PENDING", sourceId: order._id, sourceType: "Order", orderNumber: order.orderId, amount: payable, dedupSuffix: razorpayOrder.id, route: `/checkout?retryOrder=${order._id}` });
 
     return NextResponse.json({
       success: true,

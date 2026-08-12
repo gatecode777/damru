@@ -12,7 +12,7 @@ import { sendNotificationEmail } from "@/lib/email";
  * failure can never affect the payment/refund state that already succeeded.
  */
 
-const PAYMENT_TYPES: ReadonlySet<NotificationType> = new Set(["PAYMENT_SUCCESSFUL", "PAYMENT_FAILED", "COD_CONFIRMED"]);
+const PAYMENT_TYPES: ReadonlySet<NotificationType> = new Set(["PAYMENT_SUCCESSFUL", "PAYMENT_PENDING", "PAYMENT_FAILED", "COD_CONFIRMED"]);
 
 // Email for HIGH-priority payment/refund outcomes only — not every pending/processing state.
 const EMAIL_ELIGIBLE_TYPES: ReadonlySet<NotificationType> = new Set([
@@ -52,9 +52,13 @@ export async function notifyPaymentEvent(input: NotifyPaymentEventInput): Promis
     await connectDB();
 
     const category = categoryFor(input.type);
-    const dedupKey = input.dedupSuffix
-      ? `notification:${category.toLowerCase()}:${input.sourceId}:${input.dedupSuffix}`
-      : `notification:${category.toLowerCase()}:${input.sourceId}`;
+    const dedupKey = [
+      "notification",
+      category.toLowerCase(),
+      input.sourceId,
+      input.type.toLowerCase(),
+      input.dedupSuffix,
+    ].filter(Boolean).join(":");
 
     const copy = buildNotificationCopy(input.type, input);
 
@@ -82,7 +86,7 @@ export async function notifyPaymentEvent(input: NotifyPaymentEventInput): Promis
       title: copy.title,
       message: copy.message,
       data: { entityType: input.entityType, entityId: input.entityId, amount: input.amount },
-      action: input.route ? { label: "View Order", route: input.route } : undefined,
+      action: input.route ? { label: input.type === "PAYMENT_PENDING" || input.type === "PAYMENT_FAILED" ? "Retry Payment" : "View Order", route: input.route } : undefined,
       channels,
       priority: HIGH_PRIORITY_TYPES.has(input.type) ? "HIGH" : "NORMAL",
       dedupKey,

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Search } from "lucide-react";
+import { useToast } from "@/components/website/Toast";
+import { getUserErrorMessage, getUserResponseError } from "@/lib/getUserErrorMessage";
 
 interface Comment {
   _id: string; name: string; avatar?: string; userId?: string;
@@ -170,6 +172,7 @@ export function BlogSidebar({ blogSlug, currentCategoryName }: { blogSlug: strin
 
 // ── Comments + Form — exact HTML structure ──────────────────────────────────
 export function BlogComments({ blogSlug }: { blogSlug: string }) {
+  const toast = useToast();
   const [comments,    setComments]    = useState<Comment[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [user,        setUser]        = useState<UserInfo | null>(null);
@@ -177,7 +180,6 @@ export function BlogComments({ blogSlug }: { blogSlug: string }) {
   const [commentText, setCommentText] = useState("");
   const [submitting,  setSubmitting]  = useState(false);
   const [err,  setErr]  = useState("");
-  const [ok,   setOk]   = useState("");
   const [replyingTo,  setReplyingTo]  = useState<string | null>(null); // comment._id being replied to
   const [replyTexts,  setReplyTexts]  = useState<Record<string, string>>({});
   const [replySubmitting, setReplySubmitting] = useState<string | null>(null);
@@ -202,19 +204,18 @@ export function BlogComments({ blogSlug }: { blogSlug: string }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!commentText.trim()) { setErr("Please write a comment."); return; }
-    setSubmitting(true); setErr(""); setOk("");
+    setSubmitting(true); setErr("");
     try {
       const res  = await fetch("/api/blog-comments", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ blogSlug, comment: commentText.trim() }),
       });
       const data = await res.json();
-      if (data.error) { setErr(data.error); return; }
+      if (!res.ok || data.error) { const message=getUserResponseError(res,data,"Unable to post your comment.");setErr(message);toast.error("Comment not posted",message,{id:"blog-comment"});return; }
       setComments(prev => [data.comment, ...prev]);
       setCommentText("");
-      setOk("Comment posted! ✅");
-      setTimeout(() => setOk(""), 3000);
-    } catch { setErr("Failed to post. Try again."); }
+      toast.success("Comment posted", undefined, { id: "blog-comment" });
+    } catch (error) { const message=getUserErrorMessage(error,"Unable to post your comment.");setErr(message);toast.error("Comment not posted",message,{id:"blog-comment"}); }
     finally { setSubmitting(false); }
   }
 
@@ -228,11 +229,13 @@ export function BlogComments({ blogSlug }: { blogSlug: string }) {
         body: JSON.stringify({ blogSlug, comment: text, parentId }),
       });
       const data = await res.json();
-      if (data.error) return;
+      if (!res.ok || data.error) { toast.error("Reply not posted", getUserResponseError(res,data,"Unable to post your reply."), { id: `blog-reply-${parentId}` }); return; }
       setComments(prev => [...prev, data.comment]);
       setReplyTexts(p => ({ ...p, [parentId]: "" }));
       setReplyingTo(null);
-    } finally { setReplySubmitting(null); }
+      toast.success("Reply posted", undefined, { id: `blog-reply-${parentId}` });
+    } catch (error) { toast.error("Reply not posted", getUserErrorMessage(error,"Unable to post your reply."), { id: `blog-reply-${parentId}` }); }
+    finally { setReplySubmitting(null); }
   }
 
   const totalCount = topLevel.length;
@@ -392,10 +395,6 @@ export function BlogComments({ blogSlug }: { blogSlug: string }) {
             {err && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", color:"#b91c1c",
               padding:"10px 14px", borderRadius:8, marginBottom:10,
               fontFamily:"Poppins,sans-serif", fontSize:13 }}>⚠ {err}</div>}
-            {ok  && <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", color:"#15803d",
-              padding:"10px 14px", borderRadius:8, marginBottom:10,
-              fontFamily:"Poppins,sans-serif", fontSize:13 }}>✓ {ok}</div>}
-
             <label>Comment</label>
             <textarea rows={5} value={commentText}
               onChange={e => setCommentText(e.target.value)}

@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, Tag, UtensilsCrossed,
   BarChart3, Settings, Bell, HelpCircle,
   LogOut, ChevronLeft, ChevronRight, FileText, BookOpen, Images, Ticket,
-  ShoppingBag,
+  ShoppingBag, ReceiptIndianRupee, ShieldAlert,
   CalendarDays,
   MessageSquareWarning, MapPin, CalendarCheck, UserCog, QrCode, Gift,
 } from "lucide-react";
@@ -35,7 +35,7 @@ interface Perms {
     analytics?: { view?: boolean };
     settings?: { view?: boolean };
     managers?: { view?: boolean };
-    [key: string]: any;
+    [key: string]: { view?: boolean } | undefined;
   };
 }
 
@@ -63,9 +63,18 @@ const navGroups = [
     ],
   },
   {
+    label: "Commerce",
+    items: [
+      { icon: ReceiptIndianRupee, label: "Checkout Charges", href: "/admin/checkout-charges", permission: "settings" },
+    ],
+  },
+  {
     label: "Loyalty",
     items: [
       { icon: Gift,            label: "Damru Rewards", href: "/admin/rewards", permission: "rewards" },
+      { icon: BarChart3,       label: "Rewards Analytics", href: "/admin/rewards/analytics", permission: "rewards" },
+      { icon: CalendarDays,    label: "Reward Campaigns", href: "/admin/rewards/campaigns", permission: "rewards" },
+      { icon: ShieldAlert,     label: "Risk & Abuse", href: "/admin/rewards/risk", permission: "rewards" },
     ],
   },
   {
@@ -100,7 +109,7 @@ export default function AdminSidebar() {
 
   useEffect(() => {
     // Fetch user permissions from API
-    fetch("/api/admin/permissions")
+    fetch("/api/admin/permissions", { cache: "no-store" })
       .then(res => res.json())
       .then(data => {
         setPerms(data);
@@ -135,6 +144,9 @@ export default function AdminSidebar() {
       items: group.items.filter(item => hasPermission(item.permission))
     }))
     .filter(group => group.items.length > 0);
+  const activeHref = filteredNavGroups.flatMap(group => group.items)
+    .filter(item => pathname === item.href || pathname.startsWith(item.href + "/"))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <>
@@ -158,7 +170,7 @@ export default function AdminSidebar() {
             <div key={group.label} className="nav-group">
               {!collapsed && <p className="nav-group-label">{group.label}</p>}
               {group.items.map(({ icon: Icon, label, href }) => {
-                const active = pathname === href || pathname.startsWith(href + "/");
+                const active = activeHref === href;
                 return (
                   <Link key={href} href={href} className={`nav-item${active ? " active" : ""}`} title={collapsed ? label : undefined}>
                     <span className={`nav-icon-wrap${active ? " active" : ""}`}>

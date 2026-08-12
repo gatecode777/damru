@@ -1957,26 +1957,6 @@ body {
     display: flex;
 }
 
-/*  TOAST  */
-.profile__toast {
-    position: fixed;
-    bottom: 28px;
-    right: 28px;
-    background: #1a1a1a;
-    color: #fff;
-    padding: 12px 22px;
-    border-radius: 8px;
-    font-size: 14px;
-    z-index: 9999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-}
-
-.profile__toast.show {
-    opacity: 1;
-}
-
 /*  FAQ FULL PAGE  */
 .profile__faq-page {
     display: none;
@@ -2714,13 +2694,6 @@ MOBILE (up to 767px) - RESPONSIVE ADJUSTMENTS
         width: 100%;
     }
 
-    /* Toast */
-    .profile__toast {
-        bottom: 15px;
-        right: 15px;
-        left: 15px;
-        text-align: center;
-    }
 }
 
 /* ============================================================

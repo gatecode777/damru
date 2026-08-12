@@ -79,6 +79,9 @@ export function buildNotificationCopy(type: NotificationType, ctx: NotificationC
     case "DAMRU_RESTORED":
       return { title: "↩️ Damru Restored", message: `${amount} Damru has been returned to your wallet${description ? ` — ${description}` : ""}` };
 
+    case "REWARD_ADJUSTED":
+      return { title: "Reward Adjustment", message: description || `${amount} Damru was adjusted on your account.` };
+
     // Orders
     case "ORDER_PLACED":
       return { title: "Order Confirmed 🎉", message: `Your order ${order} has been placed successfully.` };
@@ -96,8 +99,10 @@ export function buildNotificationCopy(type: NotificationType, ctx: NotificationC
     // Payments
     case "PAYMENT_SUCCESSFUL":
       return { title: "Payment Successful ✅", message: `Your payment for ${order} was successful.` };
+    case "PAYMENT_PENDING":
+      return { title: "Complete Your Payment", message: `Pay ₹${amount} to confirm ${order}. Your order will not be confirmed until payment succeeds.` };
     case "PAYMENT_FAILED":
-      return { title: "Payment Failed", message: `Your payment for ${order} could not be completed.${description ? ` ${description}` : ""}` };
+      return { title: "Payment Failed — Retry", message: `Payment for ${order} was not completed. Retry payment to confirm your order.${description ? ` ${description}` : ""}` };
     case "COD_CONFIRMED":
       return { title: "Order Confirmed — Pay on Delivery", message: `${order} is confirmed for Cash on Delivery.` };
 

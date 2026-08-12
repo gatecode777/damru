@@ -11,6 +11,9 @@ export type DamruTransactionCategory =
   | "mission"
   | "referral"
   | "order_reward"
+  | "campaign"
+  | "reward_reversal"
+  | "reward_debt_recovery"
   | "loyalty_tier"
   | "redemption"
   | "admin_credit"
@@ -30,6 +33,7 @@ export type RewardCoupon = {
   usageLimit?: number | null;
   usedCount?: number;
   expiryDate: string | null;
+  userId?: string | null;
 };
 
 export type RewardTransaction = {
@@ -162,6 +166,7 @@ export type RewardsDashboard = {
   damruBalance: number;
   damruTotalEarned: number;
   damruTotalRedeemed: number;
+  rewardDebt: number;
   loyaltyLevel: LoyaltyLevel;
   nextLevel: LoyaltyLevel | null;
   damruToNextLevel: number;

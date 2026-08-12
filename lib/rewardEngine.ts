@@ -11,6 +11,9 @@ import { getDailyStreakConfig } from "@/lib/getDailyStreakConfig";
 import { projectNextStreak, rewardDayForStreak, amountForDay, toDateStr } from "@/lib/dailyStreak";
 import { assignLotFields, allocateDebit, releaseAllocation } from "@/lib/rewards/damruAllocation";
 import { notifyRewardEvent, mapCreditCategoryToType } from "@/lib/notifications/rewardNotificationService";
+import { recoverRewardDebtFromCredit } from "@/lib/rewards/reversalEngine";
+import { evaluateAdminAdjustmentRisk, evaluateRedemptionRisk, evaluateRewardRisk, evaluateRiskSafely } from "@/lib/rewards/riskEngine";
+import { paymentEligibleOrderFilter } from "@/lib/orders/orderPaymentPolicy";
 
 interface CouponTemplate {
   type: "flat" | "percentage";
@@ -19,7 +22,7 @@ interface CouponTemplate {
   minOrderValue: number;
 }
 
-interface AwardDamruInput {
+export interface AwardDamruInput {
   userId: string | mongoose.Types.ObjectId;
   category: DamruTransactionCategory;
   amount: number;
@@ -31,6 +34,9 @@ interface AwardDamruInput {
   validForDays?: number | null;
   /** Opt this specific credit out of the standard expiry policy (e.g. an admin's "Never Expires" choice). */
   neverExpires?: boolean;
+  campaignId?: mongoose.Types.ObjectId;
+  campaignCode?: string;
+  campaignSnapshot?: Record<string, unknown>;
 }
 
 function loyaltyLevelFor(totalEarned: number, thresholds: { silver: number; gold: number; platinum: number }): LoyaltyLevel {
@@ -82,10 +88,15 @@ export async function awardDamru(input: AwardDamruInput) {
       idempotencyKey: input.idempotencyKey,
       ruleId: input.ruleId,
       orderId: input.orderId,
+      campaignId: input.campaignId,
+      campaignCode: input.campaignCode,
+      campaignSnapshot: input.campaignSnapshot,
       ...assignLotFields(input.amount, input.category, config, { neverExpires: input.neverExpires }),
     });
   } catch (err: unknown) {
     if (typeof err === "object" && err !== null && "code" in err && (err as { code: number }).code === 11000) {
+      const existing = await DamruTransaction.findOne({ idempotencyKey: input.idempotencyKey });
+      if (existing) await recoverRewardDebtFromCredit(existing._id);
       return { duplicate: true as const };
     }
     throw err;
@@ -100,6 +111,9 @@ export async function awardDamru(input: AwardDamruInput) {
 
   transaction.balanceAfter = user.damruBalance;
   await transaction.save();
+
+  const debtRecovery = await recoverRewardDebtFromCredit(transaction._id);
+  const finalBalance = "newBalance" in debtRecovery ? debtRecovery.newBalance : user.damruBalance;
 
   await recalcLoyaltyLevel(user._id, user.damruTotalEarned);
 
@@ -138,7 +152,14 @@ export async function awardDamru(input: AwardDamruInput) {
     });
   }
 
-  return { duplicate: false as const, transaction, newBalance: user.damruBalance, coupon };
+  await evaluateRiskSafely("reward-award", () => evaluateRewardRisk({
+    userId: user._id,
+    transactionId: transaction._id,
+    sourceType: "DamruTransaction",
+    sourceId: String(transaction._id),
+  }));
+
+  return { duplicate: false as const, transaction, newBalance: finalBalance, coupon, debtRecovery };
 }
 
 /** Redeem Damru at a fixed conversion rate. Concurrency-safe via conditional atomic decrement. */
@@ -193,6 +214,12 @@ export async function redeemDamru(userId: string | mongoose.Types.ObjectId, amou
     orderNumber: order.orderId,
     route: "/my-profile?tab=rewards",
   });
+
+  await evaluateRiskSafely("reward-redemption", () => evaluateRedemptionRisk({
+    userId,
+    transactionId: transaction._id,
+    orderId,
+  }));
 
   return { success: true as const, discount, newBalance: allocation.newBalance, transaction };
 }
@@ -259,6 +286,8 @@ export async function adjustDamru(input: {
 
     transaction.balanceAfter = user.damruBalance;
     await transaction.save();
+    const debtRecovery = await recoverRewardDebtFromCredit(transaction._id);
+    const finalBalance = "newBalance" in debtRecovery ? debtRecovery.newBalance : user.damruBalance;
     await recalcLoyaltyLevel(user._id, user.damruTotalEarned);
 
     await notifyRewardEvent({
@@ -271,7 +300,13 @@ export async function adjustDamru(input: {
       route: "/my-profile?tab=rewards",
     });
 
-    return { success: true as const, newBalance: user.damruBalance, transaction };
+    await evaluateRiskSafely("admin-credit", () => evaluateAdminAdjustmentRisk({
+      userId: user._id,
+      transactionId: transaction._id,
+      adminId: input.adminId,
+    }));
+
+    return { success: true as const, newBalance: finalBalance, transaction, debtRecovery };
   }
 
   const allocation = await allocateDebit(input.userId, input.amount);
@@ -300,6 +335,12 @@ export async function adjustDamru(input: {
     throw err;
   }
 
+  await evaluateRiskSafely("admin-debit", () => evaluateAdminAdjustmentRisk({
+    userId: input.userId,
+    transactionId: transaction._id,
+    adminId: input.adminId,
+  }));
+
   return { success: true as const, newBalance: allocation.newBalance, transaction };
 }
 
@@ -323,7 +364,9 @@ export async function checkAndAwardFirstOrderReward(userId: string | mongoose.Ty
   const rule = await RewardRule.findOne({ category: "first_order", isActive: true });
   if (!rule || rule.amount <= 0) return { skipped: true as const };
 
-  const deliveredCount = await Order.countDocuments({ userId, status: "delivered" });
+  const order = await Order.exists({ _id: orderId, userId, status: "delivered", ...paymentEligibleOrderFilter() });
+  if (!order) return { skipped: true as const };
+  const deliveredCount = await Order.countDocuments({ userId, status: "delivered", ...paymentEligibleOrderFilter() });
   if (deliveredCount !== 1) return { skipped: true as const };
 
   return awardDamru({
@@ -335,6 +378,17 @@ export async function checkAndAwardFirstOrderReward(userId: string | mongoose.Ty
     ruleId: rule._id,
     orderId,
   });
+}
+
+/** Base order policy: floor(merchandise subtotal after coupon / ₹10). */
+export async function checkAndAwardOrderReward(userId: string | mongoose.Types.ObjectId, orderId: string | mongoose.Types.ObjectId) {
+  await connectDB();
+  const order = await Order.findOne({ _id: orderId, userId, status: "delivered", ...paymentEligibleOrderFilter() }).lean();
+  if (!order) return { skipped: true as const };
+  const eligibleAmount = Math.max(0, order.eligibleRewardAmount ?? Math.max(0, order.subtotal - order.discount));
+  const amount = Math.floor(eligibleAmount / 10);
+  if (amount <= 0) return { skipped: true as const };
+  return awardDamru({ userId, category: "order_reward", amount, description: `Order reward for ${order.orderId}`, idempotencyKey: `order_reward:${order._id}`, orderId: order._id });
 }
 
 // Occasion rewards (birthday/anniversary) are calendar-date concepts tied to a real-world

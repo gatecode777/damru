@@ -2,11 +2,13 @@
 
 import React, { useState, useMemo, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, MessageSquareWarning, Trash2, Loader2, ChevronDown, Save } from "lucide-react";
+import { Search, X, MessageSquareWarning, Trash2, Loader2, ChevronDown, Save, Check, Minus, CircleDot, CircleCheck } from "lucide-react";
 import type { ComplaintRow } from "./page";
 import { useToast } from "@/components/admin/Toast";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { getAdminResponseError } from "@/lib/admin-error";
 
-interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
+interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, Record<string, boolean>>; }
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; dot: string }> = {
   open:        { bg: "#fef2f2", color: "#b91c1c", border: "#fecaca", dot: "#dc2626" },
@@ -27,6 +29,21 @@ const ISSUE_COLORS: Record<string, string> = {
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function SelectionCheckbox({ checked, partial = false, label, onChange }: { checked: boolean; partial?: boolean; label: string; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`reservation-checkbox${checked || partial ? " reservation-checkbox--checked" : ""}`}
+      role="checkbox"
+      aria-checked={partial ? "mixed" : checked}
+      aria-label={label}
+      onClick={onChange}
+    >
+      {partial ? <Minus size={12} strokeWidth={3} /> : checked ? <Check size={12} strokeWidth={3} /> : null}
+    </button>
+  );
 }
 
 // ── Fixed-position status dropdown ───────────────────────────
@@ -106,7 +123,6 @@ function DetailPanel({ complaint, onUpdated, canEdit }: { complaint: ComplaintRo
   const toast = useToast();
   const [note,     setNote]     = useState(complaint.adminNote || "");
   const [saving,   setSaving]   = useState(false);
-  const [isPending,startTransition] = useTransition();
 
   async function saveNote() {
     if (!canEdit) return;
@@ -125,7 +141,7 @@ function DetailPanel({ complaint, onUpdated, canEdit }: { complaint: ComplaintRo
 
   return (
     <tr>
-      <td colSpan={6} style={{ padding: 0, border: "none" }}>
+      <td colSpan={7} style={{ padding: 0, border: "none" }}>
         <div style={{ padding: "16px 20px 20px", background: "#fafafa", borderTop: "1px solid #f3f4f6", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
 
           {/* Left — complaint details */}
@@ -203,6 +219,12 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
   const [typeFilter,  setTypeFilter]  = useState("all");
   const [expandedId,  setExpandedId]  = useState<string | null>(null);
   const [deletingId,  setDeletingId]  = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; subject: string } | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [pendingBulkDelete, setPendingBulkDelete] = useState<string[]>([]);
+  const [bulkDeleteReason, setBulkDeleteReason] = useState("");
 
   const issueTypes = ["Order Issue","Payment Issue","Delivery Issue","Wrong Items","Missing Items","Account Issue","Other"];
 
@@ -221,26 +243,126 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
     });
   }, [complaints, search, statusFilter, typeFilter]);
 
+  const allFilteredSelected = filtered.length > 0 && filtered.every((complaint) => selected.has(complaint._id));
+  const someFilteredSelected = !allFilteredSelected && filtered.some((complaint) => selected.has(complaint._id));
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
+  function toggleOne(id: string) {
+    setSelected((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllFiltered() {
+    setSelected((previous) => {
+      const next = new Set(previous);
+      filtered.forEach((complaint) => allFilteredSelected ? next.delete(complaint._id) : next.add(complaint._id));
+      return next;
+    });
+  }
+
   function handleUpdated(id: string, patch: Partial<ComplaintRow>) {
     setComplaints(prev => prev.map(c => c._id === id ? { ...c, ...patch } : c));
     router.refresh();
   }
 
-  async function handleDelete(id: string, subject: string) {
+  async function updateSelectedStatus(status: "in_progress" | "resolved") {
+    if (!can("edit") || selected.size === 0) return;
+    const ids = [...selected];
+    setBulkLoading(true);
+    try {
+      const response = await fetch("/api/complaints/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, status }),
+      });
+      if (!response.ok) {
+        toast.error("Complaints not updated", await getAdminResponseError(response, "Unable to update selected complaints."));
+        return;
+      }
+      const payload = await response.json() as { updatedIds?: string[] };
+      const updatedIds = new Set(payload.updatedIds ?? ids);
+      setComplaints((previous) => previous.map((complaint) => updatedIds.has(complaint._id) ? { ...complaint, status } : complaint));
+      clearSelection();
+      router.refresh();
+      toast.success(`${updatedIds.size} complaint${updatedIds.size === 1 ? "" : "s"} ${status === "resolved" ? "resolved" : "moved to in progress"}`);
+    } catch {
+      toast.error("Unable to update selected complaints");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function deleteSelected() {
+    if (!can("delete") || pendingBulkDelete.length === 0 || bulkDeleteReason.trim().length < 5) return;
+    setBulkLoading(true);
+    try {
+      const response = await fetch("/api/complaints/bulk", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: pendingBulkDelete, reason: bulkDeleteReason.trim() }),
+      });
+      if (!response.ok) {
+        toast.error("Complaints not deleted", await getAdminResponseError(response, "Unable to delete selected complaints."));
+        return;
+      }
+      const payload = await response.json() as { deletedIds?: string[] };
+      const deletedIds = new Set(payload.deletedIds ?? pendingBulkDelete);
+      setComplaints((previous) => previous.filter((complaint) => !deletedIds.has(complaint._id)));
+      clearSelection();
+      setPendingBulkDelete([]);
+      setBulkDeleteReason("");
+      if (expandedId && deletedIds.has(expandedId)) setExpandedId(null);
+      router.refresh();
+      toast.success(`${deletedIds.size} complaint${deletedIds.size === 1 ? "" : "s"} deleted`);
+    } catch {
+      toast.error("Unable to delete selected complaints");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleDelete() {
     if (!can("delete")) return;
-    if (!confirm(`Delete complaint "${subject}"? This cannot be undone.`)) return;
+    if (!pendingDelete || deleteReason.trim().length < 5) return;
+    const { id } = pendingDelete;
     setDeletingId(id);
-    const res = await fetch(`/api/complaints/${id}`, { method: "DELETE" });
-    if (!res.ok) { setDeletingId(null); toast.error("Unable to delete complaint"); return; }
-    setComplaints(prev => prev.filter(c => c._id !== id));
-    setDeletingId(null);
-    if (expandedId === id) setExpandedId(null);
-    router.refresh();
-    toast.success("Complaint deleted");
+    try {
+      const res = await fetch(`/api/complaints/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: deleteReason.trim() }),
+      });
+      if (!res.ok) {
+        toast.error("Complaint not deleted", await getAdminResponseError(res, "Unable to delete complaint."));
+        return;
+      }
+      setComplaints(prev => prev.filter(c => c._id !== id));
+      setSelected((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+      setPendingDelete(null);
+      setDeleteReason("");
+      if (expandedId === id) setExpandedId(null);
+      router.refresh();
+      toast.success("Complaint deleted");
+    } catch {
+      toast.error("Unable to delete complaint");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
-    <>
+    <div className="reservations-admin complaints-admin">
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* Toolbar */}
@@ -249,15 +371,15 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
           <div className="searchbox">
             <Search size={14} className="search-ic" />
             <input className="search-inp" placeholder="Search by name, email, subject…"
-              value={search} onChange={e => setSearch(e.target.value)} />
-            {search && <button onClick={() => setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#9ca3af",display:"flex",padding:0 }}><X size={13}/></button>}
+              value={search} onChange={e => { setSearch(e.target.value); clearSelection(); }} />
+            {search && <button onClick={() => { setSearch(""); clearSelection(); }} style={{ background:"none",border:"none",cursor:"pointer",color:"#9ca3af",display:"flex",padding:0 }}><X size={13}/></button>}
           </div>
 
           {/* Status tabs */}
           <div style={{ display: "flex", gap: 4 }}>
             {["all","open","in_progress","resolved","closed"].map(k => (
               <button key={k} className={`cat-tab${statusFilter===k?" tab-active":""}`}
-                onClick={() => setStatusFilter(k)}
+                onClick={() => { setStatusFilter(k); clearSelection(); }}
                 style={{ whiteSpace: "nowrap" }}>
                 {k === "all" ? "All" : k.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())}
               </button>
@@ -265,15 +387,47 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
           </div>
 
           {/* Issue type filter */}
-          <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+          <select className="filter-select" value={typeFilter} onChange={e => { setTypeFilter(e.target.value); clearSelection(); }}>
             <option value="all">All Types</option>
             {issueTypes.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
       </div>
 
+      {selected.size > 0 && (can("edit") || can("delete")) && (
+        <div className="bulk-bar reservation-bulk-bar">
+          <div className="bulk-bar-left">
+            <div className="reservation-selection-summary">
+              <span className="reservation-selection-icon"><Check size={17} strokeWidth={2.6} /></span>
+              <span className="reservation-selection-copy">
+                <span className="bulk-count">{selected.size} complaint{selected.size === 1 ? "" : "s"} selected</span>
+                <span className="reservation-selection-hint">Choose an action for the selected complaints</span>
+              </span>
+            </div>
+            <button className="bulk-bar-clear" onClick={clearSelection} disabled={bulkLoading}><X size={12} /> Clear</button>
+          </div>
+          <div className="bulk-bar-actions">
+            {can("edit") && (
+              <>
+                <button className="bulk-btn reservation-bulk-button complaint-bulk-button--progress" onClick={() => void updateSelectedStatus("in_progress")} disabled={bulkLoading}>
+                  <CircleDot size={13} /> In progress
+                </button>
+                <button className="bulk-btn reservation-bulk-button reservation-bulk-button--confirm" onClick={() => void updateSelectedStatus("resolved")} disabled={bulkLoading}>
+                  <CircleCheck size={13} /> Resolve selected
+                </button>
+              </>
+            )}
+            {can("delete") && (
+              <button className="bulk-btn reservation-bulk-button reservation-bulk-button--decline" onClick={() => { setPendingBulkDelete([...selected]); setBulkDeleteReason(""); }} disabled={bulkLoading}>
+                <Trash2 size={13} /> Delete selected
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Table */}
-      <div className="card" style={{ overflow: "hidden", padding: 0 }}>
+      <div className="card reservation-table-card" style={{ overflow: "hidden", padding: 0 }}>
         {filtered.length === 0 ? (
           <div className="empty-state" style={{ padding: "60px 20px" }}>
             <MessageSquareWarning size={40} />
@@ -283,9 +437,12 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="data-table">
+            <table className="data-table reservation-table">
               <thead>
                 <tr>
+                  <th style={{ width: 42 }}>
+                    <SelectionCheckbox checked={allFilteredSelected} partial={someFilteredSelected} onChange={toggleAllFiltered} label="Select all visible complaints" />
+                  </th>
                   <th>Customer</th>
                   <th>Issue Type</th>
                   <th>Subject</th>
@@ -297,12 +454,15 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
               <tbody>
                 {filtered.map(c => {
                   const isExpanded = expandedId === c._id;
-                  const ss = STATUS_STYLE[c.status] ?? STATUS_STYLE.open;
+                  const isSelected = selected.has(c._id);
                   const typeColor = ISSUE_COLORS[c.issueType] ?? "#6b7280";
                   return (
                     <React.Fragment key={c._id}>
-                      <tr style={{ cursor: "pointer", background: isExpanded ? "#fff7ed" : undefined }}
+                      <tr className={`reservation-row${isSelected ? " reservation-row--selected" : ""}`} style={{ cursor: "pointer" }}
                         onClick={() => setExpandedId(isExpanded ? null : c._id)}>
+                        <td onClick={(event) => event.stopPropagation()}>
+                          <SelectionCheckbox checked={isSelected} onChange={() => toggleOne(c._id)} label={`Select complaint ${c.subject}`} />
+                        </td>
                         <td>
                           <div style={{ fontFamily: "DM Sans,sans-serif" }}>
                             <p style={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827", margin: 0 }}>{c.userName}</p>
@@ -336,7 +496,7 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
                               </span>
                             )}
                             {can("delete") && (
-                              <button onClick={() => handleDelete(c._id, c.subject)} disabled={deletingId === c._id}
+                              <button onClick={() => { setPendingDelete({ id: c._id, subject: c.subject }); setDeleteReason(""); }} disabled={deletingId === c._id}
                                 style={{ background: "#fef2f2", border: "none", borderRadius: 7, padding: "5px 8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center" }}>
                                 {deletingId === c._id
                                   ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />
@@ -359,6 +519,78 @@ export default function ComplaintsClient({ complaints: initial, perms }: { compl
       <p style={{ fontFamily: "DM Sans,sans-serif", fontSize: "0.78rem", color: "#9ca3af", textAlign: "right" }}>
         Showing {filtered.length} of {complaints.length} complaints
       </p>
-    </>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete complaint?"
+        description={pendingDelete
+          ? `“${pendingDelete.subject}” will be permanently removed. Tell the customer why it was removed.`
+          : ""}
+        cancelLabel="Keep complaint"
+        confirmLabel="Delete complaint"
+        busy={Boolean(pendingDelete && deletingId === pendingDelete.id)}
+        confirmDisabled={deleteReason.trim().length < 5}
+        onCancel={() => {
+          if (!deletingId) {
+            setPendingDelete(null);
+            setDeleteReason("");
+          }
+        }}
+        onConfirm={() => void handleDelete()}
+      >
+        <div className="admin-delete-message">
+          <label className="decline-dialog__label" htmlFor="delete-complaint-reason">Message to customer</label>
+          <textarea
+            id="delete-complaint-reason"
+            className="decline-dialog__textarea"
+            value={deleteReason}
+            onChange={(event) => setDeleteReason(event.target.value.slice(0, 500))}
+            placeholder="Example: This complaint was submitted twice, so we removed the duplicate."
+            rows={4}
+            maxLength={500}
+            disabled={Boolean(deletingId)}
+          />
+          <div className="decline-dialog__help">
+            <span>{deleteReason.trim().length < 5 ? "Enter at least 5 characters to continue." : "The customer will receive this message."}</span>
+            <span>{deleteReason.length}/500</span>
+          </div>
+        </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={pendingBulkDelete.length > 0}
+        title={`Delete ${pendingBulkDelete.length} complaints?`}
+        description="The selected complaints will be permanently removed. Enter one clear message that will be sent to every affected customer."
+        cancelLabel="Keep complaints"
+        confirmLabel={`Delete ${pendingBulkDelete.length} complaints`}
+        busy={bulkLoading}
+        confirmDisabled={bulkDeleteReason.trim().length < 5}
+        onCancel={() => {
+          if (!bulkLoading) {
+            setPendingBulkDelete([]);
+            setBulkDeleteReason("");
+          }
+        }}
+        onConfirm={() => void deleteSelected()}
+      >
+        <div className="admin-delete-message">
+          <label className="decline-dialog__label" htmlFor="bulk-delete-complaint-reason">Message to customers</label>
+          <textarea
+            id="bulk-delete-complaint-reason"
+            className="decline-dialog__textarea"
+            value={bulkDeleteReason}
+            onChange={(event) => setBulkDeleteReason(event.target.value.slice(0, 500))}
+            placeholder="Example: These were duplicate submissions, so we removed them from your support history."
+            rows={4}
+            maxLength={500}
+            disabled={bulkLoading}
+          />
+          <div className="decline-dialog__help">
+            <span>{bulkDeleteReason.trim().length < 5 ? "Enter at least 5 characters to continue." : "Every affected customer will receive this message."}</span>
+            <span>{bulkDeleteReason.length}/500</span>
+          </div>
+        </div>
+      </ConfirmDialog>
+    </div>
   );
 }

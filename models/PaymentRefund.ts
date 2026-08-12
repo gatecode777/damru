@@ -54,6 +54,7 @@ const PaymentRefundSchema = new Schema<IPaymentRefund>(
 
 PaymentRefundSchema.index({ orderId: 1, createdAt: -1 });
 PaymentRefundSchema.index({ gatewayRefundId: 1 });
+PaymentRefundSchema.index({ userId: 1, status: 1, processedAt: -1 }, { sparse: true });
 
 const PaymentRefund: Model<IPaymentRefund> =
   mongoose.models.PaymentRefund || mongoose.model<IPaymentRefund>("PaymentRefund", PaymentRefundSchema);

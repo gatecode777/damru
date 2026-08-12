@@ -3,18 +3,18 @@ import { getDamruConfig } from "@/lib/getDamruConfig";
 import Order, { IOrder } from "@/models/Order";
 import DamruTransaction from "@/models/DamruTransaction";
 import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
+import { notifyOrderEvent } from "@/lib/notifications/orderNotificationService";
 
 /**
- * The authoritative payable amount for a given order, in rupees. `order.total`
- * only ever reflects the coupon discount (see app/api/orders/route.ts) — a
- * Damru redemption for the same order is a separate call (lib/rewardEngine.ts's
- * redeemDamru) that debits the wallet and returns a ₹ discount to the caller
- * WITHOUT writing it back onto the order. For COD that's fine (the existing,
- * unchanged behavior: full order.total collected, Damru shown as a recorded
- * rebate). For an actual gateway charge we cannot silently overcharge by that
- * same amount, so we net it out here — server-side, never trusting the client.
+ * Returns the backend-authoritative payable amount. New orders persist the
+ * checkout engine's final amount; historical orders use the legacy redemption
+ * lookup so existing payment records remain compatible.
  */
-export async function computePayableAmount(order: Pick<IOrder, "_id" | "total">): Promise<number> {
+export async function computePayableAmount(order: Pick<IOrder, "_id" | "total" | "finalAmount" | "damruDiscount">): Promise<number> {
+  // New orders snapshot the final payable after every configured charge and
+  // Damru redemption. Historical orders predate those fields and retain the
+  // transaction lookup below for backward compatibility.
+  if (typeof order.finalAmount === "number") return Math.max(0, order.finalAmount);
   await connectDB();
   const redemption = await DamruTransaction.findOne({
     idempotencyKey: `redeem_order_${order._id}`,
@@ -61,6 +61,7 @@ export async function finalizeRazorpayPayment(input: {
     {
       $set: {
         paymentStatus: "paid",
+        status: "confirmed",
         razorpayPaymentId: input.razorpayPaymentId,
         paymentVerifiedAt: now,
         paidAt: now,
@@ -74,14 +75,23 @@ export async function finalizeRazorpayPayment(input: {
   if (!order) return { success: true, alreadyFinalized: true };
 
   if (order.userId) {
-    await notifyPaymentEvent({
-      userId: order.userId,
-      type: "PAYMENT_SUCCESSFUL",
-      sourceId: order._id,
-      sourceType: "Order",
-      orderNumber: order.orderId,
-      route: "/my-profile?tab=orders",
-    });
+    await Promise.all([
+      notifyPaymentEvent({
+        userId: order.userId,
+        type: "PAYMENT_SUCCESSFUL",
+        sourceId: order._id,
+        sourceType: "Order",
+        orderNumber: order.orderId,
+        route: "/my-profile?tab=orders",
+      }),
+      notifyOrderEvent({
+        userId: order.userId,
+        type: "ORDER_PLACED",
+        sourceId: order._id,
+        orderNumber: order.orderId,
+        route: "/my-profile?tab=orders",
+      }),
+    ]);
   }
 
   return { success: true, alreadyFinalized: false, order };
@@ -92,7 +102,7 @@ export async function markRazorpayPaymentFailed(input: { orderId: string; razorp
   await connectDB();
   const order = await Order.findOneAndUpdate(
     { _id: input.orderId, razorpayOrderId: input.razorpayOrderId, paymentStatus: { $ne: "paid" } },
-    { $set: { paymentStatus: "failed", paymentFailedAt: new Date() } },
+    { $set: { paymentStatus: "failed", status: "pending", paymentFailedAt: new Date() } },
     { new: true }
   );
 
@@ -103,7 +113,9 @@ export async function markRazorpayPaymentFailed(input: { orderId: string; razorp
       sourceId: order._id,
       sourceType: "Order",
       orderNumber: order.orderId,
-      route: "/my-profile?tab=orders",
+      amount: order.paymentAmount ?? order.total,
+      description: "No charge was confirmed. Tap retry to pay securely.",
+      route: `/checkout?retryOrder=${order._id}`,
     });
   }
 }
