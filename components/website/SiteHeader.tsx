@@ -6,17 +6,24 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
 import { useRewards } from "@/lib/rewards/RewardsProvider";
+import { useToast } from "@/components/website/Toast";
+import { getUserResponseError } from "@/lib/getUserErrorMessage";
 
 type AuthScreen = "login" | "register" | "forgot" | "otp" | "reset";
 interface UserInfo { id: string; name: string; email: string; avatar?: string }
 
 async function apiPost(path: string, body: object) {
-  const r = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return r.json();
+  try {
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    return { ...data, _status: r.status };
+  } catch {
+    return { error: "Unable to connect. Check your internet connection.", _status: 0 };
+  }
 }
 
 
@@ -99,6 +106,7 @@ const OtpBoxes = forwardRef<{ getCode: () => string }, object>(function OtpBoxes
 });
 
 export default function Header() {
+  const toast = useToast();
   const pathname = usePathname();
   const router = useRouter();
   const { totalItems } = useCart();
@@ -109,7 +117,8 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  // Kept only while the legacy inline search markup is phased out below.
+  const [isMobileSearchOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState<AuthScreen>("login");
   const [showPassword, setShowPassword] = useState({ login: false, register: false, confirm: false });
   const [countdown, setCountdown] = useState(60);
@@ -119,7 +128,6 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ _id: string; name: string; desc: string; image: string; price: number; hasVariants: boolean; category: string; catSlug: string }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -300,14 +308,17 @@ export default function Header() {
   async function markAllNotifsRead() {
     setNotifItems(prev => prev.map(n => ({ ...n, isRead: true })));
     setNotifUnread(0);
-    await fetch("/api/notifications/read-all", { method: "PATCH" });
+    const response = await fetch("/api/notifications/read-all", { method: "PATCH" });
+    if (response.ok) toast.success("Notifications updated", "All notifications were marked as read.", { id: "notifications-read-all" });
+    else toast.error("Notifications not updated", getUserResponseError(response), { id: "notifications-read-all-error" });
   }
 
   async function openNotif(n: { _id: string; isRead: boolean; action?: { route: string } }) {
     if (!n.isRead) {
       setNotifItems(prev => prev.map(x => x._id === n._id ? { ...x, isRead: true } : x));
       setNotifUnread(prev => Math.max(0, prev - 1));
-      await fetch(`/api/notifications/${n._id}/read`, { method: "PATCH" });
+      const response = await fetch(`/api/notifications/${n._id}/read`, { method: "PATCH" });
+      if (!response.ok) toast.error("Notification not updated", getUserResponseError(response), { id: `notification-read-${n._id}` });
     }
     setNotifOpen(false);
     if (n.action?.route) router.push(n.action.route);
@@ -346,18 +357,23 @@ export default function Header() {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [searchQuery, handleSearch]);
 
-  // Close search dropdown on outside click (desktop only)
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (!isMobile && searchRef.current && !searchRef.current.contains(e.target as Node)) {
+    if (!isSearchOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
         setIsSearchOpen(false);
         setSearchQuery("");
         setSearchResults([]);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [isMobile]);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSearchOpen]);
 
   // ── Your original handlers ────────────────────────────────────
   const toggleMenu = () => {
@@ -373,29 +389,19 @@ export default function Header() {
   };
 
   const handleSearchOpen = () => {
-    if (isMobile) {
-      setIsMobileSearchOpen(true);
-      setTimeout(() => {
-        mobileSearchInputRef.current?.focus();
-      }, 100);
-    } else {
-      setIsSearchOpen(!isSearchOpen);
-      if (!isSearchOpen) {
-        setTimeout(() => {
-          searchInputRef.current?.focus();
-        }, 80);
-      } else {
-        setSearchQuery("");
-        setSearchResults([]);
-      }
-    }
+    setNotifOpen(false);
+    setIsMenuOpen(false);
+    setIsSearchOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 80);
   };
 
-  const handleMobileSearchClose = () => {
-    setIsMobileSearchOpen(false);
+  const handleSearchClose = () => {
+    setIsSearchOpen(false);
     setSearchQuery("");
     setSearchResults([]);
   };
+
+  const handleMobileSearchClose = handleSearchClose;
 
   // ── Added: API actions ────────────────────────────────────────
   async function handleLogin() {
@@ -404,9 +410,10 @@ export default function Header() {
     setBusy(true); setErr("");
     const d = await apiPost("/api/user/login", { email: loginEmail, password: loginPw });
     setBusy(false);
-    if (d.error) { setErr(d.error); return; }
+    if (d.error) { const message=getUserResponseError({status:d._status},d,"Please check your email and password.");setErr(message);toast.error("Login failed",message,{id:"auth-login"});return; }
     setUser(d.user);
     setIsAuthOpen(false);
+    toast.success("Welcome back", "You have signed in successfully.", { id: "auth-login" });
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("auth-state-changed", { detail: d.user }));
     }
@@ -422,9 +429,10 @@ export default function Header() {
     setBusy(true); setErr("");
     const d = await apiPost("/api/user/register", { name: regName, email: regEmail, phone: regPhone, password: regPw, referralCode: regReferralCode.trim() || undefined });
     setBusy(false);
-    if (d.error) { setErr(d.error); return; }
+    if (d.error) { const message=getUserResponseError({status:d._status},d,"Unable to create your account.");setErr(message);toast.error("Registration failed",message,{id:"auth-register"});return; }
     setUser(d.user);
     setIsAuthOpen(false);
+    toast.success("Registration successful", "Your Damru account is ready.", { id: "auth-register" });
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("auth-state-changed", { detail: d.user }));
     }
@@ -438,9 +446,10 @@ export default function Header() {
     setActiveScreen("otp");
     const d = await apiPost("/api/user/send-otp", { email: forgotEmail });
     setBusy(false);
-    if (d.error) { setErr(d.error); setActiveScreen("forgot"); return; }
+    if (d.error) { const message=getUserResponseError({status:d._status},d,"Unable to send OTP.");setErr(message);setActiveScreen("forgot");toast.error("OTP not sent",message,{id:"auth-send-otp"});return; }
     setOtpToken(d.otpToken);
     setOkMsg("OTP sent! Check your inbox.");
+    toast.info("OTP sent", "Check your email inbox for the verification code.", { id: "auth-send-otp" });
     setIsOtpSent(true);
   }
 
@@ -450,9 +459,10 @@ export default function Header() {
     setBusy(true); setErr("");
     const d = await apiPost("/api/user/verify-otp", { otpToken, otp: code });
     setBusy(false);
-    if (d.error) { setErr(d.error); return; }
+    if (d.error) { const message=getUserResponseError({status:d._status},d,"Unable to verify OTP.");setErr(message);toast.error("OTP verification failed",message,{id:"auth-verify-otp"});return; }
     setResetToken(d.resetToken);
     setOkMsg("OTP verified! Set your new password.");
+    toast.success("OTP verified", "You can now set a new password.", { id: "auth-verify-otp" });
     setActiveScreen("reset");
   }
 
@@ -463,33 +473,27 @@ export default function Header() {
     setBusy(true); setErr("");
     const d = await apiPost("/api/user/reset-password", { resetToken, password: newPw });
     setBusy(false);
-    if (d.error) { setErr(d.error); return; }
+    if (d.error) { const message=getUserResponseError({status:d._status},d,"Unable to reset password.");setErr(message);toast.error("Password not changed",message,{id:"auth-reset-password"});return; }
     setOkMsg("Password reset successfully! You can now log in.");
+    toast.success("Password changed", "You can now sign in with your new password.", { id: "auth-reset-password" });
     setTimeout(() => { setActiveScreen("login"); setErr(""); setOkMsg(""); }, 2000);
   }
 
   async function handleLogout() {
-    await fetch("/api/user/logout", { method: "POST" });
-    window.location.href = "/";
+    const response = await fetch("/api/user/logout", { method: "POST" });
+    if (!response.ok) { toast.error("Unable to sign out", getUserResponseError(response)); return; }
+    setUser(null);
+    window.dispatchEvent(new CustomEvent("auth-state-changed", { detail: null }));
+    toast.success("Signed out successfully", undefined, { id: "auth-logout" });
+    router.push("/");
+    router.refresh();
   }
 
-  // Search results component (used in both desktop and mobile)
-  const SearchResultsDropdown = ({ onItemClick, isMobileView = false }: { onItemClick: () => void; isMobileView?: boolean }) => {
+  const renderSearchResults = (onItemClick: () => void) => {
     if (searchQuery.length < 2) return null;
 
     return (
-      <div style={{
-        position: isMobileView ? "relative" : "fixed",
-        marginTop: isMobileView ? "12px" : "0",
-        width: isMobileView ? "100%" : 380,
-        background: "#fff",
-        borderRadius: 14,
-        boxShadow: isMobileView ? "none" : "0 12px 40px rgba(0,0,0,0.18)",
-        border: isMobileView ? "1px solid #e0e0e0" : "1px solid #f0f0f0",
-        overflow: "hidden",
-        maxHeight: isMobileView ? "calc(100vh - 200px)" : "70vh",
-        overflowY: "auto",
-      }}>
+      <div className="menu-search-modal__results">
         {searchLoading ? (
           <div style={{ padding: "20px", fontFamily: "Poppins,sans-serif", fontSize: "0.85rem", color: "#aaa", textAlign: "center" }}>
             🔍 Searching…
@@ -565,16 +569,19 @@ export default function Header() {
 
           <div className="header-icons">
             {/* Search Button */}
-            <div ref={searchRef} style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <div className="header-search-trigger">
               <button
+                type="button"
                 onClick={handleSearchOpen}
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#333", display: "flex", alignItems: "center", padding: "4px 6px" }}
+                className="header-search-trigger__button"
+                aria-label="Search the menu"
+                aria-haspopup="dialog"
               >
                 <i className="ri-search-line"></i>
               </button>
 
               {/* Desktop Search Bar */}
-              {!isMobile && isSearchOpen && (
+              {false && (
                 <div style={{ display: "flex", alignItems: "center", background: "#f5f5f5", borderRadius: 24, padding: "0 12px", gap: 6, minWidth: 220, border: "1.5px solid #e0e0e0", transition: "all 0.2s" }}>
                   <i className="ri-search-line" style={{ color: "#aaa", fontSize: 14 }}></i>
                   <input
@@ -601,11 +608,11 @@ export default function Header() {
               )}
 
               {/* Desktop Search Dropdown */}
-              {!isMobile && isSearchOpen && searchQuery.length >= 2 && (
+              {false && (
                 <div style={{
                   position: "fixed",
-                  top: searchRef.current ? searchRef.current.getBoundingClientRect().bottom + 8 : 80,
-                  left: searchRef.current ? Math.max(8, searchRef.current.getBoundingClientRect().right - 380) : 8,
+                  top: 80,
+                  right: 16,
                   width: 380,
                   background: "#fff",
                   borderRadius: 14,
@@ -616,11 +623,11 @@ export default function Header() {
                   maxHeight: "70vh",
                   overflowY: "auto",
                 }}>
-                  <SearchResultsDropdown onItemClick={() => {
+                  {renderSearchResults(() => {
                     setIsSearchOpen(false);
                     setSearchQuery("");
                     setSearchResults([]);
-                  }} />
+                  })}
                 </div>
               )}
             </div>
@@ -711,8 +718,92 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Search Modal */}
-      {isMobile && isMobileSearchOpen && (
+      {isSearchOpen && (
+        <div
+          className="menu-search-overlay"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) handleSearchClose();
+          }}
+        >
+          <section
+            className="menu-search-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="menu-search-title"
+          >
+            <div className="menu-search-modal__accent" aria-hidden="true" />
+            <button
+              type="button"
+              className="menu-search-modal__close"
+              onClick={handleSearchClose}
+              aria-label="Close search"
+            >
+              <i className="ri-close-line" />
+            </button>
+
+            <div className="menu-search-modal__intro">
+              <span className="menu-search-modal__eyebrow">
+                <i className="ri-restaurant-2-line" aria-hidden="true" />
+                Discover Damru
+              </span>
+              <h2 id="menu-search-title">What are you craving?</h2>
+              <p>Find your favourite dishes, drinks and menu categories.</p>
+            </div>
+
+            <div className="menu-search-modal__field">
+              <i className="ri-search-line" aria-hidden="true" />
+              <input
+                ref={searchInputRef}
+                type="search"
+                placeholder="Search soups, momos, pizza..."
+                value={searchQuery}
+                onChange={event => setSearchQuery(event.target.value)}
+                autoComplete="off"
+                aria-label="Search menu items"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    searchInputRef.current?.focus();
+                  }}
+                  aria-label="Clear search"
+                >
+                  <i className="ri-close-circle-fill" />
+                </button>
+              )}
+            </div>
+
+            {searchQuery.length < 2 ? (
+              <div className="menu-search-modal__discover">
+                <span>Popular searches</span>
+                <div className="menu-search-modal__chips">
+                  {["Soup", "Momos", "Pizza", "Noodles"].map(term => (
+                    <button key={term} type="button" onClick={() => setSearchQuery(term)}>
+                      {term}
+                    </button>
+                  ))}
+                </div>
+                <p><i className="ri-information-line" aria-hidden="true" /> Type at least 2 characters to search.</p>
+              </div>
+            ) : (
+              renderSearchResults(handleSearchClose)
+            )}
+
+            <footer className="menu-search-modal__footer">
+              <span><kbd>Esc</kbd> to close</span>
+              <Link href="/menu" onClick={handleSearchClose}>
+                Browse full menu <i className="ri-arrow-right-line" aria-hidden="true" />
+              </Link>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {/* Legacy mobile search markup retained temporarily but never rendered. */}
+      {false && isMobileSearchOpen && (
         <div style={{
           position: "fixed",
           top: 0,
@@ -809,10 +900,7 @@ export default function Header() {
           {/* Search Results */}
           <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
             {searchQuery.length >= 2 && (
-              <SearchResultsDropdown
-                isMobileView={true}
-                onItemClick={handleMobileSearchClose}
-              />
+              renderSearchResults(handleMobileSearchClose)
             )}
             {searchQuery.length > 0 && searchQuery.length < 2 && (
               <div style={{ padding: "20px", textAlign: "center", color: "#999", fontFamily: "Poppins, sans-serif" }}>

@@ -139,13 +139,6 @@ export type Coupon = {
   expiryDate?: string | null;
 };
 
-export type PaymentMethod = {
-  id: string;
-  brand: string;
-  last4: string;
-  isDefault?: boolean;
-};
-
 export type Complaint = {
   _id: string;
   issueType: string;

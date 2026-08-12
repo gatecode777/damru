@@ -23,6 +23,7 @@ async function getTransporter() {
 }
 
 export async function sendOtpEmail(to: string, otp: string, name?: string) {
+  if (process.env.NODE_ENV === "test") return;
   const { transporter, smtpUser, fromName, siteName } = await getTransporter();
 
   await transporter.sendMail({
@@ -63,6 +64,7 @@ export async function sendOtpEmail(to: string, otp: string, name?: string) {
  * lost). Reuses the same transporter/branding, just without the amount badge.
  */
 export async function sendNotificationEmail(to: string, notification: { title: string; message: string }, name?: string) {
+  if (process.env.NODE_ENV === "test") return;
   const { transporter, smtpUser, fromName, siteName } = await getTransporter();
 
   await transporter.sendMail({
@@ -93,6 +95,7 @@ export async function sendRewardEmail(
   reward: { title: string; amount: number; description?: string },
   name?: string
 ) {
+  if (process.env.NODE_ENV === "test") return;
   const { transporter, smtpUser, fromName, siteName } = await getTransporter();
 
   await transporter.sendMail({

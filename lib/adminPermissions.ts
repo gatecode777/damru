@@ -23,19 +23,40 @@ export interface AdminPerms {
   permissions: Record<string, { view:boolean; create:boolean; edit:boolean; delete:boolean }>;
 }
 
-/** Call from any server component to get the current admin's permissions */
-export async function getAdminPerms(): Promise<AdminPerms> {
-  const session = await auth();
-  if (!session?.user) {
+/**
+ * Call from a server component to get the current admin's permissions.
+ * Route handlers that already resolved a session should pass its email so we
+ * do not perform a second Auth.js lookup in the same request.
+ */
+export async function getAdminPerms(authenticatedEmail?: string | null, authenticatedId?: string | null): Promise<AdminPerms> {
+  let email = authenticatedEmail?.trim().toLowerCase();
+  let adminId = authenticatedId?.trim();
+  if (!email) {
+    const session = await auth();
+    email = session?.user?.email?.trim().toLowerCase();
+    adminId = (session?.user as { id?: string } | undefined)?.id?.trim();
+  }
+
+  if (!email && !adminId) {
     // Unauthenticated — no access
     const none = () => false;
     return { name: "Admin", email: "", role:"moderator", isSuperAdmin:false, can:none, permissions:{} };
   }
 
   await connectDB();
-  const admin = await AdminUser.findOne({
-    email: (session.user as any).email,
-  }).select("role permissions isActive isSuperAdmin").lean() as any;
+  const identityFilters: Array<{ email: string } | { _id: string }> = [];
+  if (email) identityFilters.push({ email });
+  if (adminId) identityFilters.push({ _id: adminId });
+  const admin = await AdminUser.findOne(
+    identityFilters.length === 1 ? identityFilters[0] : { $or: identityFilters },
+  ).select("name email role permissions isActive isSuperAdmin").lean<{
+    name?: string;
+    email?: string;
+    role: "super_admin" | "admin" | "moderator";
+    permissions?: AdminPerms["permissions"];
+    isActive?: boolean;
+    isSuperAdmin?: boolean;
+  }>();
 
   if (!admin || admin.isActive === false) {
     const none = () => false;
@@ -59,17 +80,16 @@ export function serializePerms(p: AdminPerms) {
   // Each permission module comes from Mongoose with an _id ObjectId — strip it
   const cleanPermissions: Record<string, { view:boolean; create:boolean; edit:boolean; delete:boolean }> = {};
   for (const [key, val] of Object.entries(p.permissions || {})) {
-    const { _id, ...rest } = val as any;
     cleanPermissions[key] = {
-      view:   Boolean(rest.view),
-      create: Boolean(rest.create),
-      edit:   Boolean(rest.edit),
-      delete: Boolean(rest.delete),
+      view:   Boolean(val.view),
+      create: Boolean(val.create),
+      edit:   Boolean(val.edit),
+      delete: Boolean(val.delete),
     };
   }
   return {
-    name:         (p as any).name || "Admin",
-    email:        (p as any).email || "",
+    name:         p.name || "Admin",
+    email:        p.email || "",
     role:         p.role,
     isSuperAdmin: p.isSuperAdmin,
     permissions:  cleanPermissions,

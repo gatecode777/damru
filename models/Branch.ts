@@ -41,6 +41,10 @@ export interface IBranch extends Document {
   contact:     string;               // "+91 XXXXX XXXXX"
   timing:      string;               // "11:00 AM – 11:00 PM"
   address:     string;               // full address
+  latitude?:   number;
+  longitude?:  number;
+  geocodedAddress?: string;
+  geocodedAt?: Date;
 
   // Banner (top of branch page)
   bannerImage: string;               // filename
@@ -80,6 +84,10 @@ const BranchSchema = new Schema<IBranch>(
     contact:     { type: String, default: "", trim: true },
     timing:      { type: String, default: "11:00 AM – 11:00 PM", trim: true },
     address:     { type: String, default: "", trim: true },
+    latitude:    { type: Number, min: -90, max: 90 },
+    longitude:   { type: Number, min: -180, max: 180 },
+    geocodedAddress: { type: String, default: "" },
+    geocodedAt:  { type: Date },
 
     bannerImage: { type: String, default: "" },
     bannerAlt:   { type: String, default: "" },

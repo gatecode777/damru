@@ -7,6 +7,9 @@ import DamruTransaction from "@/models/DamruTransaction";
 import { awardDamru } from "@/lib/rewardEngine";
 import { getReferralConfig } from "@/lib/getReferralConfig";
 import { generateUniqueReferralCode } from "@/lib/referralCode";
+import { awardCampaignBonuses } from "@/lib/rewards/campaignEngine";
+import { evaluateReferralRisk, evaluateRiskSafely } from "@/lib/rewards/riskEngine";
+import { paymentEligibleOrderFilter } from "@/lib/orders/orderPaymentPolicy";
 
 /** Lazily issues a referral code — during registration or the first time it's actually needed. Never regenerated once set. */
 export async function getOrCreateReferralCode(userId: string | mongoose.Types.ObjectId): Promise<string> {
@@ -48,13 +51,14 @@ export async function createReferralRelationship(
   if (String(referrerUserId) === String(referredUserId)) return { success: false as const, error: "Self-referral is not allowed." };
 
   try {
-    await Referral.create({
+    const referral = await Referral.create({
       referrerUserId,
       referredUserId,
       referralCode: code.trim().toUpperCase(),
       status: "PENDING_QUALIFICATION",
       registeredAt: new Date(),
     });
+    await evaluateRiskSafely("referral-created", () => evaluateReferralRisk({ userId: referrerUserId, referralId: referral._id }));
     return { success: true as const };
   } catch (err: unknown) {
     // Unique index on referredUserId — this user already has a referral relationship.
@@ -92,6 +96,7 @@ export async function issueReferralRewards(referral: IReferral) {
     referrerTxId = result.duplicate
       ? await ensureTransactionId(idempotencyKey, null)
       : (result.transaction?._id || null);
+    await awardCampaignBonuses({ trigger:"REFERRAL_REWARDED", userId:referral.referrerUserId, sourceId:`${referral._id}:referrer`, baseReward:referral.referrerRewardAmount });
   }
 
   let referredTxId = referral.referredTransactionId || null;
@@ -107,6 +112,7 @@ export async function issueReferralRewards(referral: IReferral) {
     referredTxId = result.duplicate
       ? await ensureTransactionId(idempotencyKey, null)
       : (result.transaction?._id || null);
+    await awardCampaignBonuses({ trigger:"REFERRAL_REWARDED", userId:referral.referredUserId, sourceId:`${referral._id}:referred`, baseReward:referral.referredRewardAmount });
   }
 
   const bothDone =
@@ -135,6 +141,8 @@ export async function evaluateReferralQualification(
   orderAmount: number
 ) {
   await connectDB();
+  const eligibleOrder = await Order.exists({ _id: orderId, userId: referredUserId, status: "delivered", ...paymentEligibleOrderFilter() });
+  if (!eligibleOrder) return { skipped: true as const };
   const referral = await Referral.findOne({ referredUserId, status: "PENDING_QUALIFICATION" });
   if (!referral) return { skipped: true as const };
 
@@ -145,7 +153,7 @@ export async function evaluateReferralQualification(
 
   if (!meetsMinimum) {
     if (config.qualificationEvent === "FIRST_DELIVERED_ORDER") {
-      const deliveredCount = await Order.countDocuments({ userId: referredUserId, status: "delivered" });
+      const deliveredCount = await Order.countDocuments({ userId: referredUserId, status: "delivered", ...paymentEligibleOrderFilter() });
       if (deliveredCount === 1) {
         // This was their one and only shot under this rule — it didn't meet the minimum.
         await Referral.findOneAndUpdate(

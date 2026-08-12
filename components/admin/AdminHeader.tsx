@@ -15,7 +15,7 @@ export default function AdminHeader({ title }: { title?: string }) {
   });
 
   useEffect(() => {
-    fetch("/api/admin/permissions")
+    fetch("/api/admin/permissions", { cache: "no-store" })
       .then(res => res.json())
       .then(data => {
         if (data && !data.error) {

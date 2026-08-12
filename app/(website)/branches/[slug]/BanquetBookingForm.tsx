@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/website/Toast";
+import { getUserErrorMessage, getUserResponseError } from "@/lib/getUserErrorMessage";
 
 interface Props {
   branchSlug?: string;
@@ -11,7 +13,7 @@ interface Props {
 
 function clampDateString(val: string): string {
   // Keep only digits and dashes
-  let clean = val.replace(/[^0-9-]/g, "");
+  const clean = val.replace(/[^0-9-]/g, "");
   const parts = clean.split("-");
   const maxYear = new Date().getFullYear() + 2;
 
@@ -50,6 +52,7 @@ function clampDateString(val: string): string {
 }
 
 export default function BanquetBookingForm({ branchSlug, branchName, ctaTitle, ctaSubtitle }: Props) {
+  const toast = useToast();
   const [form, setForm] = useState({
     fullName: "", phone: "", email: "",
     eventType: "", eventDate: "", guestCount: "", message: "",
@@ -108,9 +111,10 @@ export default function BanquetBookingForm({ branchSlug, branchName, ctaTitle, c
         body: JSON.stringify({ ...form, branchSlug, branchName }),
       });
       const data = await res.json();
-      if (data.error) { setErr(data.error); return; }
+      if (!res.ok || data.error) { const message=getUserResponseError(res,data,"Unable to submit your request.");setErr(message);toast.error("Request not submitted",message,{id:"banquet-request"});return; }
       setDone(true);
-    } catch { setErr("Failed to submit. Please try again."); }
+      toast.success("Request submitted", "Our event team will contact you shortly.", { id: "banquet-request" });
+    } catch (error) { const message=getUserErrorMessage(error,"Unable to submit your request.");setErr(message);toast.error("Request not submitted",message,{id:"banquet-request"}); }
     finally { setSubmitting(false); }
   }
 

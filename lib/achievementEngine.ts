@@ -5,6 +5,7 @@ import UserAchievement from "@/models/UserAchievement";
 import User from "@/models/User";
 import Order from "@/models/Order";
 import { awardDamru } from "@/lib/rewardEngine";
+import { paymentEligibleOrderFilter } from "@/lib/orders/orderPaymentPolicy";
 
 /** A user is considered profile-complete once the fields they can actually set are filled in. */
 export function isProfileComplete(user: { phone?: string; avatar?: string }): boolean {
@@ -81,7 +82,7 @@ export async function evaluateOrderAchievements(userId: mongoose.Types.ObjectId 
   if (orderCountAchievements.length === 0 && spendAchievements.length === 0) return [];
 
   const [agg] = await Order.aggregate([
-    { $match: { userId: new mongoose.Types.ObjectId(userId), status: "delivered" } },
+    { $match: { userId: new mongoose.Types.ObjectId(userId), status: "delivered", ...paymentEligibleOrderFilter() } },
     { $group: { _id: null, count: { $sum: 1 }, total: { $sum: "$total" } } },
   ]);
   const orderCount = agg?.count || 0;

@@ -1,35 +1,30 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { connectDB } from "@/lib/mongodb";
-import AdminUser from "@/models/Admin";
-import { adminBypassesPermissions } from "@/lib/adminPermissions";
+import { getAdminPerms } from "@/lib/adminPermissions";
 
 type Action = "view" | "create" | "edit" | "delete";
 
-/**
- * Use at the top of API route handlers to enforce permissions.
- * Returns null if allowed, or a 401/403 NextResponse if blocked.
- *
- * Usage:
- *   const deny = await checkApiPerm("users", "delete");
- *   if (deny) return deny;
- */
+/** Returns null when the signed-in admin may perform the requested action. */
 export async function checkApiPerm(module: string, action: Action = "view"): Promise<NextResponse | null> {
   const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  await connectDB();
-  const admin = await AdminUser.findOne({
-    email: (session.user as any).email,
-  }).select("role permissions isActive isSuperAdmin").lean() as any;
+  const perms = await getAdminPerms(
+    session.user.email,
+    (session.user as { id?: string }).id,
+  );
 
-  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (admin.isActive === false) return NextResponse.json({ error: "Forbidden: account deactivated" }, { status: 403 });
+  // getAdminPerms intentionally returns an empty identity for missing or
+  // inactive accounts. Never treat its fallback role as a real moderator.
+  if (!perms.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  if (adminBypassesPermissions(admin.role, admin.isSuperAdmin)) return null;
-
-  const allowed = Boolean(admin.permissions?.[module]?.[action]);
-  if (!allowed) return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+  if (!perms.can(module, action)) {
+    return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+  }
 
   return null;
 }

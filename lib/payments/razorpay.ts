@@ -32,7 +32,12 @@ export function getRazorpayClient(): Razorpay {
 /** True only when all three Razorpay env vars are present — used to decide
  *  whether online payment is offered at all, without throwing. */
 export function isRazorpayConfigured(): boolean {
-  return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET);
+  return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+}
+
+/** Webhook delivery is optional and independently enabled. */
+export function isRazorpayWebhookConfigured(): boolean {
+  return Boolean(process.env.RAZORPAY_WEBHOOK_SECRET);
 }
 
 /** The only Key ID value ever allowed to reach the client — never the secret. */

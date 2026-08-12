@@ -20,6 +20,24 @@
   width: 100%;
   display: block;
   position: relative;
+  isolation: isolate;
+}
+
+/* Website-wide paper texture. The locally stored texture is kept in one
+   non-interactive layer so customer pages share the same warm finish without
+   affecting the admin application or the mobile app. */
+.damru-theme-wrapper::after {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background-image: url("/assets/images/warm-paper-texture.jpg");
+  background-repeat: repeat;
+  background-position: top center;
+  background-size: 800px 533px;
+  mix-blend-mode: multiply;
+  opacity: 0.2;
 }
 
 /* ============================================================
@@ -380,7 +398,7 @@
     font-size: clamp(12px, 3.5vw, 15px);
   }
 
-  /* 
+  /*
     hero-right height = circle ka sirf upar ka aadha hissa dikhega
     Circle = 90vw, half = 45vw, plus top gap 20px
   */
@@ -398,7 +416,7 @@
     /* flex: none; */
   }
 
-  /* 
+  /*
     Wheel:
     - 90vw size (aapka adjusted value)
     - left: 70%, transform: translateX(-15%) = right side mein shift, right half off-screen
@@ -420,7 +438,7 @@
     border-radius: 50% !important;
   }
 
-  /* 
+  /*
     Plates: 70vw size (aapka adjusted value)
     Positions: circle ki exact rim par — 9, 12, 3, 6 o'clock
   */
@@ -479,6 +497,110 @@
   }
 }
 
+/* Tablet hero: the header is absolute from 768px upward, so reserve its
+   height and use a controlled two-column composition instead of the mobile
+   wheel positioning that allowed the plate to cover the CTA row. */
+@media (min-width: 768px) and (max-width: 991px) {
+  .hero {
+    min-height: 650px;
+    padding: 125px 24px 48px;
+    overflow: hidden;
+    align-items: center;
+  }
+
+  .hero-container {
+    max-width: 920px;
+    min-height: 470px;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .hero-left {
+    width: 55%;
+    max-width: 510px;
+    flex: 0 0 55%;
+    padding: 0;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .sub-heading {
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  .main-heading {
+    margin-bottom: 22px;
+    font-size: clamp(36px, 5.2vw, 44px);
+    line-height: 1.14;
+  }
+
+  .thumbnails {
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: flex-start;
+  }
+
+  .thumb {
+    width: 48px;
+    height: 48px;
+  }
+
+  .hero-actions {
+    gap: 18px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .btn-book {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+
+  .btn-menu {
+    font-size: 14px;
+  }
+
+  .hero-right {
+    width: 45%;
+    height: 420px;
+    min-height: 420px;
+    flex: 1 1 45%;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .wheel-container {
+    width: 420px !important;
+    height: 420px !important;
+    top: 50% !important;
+    right: -210px !important;
+    left: auto !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+  }
+
+  .plate-item {
+    width: 265px !important;
+    height: 265px !important;
+  }
+
+  .p1 {
+    left: 6% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .hero + * {
+    margin-top: 0;
+  }
+}
+
 
 /* DIET plan section  */
 
@@ -524,6 +646,9 @@
   justify-content: center;
   padding: 20px 90px 20px 24px;
   opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(6px);
   transition: all 0.4s ease-in-out;
   position: absolute;
   top: 0;
@@ -556,9 +681,13 @@
   padding-left: 24px;
 }
 
-/* Hover Effects */
-.diet-interactive-section .di-image-card:hover .di-overlay {
+/* Reveal details only after the user engages with the dish card. */
+.diet-interactive-section .di-image-card:hover .di-overlay,
+.diet-interactive-section .di-image-card:focus-within .di-overlay {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 /* Content Inside Overlay */
@@ -629,7 +758,6 @@
   margin-top: 14px;
   display: inline-flex;
 }
-
 /* CHEF IMAGE STYLING (The Peek Effect) */
 .diet-interactive-section .di-chef {
   position: absolute;
@@ -638,6 +766,10 @@
   width: 85px;
   z-index: 5;
   pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(18px) translateY(8px);
+  transition: opacity 220ms ease, transform 260ms ease, visibility 220ms ease;
 }
 
 .diet-interactive-section .di-chef-right {
@@ -649,8 +781,11 @@
   bottom: -2px;
 }
 
-.diet-interactive-section .di-image-card:hover .di-chef {
-  transform: translateY(0);
+.diet-interactive-section .di-image-card:hover .di-chef,
+.diet-interactive-section .di-image-card:focus-within .di-chef {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0) translateY(0);
 }
 
 /* TEXT STYLING (Headings/Description) */
@@ -737,6 +872,12 @@
     order: 4;
   }
 
+  .diet-interactive-section .di-card-wrapper {
+    width: 100%;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+
   /* --- TEXT STYLING (Bigger & Centered) --- */
 
   .diet-interactive-section .di-main-heading {
@@ -760,6 +901,12 @@
 
   .diet-interactive-section .di-image-card {
     border-radius: 8px;
+    aspect-ratio: 4 / 3;
+  }
+
+  .diet-interactive-section .di-base-img {
+    height: 100%;
+    object-fit: cover;
   }
 
   .diet-interactive-section .di-overlay {
@@ -768,7 +915,16 @@
     /* :hover never reliably fires on touch devices — without this the card
        either never reveals its content, or gets stuck showing it after the
        first tap. Always-visible is the correct default on mobile. */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .diet-interactive-section .di-image-card:hover .di-overlay,
+  .diet-interactive-section .di-image-card:focus-within .di-overlay {
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
   }
 
   /* Overlay text size mobile ke liye */
@@ -796,17 +952,159 @@
 
 /* Extra Small Phones (320px - 400px) */
 @media (max-width: 480px) {
+  .diet-interactive-section {
+    padding: 32px 12px;
+  }
+
+  .diet-interactive-section .di-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    align-items: start;
+  }
+
+  .diet-interactive-section .di-col {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .diet-interactive-section .di-left .di-text-bottom,
+  .diet-interactive-section .di-right .di-text-top {
+    order: 1;
+    min-width: 0;
+    padding: 0 8px;
+    text-align: center;
+  }
+
+  .diet-interactive-section .di-left .di-text-bottom {
+    margin: 0 0 22px;
+  }
+
+  .diet-interactive-section .di-right .di-text-top {
+    margin: 0 0 22px;
+  }
+
+  .diet-interactive-section .di-left .di-card-wrapper,
+  .diet-interactive-section .di-right .di-card-wrapper {
+    order: 2;
+    width: min(100%, 360px);
+    margin: 0 auto;
+  }
+
+  .diet-interactive-section .di-left .di-card-wrapper {
+    margin-bottom: 38px;
+  }
+
+  .diet-interactive-section .di-image-card {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 12px;
+  }
+
+  .diet-interactive-section .di-base-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .diet-interactive-section .di-overlay,
+  .diet-interactive-section .di-overlay-left,
+  .diet-interactive-section .di-overlay-right {
+    left: 0;
+    right: 0;
+    align-items: flex-start;
+    text-align: left;
+    padding: 12px 82px 12px 14px;
+    border-radius: 12px;
+  }
+
+  .diet-interactive-section .di-overlay-content {
+    width: 100%;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .diet-interactive-section .di-icon {
+    margin-bottom: 2px;
+  }
+
+  .diet-interactive-section .di-icon img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .diet-interactive-section .di-card-title {
+    font-size: 19px;
+    line-height: 1.25;
+  }
+
+  .diet-interactive-section .di-card-tags {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .diet-interactive-section .di-explore-btn {
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .diet-interactive-section .di-chef {
+    left: auto;
+    right: -8px;
+    bottom: -2px;
+    width: 76px;
+  }
+
+  .diet-interactive-section .di-chef-left,
+  .diet-interactive-section .di-chef-right {
+    left: auto;
+    right: -8px;
+  }
+
   .diet-interactive-section .di-main-heading {
-    font-size: 2.2rem !important;
+    margin: 0 0 10px;
+    font-size: 2rem !important;
+    line-height: 1.15;
+    text-align: center;
   }
 
   .diet-interactive-section .di-subtext,
   .diet-interactive-section .di-description {
-    font-size: 18px !important;
+    margin: 0;
+    font-size: 13px !important;
+    line-height: 1.55;
+    text-align: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .diet-interactive-section .di-container {
+    gap: 14px;
   }
 
-  .diet-interactive-section {
-    padding: 40px 15px;
+  .diet-interactive-section .di-overlay,
+  .diet-interactive-section .di-overlay-left,
+  .diet-interactive-section .di-overlay-right {
+    padding: 12px 72px 12px 12px;
+  }
+
+  .diet-interactive-section .di-card-title {
+    font-size: 18px;
+  }
+
+  .diet-interactive-section .di-card-tags {
+    font-size: 11px;
+  }
+
+  .diet-interactive-section .di-chef {
+    width: 68px;
   }
 }
 
@@ -1204,54 +1502,93 @@
   }
 
   .ms-list {
-    gap: 60px;
-    margin-top: 50px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 30px;
   }
 
   .ms-item,
   .ms-item.ms-reverse {
+    min-width: 0;
+    height: 100%;
     flex-direction: column-reverse;
     text-align: center;
-    gap: 25px;
+    justify-content: flex-end;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid #eadfd6;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(62, 38, 20, 0.08);
   }
 
   .ms-content {
+    min-width: 0;
     width: 100%;
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
   }
 
   .ms-price-row {
+    order: 3;
     justify-content: center;
-    margin-bottom: 10px;
+    margin: auto 0 10px;
   }
 
   .ms-line {
-    flex-grow: 0.3;
+    display: none;
   }
 
   .ms-price {
-    margin-left: 10px;
-    font-size: 2rem;
-    margin-bottom: 0;
+    margin: 0;
+    color: #e66a0d;
+    font-family: "Poppins", sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
   }
 
   .ms-item-name {
-    font-size: 2.2rem;
-    margin-bottom: 10px;
+    order: 1;
+    min-height: 44px;
+    margin: 0 0 6px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-family: "Poppins", sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.35;
   }
 
   .ms-item-desc {
-    font-size: 1.1rem;
-    margin-bottom: 25px;
+    order: 2;
+    margin: 0 0 12px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: #6f6760;
+    font-size: 0.75rem;
+    line-height: 1.45;
   }
 
   .ms-btn-group {
+    order: 4;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
+    margin: 0;
   }
 
   .ms-order-btn {
-    padding: 12px 30px;
-    font-size: 1rem;
+    width: 100%;
+    min-height: 38px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 0.78rem;
   }
 
   .ms-qty {
@@ -1264,10 +1601,19 @@
   }
 
   .ms-image-box {
+    flex: none;
     width: 100%;
-    max-width: 350px;
-    height: 250px;
-    margin: 0 auto;
+    max-width: none;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .ms-image-box:hover {
+    transform: none;
+    box-shadow: none;
   }
 }
 
@@ -1278,7 +1624,8 @@
   }
 
   .ms-item-name {
-    font-size: 1.8rem;
+    min-height: 38px;
+    font-size: 0.86rem;
   }
 
   .ms-leaf-img {
@@ -1287,15 +1634,41 @@
   }
 
   .ms-btn-group {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .ms-price {
-    font-size: 1.8rem;
+    font-size: 0.86rem;
   }
 
   .ms-line {
     display: none;
+  }
+
+  .ms-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .ms-item,
+  .ms-item.ms-reverse {
+    width: 100%;
+    max-width: 390px;
+    margin-inline: auto;
+  }
+
+  .ms-content {
+    padding: 11px;
+  }
+
+  .ms-item-desc {
+    display: none;
+  }
+
+  .ms-order-btn {
+    min-height: 34px;
+    padding: 8px;
+    font-size: 0.7rem;
   }
 }
 
@@ -1639,12 +2012,19 @@
 
 @media (max-width: 992px) {
   .branches-grid-3d {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
   }
 
   .reveal-3d-left,
   .reveal-3d-right {
     transform: translateY(100px) scale(0.9);
+  }
+}
+
+@media (max-width: 480px) {
+  .branches-grid-3d {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1907,6 +2287,396 @@
   margin: 0 auto;
 }
 
+/* --- Premium "What Makes Us Special" showcase --- */
+.special-features-showcase {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100vw;
+  margin-right: 0;
+  margin-bottom: 64px;
+  margin-left: calc(50% - 50vw);
+  padding: clamp(50px, 4.5vw, 64px) max(5vw, calc((100vw - 1240px) / 2)) clamp(48px, 4vw, 60px);
+  border-top: 1px solid rgba(217, 132, 64, 0.14);
+  border-bottom: 1px solid rgba(217, 132, 64, 0.14);
+  background:
+    radial-gradient(circle at 8% 4%, rgba(242, 185, 117, 0.16), transparent 25%),
+    radial-gradient(circle at 94% 92%, rgba(245, 196, 137, 0.13), transparent 24%),
+    linear-gradient(135deg, #fffaf3 0%, #fffdf9 48%, #fff8ef 100%);
+}
+
+.special-features-showcase::before,
+.special-features-showcase::after {
+  position: absolute;
+  z-index: -1;
+  width: 220px;
+  height: 280px;
+  content: "";
+  pointer-events: none;
+  background: url("/assets/images/rosemary.png") center / contain no-repeat;
+  opacity: 0.1;
+}
+
+.special-features-showcase::before {
+  top: -72px;
+  right: -48px;
+  transform: rotate(17deg);
+}
+
+.special-features-showcase::after {
+  bottom: -92px;
+  left: -56px;
+  transform: rotate(198deg);
+}
+
+.special-features-header {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto clamp(34px, 3.5vw, 46px);
+  text-align: center;
+}
+
+.special-features-eyebrow {
+  margin: 0 0 12px;
+  color: #df670f;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.special-features-header h2 {
+  margin: 0;
+  color: #171717;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.9rem, 3vw, 2.65rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.special-heading-ornament,
+.special-feature-ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #dc741f;
+}
+
+.special-heading-ornament {
+  width: 92px;
+  margin: 21px auto 0;
+}
+
+.special-heading-ornament::before,
+.special-heading-ornament::after,
+.special-feature-ornament::before,
+.special-feature-ornament::after {
+  width: 34px;
+  height: 1px;
+  content: "";
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.special-heading-ornament i,
+.special-feature-ornament i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 8px 0 8px 0;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+
+.special-features-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.special-feature-item {
+  position: relative;
+  min-width: 0;
+  padding: 0 clamp(24px, 3vw, 44px);
+  text-align: center;
+}
+
+.special-feature-item + .special-feature-item::before {
+  position: absolute;
+  top: 30px;
+  bottom: 12px;
+  left: 0;
+  width: 1px;
+  content: "";
+  background: linear-gradient(to bottom, transparent, rgba(222, 111, 28, 0.28) 17%, rgba(222, 111, 28, 0.28) 83%, transparent);
+}
+
+.special-feature-icon-wrap {
+  position: relative;
+  width: 132px;
+  margin: 0 auto 27px;
+}
+
+.special-feature-icon-arch {
+  position: relative;
+  display: grid;
+  width: 132px;
+  height: 140px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(222, 103, 15, 0.36);
+  border-radius: 66px 66px 45px 45px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.9), rgba(255, 246, 232, 0.95));
+  box-shadow: 0 13px 30px rgba(130, 80, 36, 0.08);
+  transition: transform 280ms ease, border-color 280ms ease, box-shadow 280ms ease;
+}
+
+.special-feature-icon-arch::before {
+  position: absolute;
+  inset: 8px;
+  content: "";
+  pointer-events: none;
+  border: 1px dashed rgba(219, 111, 28, 0.32);
+  border-radius: 58px 58px 37px 37px;
+}
+
+.special-feature-icon-arch svg {
+  position: relative;
+  z-index: 1;
+  width: 76px;
+  height: 76px;
+  transition: transform 280ms ease;
+}
+
+.feature-art-line,
+.feature-art-leaf,
+.feature-art-warm,
+.feature-art-fruit,
+.feature-art-seed {
+  stroke: #8e5728;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.feature-art-line,
+.feature-art-seed {
+  fill: none;
+}
+
+.feature-art-leaf {
+  fill: #a8b08b;
+}
+
+.feature-art-warm,
+.feature-art-dot {
+  fill: #efb069;
+}
+
+.feature-art-soft {
+  fill: #fff2dc;
+}
+
+.feature-art-fruit {
+  fill: #e89478;
+}
+
+.feature-sparkle {
+  position: absolute;
+  color: rgba(223, 103, 15, 0.58);
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.feature-sparkle-one {
+  top: 29px;
+  right: 20px;
+}
+
+.feature-sparkle-two {
+  bottom: 26px;
+  left: 21px;
+  font-size: 0.48rem;
+}
+
+.special-feature-number {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: -16px;
+  left: 0;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  margin: auto;
+  border: 3px solid #fffaf2;
+  border-radius: 50%;
+  color: #fff;
+  background: #ed6c0c;
+  box-shadow: 0 7px 16px rgba(184, 79, 6, 0.23);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.special-feature-item h3 {
+  margin: 0;
+  color: #1a1917;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.3rem, 1.8vw, 1.58rem);
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.special-feature-ornament {
+  width: 64px;
+  margin: 14px auto 17px;
+}
+
+.special-feature-ornament::before,
+.special-feature-ornament::after {
+  width: 21px;
+}
+
+.special-feature-ornament i {
+  width: 6px;
+  height: 6px;
+}
+
+.special-feature-item p {
+  max-width: 320px;
+  margin: 0 auto;
+  color: #606060;
+  font-size: clamp(0.9rem, 1.15vw, 0.98rem);
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .special-feature-item:hover .special-feature-icon-arch {
+    border-color: rgba(222, 103, 15, 0.62);
+    box-shadow: 0 18px 34px rgba(160, 83, 22, 0.14);
+    transform: translateY(-4px);
+  }
+
+  .special-feature-item:hover .special-feature-icon-arch svg {
+    transform: scale(1.03);
+  }
+}
+
+@media (max-width: 1100px) {
+  .special-features-showcase {
+    padding-right: 5vw;
+    padding-left: 5vw;
+  }
+
+  .special-feature-item {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+}
+
+@media (max-width: 900px) {
+  .special-features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 52px;
+  }
+
+  .special-feature-item + .special-feature-item::before {
+    display: none;
+  }
+
+  .special-feature-item:last-child {
+    grid-column: 1 / -1;
+    width: min(100%, 420px);
+    justify-self: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .special-features-showcase {
+    margin-bottom: 50px;
+    padding: 44px 22px 48px;
+  }
+
+  .special-features-showcase::before,
+  .special-features-showcase::after {
+    display: none;
+  }
+
+  .special-features-header {
+    margin-bottom: 38px;
+  }
+
+  .special-features-eyebrow {
+    font-size: 0.69rem;
+    letter-spacing: 0.18em;
+  }
+
+  .special-features-header h2 {
+    font-size: clamp(1.75rem, 8vw, 2.1rem);
+  }
+
+  .special-features-grid {
+    grid-template-columns: 1fr;
+    row-gap: 42px;
+  }
+
+  .special-feature-item,
+  .special-feature-item:last-child {
+    grid-column: auto;
+    width: 100%;
+    padding: 0;
+  }
+
+  .special-feature-item + .special-feature-item::before {
+    top: -24px;
+    right: 28%;
+    bottom: auto;
+    left: 28%;
+    display: block;
+    width: auto;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(222, 111, 28, 0.22), transparent);
+  }
+
+  .special-feature-icon-wrap,
+  .special-feature-icon-arch {
+    width: 122px;
+  }
+
+  .special-feature-icon-arch {
+    height: 130px;
+    border-radius: 61px 61px 42px 42px;
+  }
+
+  .special-feature-icon-arch::before {
+    border-radius: 53px 53px 34px 34px;
+  }
+
+  .special-feature-icon-arch svg {
+    width: 72px;
+    height: 72px;
+  }
+
+  .special-feature-item p {
+    max-width: 340px;
+  }
+}
+
 /* --- Blog Cards Layout & 3D Entrance --- */
 .blog-grid-3d {
   display: grid;
@@ -2133,21 +2903,26 @@
 
 /* --- Excellent Cook Section Settings --- */
 .excellent-cook-section {
-  background-color: #e66a0d;
+  background: #fff9f4;
   position: relative;
-  padding: 80px 0 0 0;
+  padding: 70px 5%;
   overflow: hidden;
-  display: flex;
-  align-items: flex-end;
+  display: block;
 }
 
 .cook-flex {
   display: flex;
   align-items: flex-end;
-  justify-content: flex-start;
+  justify-content: space-between;
   width: 100%;
-  max-width: 100%;
-  margin: 0;
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: 450px;
+  border-radius: 30px;
+  background: linear-gradient(118deg, #d95708 0%, #eb710d 58%, #f18420 100%);
+  box-shadow: 0 24px 60px rgba(151, 70, 13, 0.18);
+  isolation: isolate;
+  overflow: hidden;
 }
 
 /* Chef Side Style */
@@ -2158,35 +2933,61 @@
   margin-bottom: 0 !important;
   padding-bottom: 0 !important;
   font-size: 0;
+  width: 47%;
+  min-width: 0;
 }
 
 .chef-static-img {
-  width: auto;
-  max-width: 650px;
-  height: 650px;
+  width: 100%;
+  max-width: 575px;
+  height: 450px;
+  object-fit: contain;
+  object-position: bottom left;
   display: block;
   margin: 0;
   padding: 0;
 
   filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 0.2));
-  margin-bottom: -35px !important;
+  /* The PNG contains transparent pixels below its dark counter surface.
+     Pull that transparent edge outside the clipped card so the visible
+     artwork sits perfectly flush with the banner bottom. */
+  margin-bottom: -27px !important;
   margin-left: 0;
   padding: 0;
 }
 
 /* Content Side Style */
 .cook-content {
-  padding-left: 90px;
-  padding-bottom: 80px;
+  width: 53%;
+  padding: 54px clamp(42px, 5vw, 76px) 54px clamp(28px, 3.5vw, 54px);
   color: #fff;
   align-self: center;
 }
 
+.cook-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 14px;
+  color: #fff2df;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.cook-eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 2px;
+  margin-right: 10px;
+  background: #ffd3a3;
+}
+
 .excellent-title {
   font-family: "Playfair Display", serif;
-  font-size: 7rem;
-  line-height: 1.1;
-  margin-bottom: 25px;
+  font-size: clamp(3.5rem, 4.7vw, 5rem);
+  line-height: 0.98;
+  margin-bottom: 18px;
   font-weight: 700;
   position: relative;
   display: inline-block;
@@ -2242,10 +3043,41 @@
 
 .excellent-desc {
   font-family: "Inter", sans-serif;
-  font-size: 1.2rem;
-  line-height: 1.6;
-  opacity: 0.95;
-  max-width: 620px;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  opacity: 0.92;
+  max-width: 590px;
+  margin-bottom: 25px;
+}
+
+.cook-menu-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 12px;
+  background: #fff;
+  color: #c84f08;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 12px 28px rgba(91, 39, 4, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cook-menu-link span {
+  font-size: 1.15rem;
+  transition: transform 0.25s ease;
+}
+
+.cook-menu-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(91, 39, 4, 0.24);
+}
+
+.cook-menu-link:hover span {
+  transform: translateX(4px);
 }
 
 /* --- 3D LEAF ANIMATION LOGIC --- */
@@ -2257,20 +3089,20 @@
 }
 
 .leaf-top {
-  top: 30px;
+  top: 82px;
   left: 8%;
 }
 
 .leaf-bottom {
-  bottom: 40px;
-  right: 5%;
+  bottom: 82px;
+  right: 7%;
   transform: rotate(150deg);
 }
 
 .leaf-3d-ani {
-  width: 180px;
+  width: 130px;
   height: auto;
-  opacity: 0.5;
+  opacity: 0.3;
   filter: brightness(0) invert(1);
   animation: leaf3D 8s ease-in-out infinite;
   transform-style: preserve-3d;
@@ -2296,16 +3128,16 @@
 
 @media (max-width: 1100px) {
   .chef-static-img {
-    max-width: 450px;
-    height: auto;
+    max-width: 440px;
+    height: 390px;
   }
 
   .excellent-title {
-    font-size: 4.5rem !important;
+    font-size: 3.7rem !important;
   }
 
   .cook-content {
-    padding-left: 30px;
+    padding: 40px 38px 40px 24px;
   }
 }
 
@@ -2324,30 +3156,42 @@
     width: 100%;
     max-width: 100%;
     height: auto;
-    margin-bottom: -15px !important;
+    margin-bottom: -20px !important;
   }
 
   .excellent-cook-section {
-    padding-top: 80px !important;
+    padding: 42px 18px !important;
+  }
+
+  .cook-flex {
+    min-height: 370px;
+    border-radius: 22px;
   }
 
   .cook-content {
     width: 55%;
-    padding-left: 20px !important;
-    padding-bottom: 40px !important;
+    padding: 30px 22px 30px 14px !important;
     text-align: left !important;
   }
 
   .excellent-title {
-    font-size: 2.8rem !important;
-    line-height: 1.2;
+    font-size: 2.55rem !important;
+    line-height: 1.05;
   }
 
   .excellent-desc {
-    font-size: 0.9rem !important;
+    font-size: 0.82rem !important;
     max-width: 100%;
     line-height: 1.4;
+    display: -webkit-box;
+    line-clamp: 4;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
+
+  .cook-eyebrow { font-size: 0.62rem; letter-spacing: 0.12em; }
+  .cook-menu-link { min-height: 42px; padding: 0 16px; font-size: 0.78rem; }
 
   /* Leaves ko mobile par chota kiya gaya */
   .leaf-3d-ani {
@@ -2372,6 +3216,14 @@
   .cook-content {
     padding-bottom: 20px !important;
   }
+
+  .excellent-cook-section {
+    padding: 30px 14px !important;
+  }
+
+  .cook-flex { min-height: 310px; border-radius: 18px; }
+  .cook-eyebrow { margin-bottom: 9px; }
+  .cook-menu-link { min-height: 38px; padding: 0 13px; }
 }
 
 /* Make a Reservation section  */

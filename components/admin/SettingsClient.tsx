@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Loader2, Globe, Mail, Bell, ShoppingBag, Wrench, CheckCircle2 } from "lucide-react";
+import { Save, Loader2, Globe, Mail, Wrench, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/admin/Toast";
 import { getAdminResponseError } from "@/lib/admin-error";
 
@@ -12,7 +12,7 @@ type Settings = {
   smtpSecure: boolean; smtpFromName: string;
   notifyNewUser: boolean; notifyNewOrder: boolean;
   notifyReservation: boolean; notifyComplaint: boolean;
-  taxRate: number; freeDeliveryAbove: number; deliveryCharge: number;
+  taxRate: number; freeDeliveryAbove: number; deliveryCharge: number; deliveryRadiusKm: number;
   maintenanceMode: boolean; maintenanceMsg: string;
 };
 
@@ -23,7 +23,7 @@ const DEFAULT: Settings = {
   smtpHost: "smtp.gmail.com", smtpPort: 587, smtpUser: "", smtpPass: "",
   smtpSecure: false, smtpFromName: "Damru By Namo",
   notifyNewUser: true, notifyNewOrder: true, notifyReservation: true, notifyComplaint: true,
-  taxRate: 5, freeDeliveryAbove: 500, deliveryCharge: 50,
+  taxRate: 5, freeDeliveryAbove: 500, deliveryCharge: 50, deliveryRadiusKm: 10,
   maintenanceMode: false, maintenanceMsg: "We'll be back soon!",
 };
 
@@ -31,7 +31,6 @@ const TABS = [
   { id: "general", label: "General", icon: Globe },
   { id: "email", label: "Email / SMTP", icon: Mail },
   // { id:"notifications", label:"Notifications", icon:Bell },
-  { id: "orders", label: "Orders", icon: ShoppingBag },
   { id: "maintenance", label: "Maintenance", icon: Wrench },
 ];
 
@@ -155,14 +154,6 @@ export default function SettingsClient() {
         <Field label="New Order Placed" hint="Alert when a customer places an order."><Toggle value={s.notifyNewOrder} onChange={v => set("notifyNewOrder", v)} /></Field>
         <Field label="New Reservation" hint="Alert when a table is booked."><Toggle value={s.notifyReservation} onChange={v => set("notifyReservation", v)} /></Field>
         <Field label="New Complaint" hint="Alert when a user submits a complaint."><Toggle value={s.notifyComplaint} onChange={v => set("notifyComplaint", v)} /></Field>
-      </Sec>
-    ),
-
-    orders: (
-      <Sec title="Order & Delivery Settings">
-        <Field label="Tax Rate (%)" hint="Applied to all orders at checkout."><Inp value={s.taxRate} onChange={v => set("taxRate", Number(v))} type="number" placeholder="5" /></Field>
-        <Field label="Free Delivery Above (₹)" hint="Orders above this amount get free delivery."><Inp value={s.freeDeliveryAbove} onChange={v => set("freeDeliveryAbove", Number(v))} type="number" placeholder="500" /></Field>
-        <Field label="Delivery Charge (₹)" hint="Flat fee for orders below the free threshold."><Inp value={s.deliveryCharge} onChange={v => set("deliveryCharge", Number(v))} type="number" placeholder="50" /></Field>
       </Sec>
     ),
 

@@ -115,8 +115,9 @@ test("Damru restoration: full refund restores once, duplicate restoration is a n
     email: `damru-restore-test-${Date.now()}@example.test`,
     password: "not-a-real-hash",
     damruBalance: 0,
+    notificationPreferences: { rewardUpdates: false, orderUpdates: false },
   });
-  const redemptionTxn = await DamruTransaction.create({
+  await DamruTransaction.create({
     userId: user._id, type: "debit", category: "redemption", amount: 200, balanceAfter: 0,
     description: "test redemption", idempotencyKey: `redeem_order_${order._id}`, orderId: order._id,
   });
@@ -152,6 +153,7 @@ test("Damru restoration: full refund restores once, duplicate restoration is a n
     email: `damru-restore-test2-${Date.now()}@example.test`,
     password: "not-a-real-hash",
     damruBalance: 0,
+    notificationPreferences: { rewardUpdates: false, orderUpdates: false },
   });
   await DamruTransaction.create({
     userId: user2._id, type: "debit", category: "redemption", amount: 50, balanceAfter: 0,

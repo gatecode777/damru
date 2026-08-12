@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
+import { useToast } from "@/components/website/Toast";
 
 interface AvailableCoupon {
   code: string; description: string; type: string;
@@ -16,7 +17,13 @@ interface SuggestedItem {
   hasVariants: boolean; category: string; catSlug: string; isFeatured: boolean;
 }
 
+interface CartQuote {
+  subtotal: number;
+  couponDiscount: number;
+}
+
 export default function CartPage() {
+  const toast = useToast();
   const router = useRouter();
   const { items, removeItem, updateQty, totalPrice, clearCart, loading, addItem, isLoggedIn } = useCart();
 
@@ -33,9 +40,7 @@ export default function CartPage() {
   const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
   const [showCoupons,      setShowCoupons]      = useState(false);
   const [couponsLoaded,    setCouponsLoaded]    = useState(false);
-  const [taxRate,          setTaxRate]          = useState(5);
-  const [freeAbove,        setFreeAbove]        = useState(500);
-  const [deliveryCharge,   setDeliveryCharge]   = useState(50);
+  const [quote,            setQuote]            = useState<CartQuote | null>(null);
 
   // Fetch available coupons when section opens
   async function loadAvailableCoupons() {
@@ -51,7 +56,7 @@ export default function CartPage() {
 
   // Apply coupon by code
   async function handleApplyCoupon() {
-    if (!couponCode.trim()) { setCouponError("Please enter a coupon code."); return; }
+    if (!couponCode.trim()) { setCouponError("Please enter a coupon code."); toast.warning("Coupon code required", "Enter a coupon code before applying it.", { id: "coupon-validation" }); return; }
     setCouponLoading(true); setCouponError("");
     try {
       const res  = await fetch("/api/coupons", {
@@ -64,11 +69,13 @@ export default function CartPage() {
         setAppliedCoupon({ code: data.coupon.code, discount: data.discount, description: data.coupon.description });
         setCouponError("");
         setShowCoupons(false);
+        toast.success("Coupon applied", `${data.coupon.code} saved you ₹${data.discount}.`, { id: "coupon-applied" });
       } else {
         setCouponError(data.message);
         setAppliedCoupon(null);
+        toast.warning("Coupon not applied", data.message || "This coupon is not available.", { id: "coupon-validation" });
       }
-    } catch { setCouponError("Could not verify coupon. Try again."); }
+    } catch { setCouponError("Could not verify coupon. Try again."); toast.error("Coupon could not be verified", "Unable to connect. Check your internet connection.", { id: "coupon-validation" }); }
     finally { setCouponLoading(false); }
   }
 
@@ -86,31 +93,49 @@ export default function CartPage() {
       if (data.valid) {
         setAppliedCoupon({ code: data.coupon.code, discount: data.discount, description: data.coupon.description });
         setShowCoupons(false); setCouponError("");
+        toast.success("Coupon applied", `${data.coupon.code} saved you ₹${data.discount}.`, { id: "coupon-applied" });
       } else {
         setCouponError(data.message);
         setAppliedCoupon(null);
+        toast.warning("Coupon not applied", data.message || "This coupon is not available.", { id: "coupon-validation" });
       }
-    } catch { setCouponError("Could not verify coupon. Try again."); }
+    } catch { setCouponError("Could not verify coupon. Try again."); toast.error("Coupon could not be verified", "Unable to connect. Check your internet connection.", { id: "coupon-validation" }); }
     finally { setCouponLoading(false); }
   }
 
   function handleRemoveCoupon() {
     setAppliedCoupon(null); setCouponCode(""); setCouponError("");
+    toast.info("Coupon removed", undefined, { id: "coupon-removed" });
   }
 
-  // Re-validate coupon if cart total changes
-  // Load site settings for dynamic tax/delivery
+  // The cart displays a backend estimate. Address-dependent distance pricing
+  // is intentionally deferred until checkout, where a verified address exists.
+  const appliedCouponCode = appliedCoupon?.code || "";
   useEffect(() => {
-    fetch("/api/admin/settings")
-      .then(r => r.json())
-      .then(d => {
-        if (d.settings) {
-          setTaxRate(d.settings.taxRate ?? 5);
-          setFreeAbove(d.settings.freeDeliveryAbove ?? 500);
-          setDeliveryCharge(d.settings.deliveryCharge ?? 50);
-        }
-      }).catch(() => {});
-  }, []);
+    if (loading || items.length === 0) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      fetch("/api/checkout/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ couponCode: appliedCouponCode, estimateWithoutAddress: true }),
+        signal: controller.signal,
+      })
+        .then(async response => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || "Unable to calculate cart totals.");
+          setQuote(data.totals);
+        })
+        .catch(error => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          setQuote(null);
+        })
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [appliedCouponCode, items.length, loading, totalPrice]);
 
   // Load suggested items whenever the cart is seen empty
   useEffect(() => {
@@ -129,17 +154,30 @@ export default function CartPage() {
     setAddingId(item._id);
     try {
       await addItem({ id: `${item._id}-plain`, menuItemId: item._id, name: item.name, custom: "", price: item.price, image: item.image, variantType: "none" }, 1);
+      toast.success("Added to cart", item.name, { id: `cart-add-${item._id}` });
+    } catch {
+      toast.error("Item not added", "Please try again.", { id: `cart-add-${item._id}` });
     } finally {
       setAddingId("");
     }
   }
 
+  async function handleRemoveItem(item: Parameters<typeof removeItem>[0]) {
+    try { await removeItem(item); toast.info("Item removed", item.name, { id: `cart-remove-${item.id}` }); }
+    catch { toast.error("Item not removed", "Please try again.", { id: `cart-remove-${item.id}` }); }
+  }
+
+  async function handleClearCart() {
+    try { await clearCart(); toast.info("Cart cleared", undefined, { id: "cart-cleared" }); }
+    catch { toast.error("Cart not cleared", "Please try again.", { id: "cart-cleared" }); }
+  }
+
   useEffect(() => {
-    if (appliedCoupon) {
+    if (appliedCouponCode) {
       fetch("/api/coupons", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ code: appliedCoupon.code, cartTotal: totalPrice }),
+        body:    JSON.stringify({ code: appliedCouponCode, cartTotal: totalPrice }),
       })
         .then(r => r.json())
         .then(data => {
@@ -148,15 +186,9 @@ export default function CartPage() {
         })
         .catch(() => {});
     }
-  }, [totalPrice]);
+  }, [appliedCouponCode, totalPrice]);
 
   // ── Price calculations ────────────────────────────────────
-  const discount       = appliedCoupon?.discount ?? 0;
-  const subtotalAfterDiscount = Math.max(0, totalPrice - discount);
-  const shippingAmount = items.length > 0 ? (subtotalAfterDiscount >= freeAbove ? 0 : deliveryCharge) : 0;
-  const taxAmount      = items.length > 0 ? Math.round(subtotalAfterDiscount * taxRate / 100) : 0;
-  const grandTotal     = subtotalAfterDiscount + taxAmount + shippingAmount;
-
   if (loading) {
     return (
       <div className="cart-page-section">
@@ -230,13 +262,13 @@ export default function CartPage() {
                     <span className="qty-btn" onClick={() => updateQty(item, item.qty + 1)}>+</span>
                   </div>
                   <div className="item-price">₹{item.price * item.qty}</div>
-                  <div className="remove-icon" onClick={() => removeItem(item)}>×</div>
+                  <div className="remove-icon" onClick={() => handleRemoveItem(item)}>×</div>
                 </div>
               ))
             )}
           </div>
           {items.length > 0 && (
-            <button onClick={clearCart} className="clear-cart-btn">
+            <button onClick={handleClearCart} className="clear-cart-btn">
               Clear Cart
             </button>
           )}
@@ -245,7 +277,11 @@ export default function CartPage() {
         {/* Right */}
         <div className="cart-right">
           <div className="summary-card">
-            <h3>Order Summary</h3>
+            <div className="summary-card__heading">
+              <span className="summary-card__eyebrow"><i className="fa-solid fa-shield-halved" /> Secure checkout</span>
+              <h3>Order Summary</h3>
+              <p>Review your cart before choosing an address and payment method.</p>
+            </div>
 
             {/* ── Coupon section ── */}
             <div className="promo-box">
@@ -281,7 +317,7 @@ export default function CartPage() {
                     <button
                       onClick={handleApplyCoupon}
                       disabled={couponLoading}
-                      style={{ background: "#e67e22", color: "#fff", border: "none", borderRadius: 8, padding: "0 14px", cursor: "pointer", fontFamily: "Poppins,sans-serif", fontSize: "0.82rem", fontWeight: 600, whiteSpace: "nowrap", opacity: couponLoading ? 0.7 : 1 }}>
+                      className="promo-apply-btn">
                       {couponLoading ? "…" : "Apply"}
                     </button>
                   </div>
@@ -294,8 +330,8 @@ export default function CartPage() {
               {/* View available coupons toggle */}
               {!appliedCoupon && items.length > 0 && (
                 <button onClick={loadAvailableCoupons}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#e67e22", fontFamily: "Poppins,sans-serif", fontSize: "0.78rem", fontWeight: 600, padding: "6px 0 0", display: "flex", alignItems: "center", gap: 4 }}>
-                  🏷️ {showCoupons ? "Hide" : "View"} available coupons
+                  className="available-coupons-btn">
+                  <i className="fa-solid fa-ticket" /> {showCoupons ? "Hide" : "View"} available coupons
                 </button>
               )}
 
@@ -340,20 +376,38 @@ export default function CartPage() {
               )}
             </div>
 
-            {/* Summary rows — unchanged class names */}
-            <div className="summary-row"><span>Subtotal</span><span>₹{totalPrice}</span></div>
+            <div className="summary-breakdown">
+              <div className="summary-row summary-row--subtotal"><span>Cart subtotal</span><strong>₹{quote?.subtotal ?? totalPrice}</strong></div>
 
-            {/* Discount row — only shown when coupon applied */}
-            {appliedCoupon && (
-              <div className="summary-row" style={{ color: "#16a34a" }}>
-                <span>Discount ({appliedCoupon.code})</span>
-                <span>− ₹{appliedCoupon.discount}</span>
+              {appliedCoupon && (
+                <div className="summary-row summary-row--discount">
+                  <span>Discount ({appliedCoupon.code})</span>
+                  <strong>− ₹{quote?.couponDiscount ?? appliedCoupon.discount}</strong>
+                </div>
+              )}
+
+              <div className="summary-row summary-row--pending">
+                <span className="summary-row__label"><i className="fa-solid fa-receipt" /> Tax</span>
+                <span className="calculation-badge">At checkout</span>
               </div>
-            )}
+              <div className="summary-row summary-row--pending">
+                <span className="summary-row__label"><i className="fa-solid fa-truck-fast" /> Delivery</span>
+                <span className="calculation-badge">At checkout</span>
+              </div>
+            </div>
 
-            <div className="summary-row"><span>Estimated Tax</span><span>₹{taxAmount}</span></div>
-            <div className="summary-row"><span>Shipping {subtotalAfterDiscount >= freeAbove ? <span style={{color:"#16a34a",fontSize:"0.7rem"}}>(Free!)</span> : <span style={{color:"#9ca3af",fontSize:"0.7rem"}}>(Free above ₹{freeAbove})</span>}</span><span>₹{shippingAmount}</span></div>
-            <div className="summary-row total"><span>Total</span><span>₹{grandTotal}</span></div>
+            <div className="summary-total-preview">
+              <div>
+                <strong>Final payable</strong>
+                <span>After address, offers and charges</span>
+              </div>
+              <span className="summary-total-preview__status">Calculated next</span>
+            </div>
+
+            <div className="checkout-assurance">
+              <i className="fa-solid fa-circle-check" />
+              <div><strong>See the exact price before paying</strong><span>Nothing is charged until you review and confirm.</span></div>
+            </div>
             <button
               className="checkout-btn"
               disabled={items.length === 0}
@@ -364,8 +418,9 @@ export default function CartPage() {
                 else sessionStorage.removeItem("appliedCoupon");
                 router.push("/checkout");
               }}>
-              Checkout
+              <span>Continue to Checkout</span><i className="fa-solid fa-arrow-right" />
             </button>
+            <p className="checkout-security"><i className="fa-solid fa-lock" /> Secure payment powered by Razorpay</p>
             {items.length === 0 && (
               <p className="checkout-btn__hint">Add at least one item to your cart to checkout.</p>
             )}

@@ -117,18 +117,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           qty,
         }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        const mapped: CartItem[] = (data.items || []).map((i: {
-          menuItemId: string; name: string; custom: string;
-          price: number; qty: number; image?: string; variantType: string;
-        }) => ({
-          id: `${i.menuItemId}-${i.custom || "plain"}`,
-          menuItemId: i.menuItemId, name: i.name, custom: i.custom,
-          price: i.price, qty: i.qty, image: i.image, variantType: i.variantType,
-        }));
-        setItems(mapped);
-      }
+      if (!res.ok) throw new Error("Unable to add this item to your cart.");
+
+      const data = await res.json();
+      const mapped: CartItem[] = (data.items || []).map((i: {
+        menuItemId: string; name: string; custom: string;
+        price: number; qty: number; image?: string; variantType: string;
+      }) => ({
+        id: `${i.menuItemId}-${i.custom || "plain"}`,
+        menuItemId: i.menuItemId, name: i.name, custom: i.custom,
+        price: i.price, qty: i.qty, image: i.image, variantType: i.variantType,
+      }));
+      setItems(mapped);
     } else {
       // Guest: local state
       setItems(prev => {
@@ -142,11 +142,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // ── REMOVE ITEM ─────────────────────────────────────────────
   const removeItem = useCallback(async (item: CartItem) => {
     if (isLoggedIn && item.menuItemId) {
-      await fetch("/api/cart/item", {
+      const response = await fetch("/api/cart/item", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ menuItemId: item.menuItemId, custom: item.custom }),
       });
+      if (!response.ok) throw new Error("Unable to remove this item from your cart.");
     }
     setItems(prev => prev.filter(i => i.id !== item.id));
   }, [isLoggedIn]);
@@ -154,11 +155,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // ── UPDATE QTY ──────────────────────────────────────────────
   const updateQty = useCallback(async (item: CartItem, qty: number) => {
     if (isLoggedIn && item.menuItemId) {
-      await fetch("/api/cart/item", {
+      const response = await fetch("/api/cart/item", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ menuItemId: item.menuItemId, custom: item.custom, qty }),
       });
+      if (!response.ok) throw new Error("Unable to update this cart item.");
     }
     if (qty < 1) {
       setItems(prev => prev.filter(i => i.id !== item.id));
@@ -170,7 +172,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // ── CLEAR CART ──────────────────────────────────────────────
   const clearCart = useCallback(async () => {
     if (isLoggedIn) {
-      await fetch("/api/cart", { method: "DELETE" });
+      const response = await fetch("/api/cart", { method: "DELETE" });
+      if (!response.ok) throw new Error("Unable to clear your cart.");
     } else {
       try { localStorage.removeItem("damru_cart"); } catch { /* ignore */ }
     }

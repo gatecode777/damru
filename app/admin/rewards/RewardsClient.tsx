@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Search, X, Save, Loader2, Gift, Settings2, Users,
-  Plus, Minus, Lock, Unlock, Flame, Trash2, Trophy, Pencil, Target, Share2, Crown,
+  Plus, Minus, Lock, Unlock, Flame, Trash2, Trophy, Pencil, Target, Share2, Crown, RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/components/admin/Toast";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -50,12 +51,12 @@ interface DamruConfigValues {
 }
 interface RewardUser {
   _id: string; name: string; email: string; phone?: string;
-  damruBalance: number; damruTotalEarned: number; damruTotalRedeemed: number; loyaltyLevel: string;
+  damruBalance: number; damruTotalEarned: number; damruTotalRedeemed: number; rewardDebt: number; loyaltyLevel: string;
   dateOfBirth?: string; dobLocked: boolean; marriageAnniversary?: string; anniversaryLocked: boolean;
 }
 interface DamruTx {
   _id: string; type: string; category: string; amount: number; balanceAfter: number;
-  description: string; adjustmentReason?: string; createdAt: string;
+  description: string; adjustmentReason?: string; createdAt: string; reversed?: boolean;
 }
 interface DayReward { day: number; amount: number; }
 interface DailyStreakConfigValues {
@@ -1077,6 +1078,9 @@ function UsersTab({ canEdit }: { canEdit: boolean }) {
   const [neverExpires, setNeverExpires] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
   const [error, setError] = useState("");
+  const [reversalTarget, setReversalTarget] = useState<DamruTx | null>(null);
+  const [reversalNote, setReversalNote] = useState("");
+  const [reversing, setReversing] = useState(false);
   // Persists across a failed-then-retried submit of the SAME adjustment so a network
   // retry can't double-apply it; cleared after a successful submit so the next,
   // genuinely new adjustment (even with identical fields) gets its own fresh id.
@@ -1130,6 +1134,26 @@ function UsersTab({ canEdit }: { canEdit: boolean }) {
     }
   }
 
+  async function reverseReward() {
+    if (!selected || !reversalTarget || reversalNote.trim().length < 5) return;
+    setReversing(true);
+    try {
+      const response = await fetch(`/api/admin/rewards/transactions/${reversalTarget._id}/reverse`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: reversalNote.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) { toast.error("Unable to reverse reward", data.error); return; }
+      toast.success("Reward reversed", `${reversalTarget.amount.toLocaleString("en-IN")} Damru was recorded as a permanent reward adjustment.`);
+      setReversalTarget(null);
+      setReversalNote("");
+      await loadUser(selected._id);
+    } finally {
+      setReversing(false);
+    }
+  }
+
   async function unlock(field: "dob" | "anniversary") {
     if (!selected) return;
     const res = await fetch(`/api/admin/rewards/users/${selected._id}/unlock`, {
@@ -1176,11 +1200,12 @@ function UsersTab({ canEdit }: { canEdit: boolean }) {
             <div style={{ padding: 40, textAlign: "center", color: "#9ca3af" }}><Loader2 size={20} style={{ animation: "spin 0.8s linear infinite" }} /></div>
           ) : (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 18 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 18 }}>
                 {[
                   { label: "Balance", value: selected.damruBalance, color: "#f97316" },
                   { label: "Total Earned", value: selected.damruTotalEarned, color: "#16a34a" },
                   { label: "Total Redeemed", value: selected.damruTotalRedeemed, color: "#6b7280" },
+                  { label: "Reward Debt", value: selected.rewardDebt || 0, color: "#dc2626" },
                   { label: "Loyalty Level", value: selected.loyaltyLevel, color: "#3b82f6" },
                 ].map(s => (
                   <div key={s.label} style={{ border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "12px 14px" }}>
@@ -1266,9 +1291,15 @@ function UsersTab({ canEdit }: { canEdit: boolean }) {
                         {new Date(tx.createdAt).toLocaleString("en-IN")}{tx.adjustmentReason ? ` · ${tx.adjustmentReason}` : ""}
                       </p>
                     </div>
-                    <span style={{ fontWeight: 700, fontSize: "0.9rem", color: tx.type === "credit" ? "#16a34a" : "#dc2626", fontFamily: "DM Sans, sans-serif" }}>
-                      {tx.type === "credit" ? "+" : "-"}{tx.amount}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: "0.9rem", color: tx.type === "credit" ? "#16a34a" : "#dc2626", fontFamily: "DM Sans, sans-serif" }}>
+                        {tx.type === "credit" ? "+" : "-"}{tx.amount}
+                      </span>
+                      {canEdit && tx.type === "credit" && !tx.reversed && (
+                        <button type="button" title="Reverse this reward" onClick={() => { setReversalTarget(tx); setReversalNote(""); }} style={{ border: "1px solid #fecaca", background: "#fff7f7", color: "#dc2626", borderRadius: 8, padding: 6, display: "grid", placeItems: "center", cursor: "pointer" }}><RotateCcw size={13} /></button>
+                      )}
+                      {tx.reversed && <span style={{ color: "#9ca3af", fontSize: "0.68rem", fontWeight: 700 }}>REVERSED</span>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1276,6 +1307,24 @@ function UsersTab({ canEdit }: { canEdit: boolean }) {
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(reversalTarget)}
+        title={`Reverse ${reversalTarget?.amount || 0} Damru?`}
+        description="The original reward will remain in history and a permanent reversal ledger entry will be created."
+        confirmLabel="Reverse reward"
+        busyLabel="Reversing…"
+        busy={reversing}
+        confirmDisabled={reversalNote.trim().length < 5}
+        confirmIcon={<RotateCcw size={16} />}
+        onCancel={() => { if (!reversing) { setReversalTarget(null); setReversalNote(""); } }}
+        onConfirm={() => void reverseReward()}
+      >
+        <div style={{ marginTop: 14 }}>
+          <p style={{ margin: "0 0 8px", fontSize: "0.8rem", color: "#475569" }}><b>Original reward:</b> {reversalTarget?.description || reversalTarget?.category}</p>
+          <label style={lbl}>Correction note (required)</label>
+          <textarea style={{ ...inp, minHeight: 88, resize: "vertical" }} maxLength={500} value={reversalNote} onChange={event => setReversalNote(event.target.value)} placeholder="Explain why this reward is no longer valid" />
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

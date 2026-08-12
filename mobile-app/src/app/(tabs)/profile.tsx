@@ -31,6 +31,7 @@ import { CouponCard } from "@/components/profile/CouponCard";
 import { LoadingSkeleton } from "@/components/profile/LoadingSkeleton";
 import { HelpSupportSection } from "@/components/profile/HelpSupportSection";
 import { RewardsSection } from "@/components/profile/RewardsSection";
+import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSection";
 
 export default function ProfileScreen() {
   const { user, setUser, ready } = useApp();
@@ -43,12 +44,10 @@ export default function ProfileScreen() {
     addresses,
     orders,
     coupons,
-    paymentMethods,
     loading,
     refreshing,
     error,
     refreshData,
-    deletePaymentMethod,
     reload,
   } = useProfile();
 
@@ -66,7 +65,7 @@ export default function ProfileScreen() {
       if (user) {
         reload();
       }
-    }, [user])
+    }, [user, reload])
   );
 
   const handleDeleteAddress = (addressId: string) => {
@@ -161,7 +160,7 @@ export default function ProfileScreen() {
                   <UserProfileCard user={user} />
                   <AddressBookCard addresses={addresses} />
                   <OrdersCard orders={orders} />
-                  <PaymentMethodCard paymentMethods={paymentMethods} />
+                  <PaymentMethodCard />
                   <CouponCard coupons={coupons} />
 
                   <View style={styles.logoutWrapper}>
@@ -298,47 +297,7 @@ export default function ProfileScreen() {
               )}
 
               {activeTab === "payment" && (
-                <FlatList
-                  data={paymentMethods}
-                  keyExtractor={(item) => item.id}
-                  contentContainerStyle={styles.scrollContent}
-                  refreshControl={
-                    React.createElement(RefreshControl as any, {
-                      refreshing: manualRefreshing,
-                      onRefresh: handleRefresh,
-                      colors: [colors.orange],
-                    })
-                  }
-                  ListHeaderComponent={
-                    <Text style={styles.sectionTitle}>Payment Methods</Text>
-                  }
-                  ListEmptyComponent={
-                    <EmptyState title="No payment methods saved" message="Save a credit or debit card." />
-                  }
-                  ListFooterComponent={
-                    <View style={{ marginTop: 12 }}>
-                      <Button label="+ Add New Card" onPress={() => router.push("/payment-methods")} />
-                    </View>
-                  }
-                  renderItem={({ item: c }) => (
-                    <View style={[styles.listItemCard, { backgroundColor: "#20272c" }]}>
-                      <View style={styles.cardHeader}>
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                          <View style={styles.chipPlaceholder} />
-                          <Text style={[styles.cardLabel, { color: "#ffffff", letterSpacing: 1.5 }]}>
-                            •••• {c.last4}
-                          </Text>
-                        </View>
-                        <Pressable style={styles.actionBtn} onPress={() => deletePaymentMethod(c.id)}>
-                          <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                        </Pressable>
-                      </View>
-                      <Text style={{ color: "#a99c94", fontSize: 11, fontFamily: "Poppins_500Medium" }}>
-                        {c.brand.toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
-                />
+                <PaymentMethodsSection />
               )}
 
               {activeTab === "coupons" && (
@@ -538,13 +497,6 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_700Bold",
     fontSize: 13,
     color: colors.ink,
-  },
-  chipPlaceholder: {
-    width: 28,
-    height: 18,
-    borderRadius: 3,
-    backgroundColor: "#3a4650",
-    marginRight: 10,
   },
   codeBadge: {
     backgroundColor: "rgba(229, 121, 34, 0.1)",

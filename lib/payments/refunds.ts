@@ -10,6 +10,8 @@ import { getDamruConfig } from "@/lib/getDamruConfig";
 import { assignLotFields } from "@/lib/rewards/damruAllocation";
 import { notifyRewardEvent } from "@/lib/notifications/rewardNotificationService";
 import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
+import { reverseOrderRewards } from "@/lib/rewards/reversalEngine";
+import { evaluateRefundRisk, evaluateRiskSafely } from "@/lib/rewards/riskEngine";
 
 /**
  * Releases one reserved usage of a coupon — called when an order that
@@ -156,18 +158,22 @@ export async function restoreDamruForOrder(
 export async function finalizeRefund(refundId: string | mongoose.Types.ObjectId): Promise<{ alreadyFinalized: boolean; refund?: IPaymentRefund }> {
   await connectDB();
 
-  const refund = await PaymentRefund.findOneAndUpdate(
+  let refund = await PaymentRefund.findOneAndUpdate(
     { _id: refundId, status: "pending" },
     { $set: { status: "processed", processedAt: new Date() } },
     { new: true }
   );
-  if (!refund) return { alreadyFinalized: true };
-
-  await Order.updateOne(
-    { _id: refund.orderId },
-    { $inc: { refundedAmount: refund.amount, pendingRefundAmount: -refund.amount } }
-  );
-  await syncOrderPaymentStatus(refund.orderId);
+  const newlyFinalized = Boolean(refund);
+  if (!refund) {
+    refund = await PaymentRefund.findOne({ _id: refundId, status: "processed" });
+    if (!refund) return { alreadyFinalized: true };
+  } else {
+    await Order.updateOne(
+      { _id: refund.orderId },
+      { $inc: { refundedAmount: refund.amount, pendingRefundAmount: -refund.amount } }
+    );
+    await syncOrderPaymentStatus(refund.orderId);
+  }
 
   // Policy A (see docs/PAYMENT_RELIABILITY_REFUNDS.md): restore Damru only
   // once the order has been refunded IN FULL — proportional restoration for
@@ -177,6 +183,13 @@ export async function finalizeRefund(refundId: string | mongoose.Types.ObjectId)
   }>();
   if (order && order.paymentAmount != null && order.paymentAmount > 0 && order.refundedAmount >= order.paymentAmount) {
     await restoreDamruForOrder(refund.orderId, order.userId, String(refund._id));
+    await reverseOrderRewards({
+      orderId: refund.orderId,
+      refundId: refund._id,
+      reason: "FULL_REFUND",
+      triggerId: `refund:${refund._id}`,
+      createdBy: refund.requestedBy,
+    });
   }
 
   if (order?.userId) {
@@ -189,9 +202,14 @@ export async function finalizeRefund(refundId: string | mongoose.Types.ObjectId)
       orderNumber: order.orderId,
       route: `/my-profile?tab=orders`,
     });
+    await evaluateRiskSafely("refund-processed", () => evaluateRefundRisk({
+      userId: order.userId as mongoose.Types.ObjectId,
+      refundId: refund._id,
+      orderId: refund.orderId,
+    }));
   }
 
-  return { alreadyFinalized: false, refund };
+  return { alreadyFinalized: !newlyFinalized, refund };
 }
 
 /**

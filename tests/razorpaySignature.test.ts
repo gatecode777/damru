@@ -2,7 +2,7 @@ import "./setup";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { verifyPaymentSignature, verifyWebhookSignature } from "../lib/payments/razorpay";
+import { isRazorpayConfigured, isRazorpayWebhookConfigured, verifyPaymentSignature, verifyWebhookSignature } from "../lib/payments/razorpay";
 
 // These functions read process.env lazily, at call time — setting these here,
 // before any test() body runs, is sufficient without needing a fresh module
@@ -10,6 +10,14 @@ import { verifyPaymentSignature, verifyWebhookSignature } from "../lib/payments/
 process.env.RAZORPAY_KEY_ID = "rzp_test_fake_key_id";
 process.env.RAZORPAY_KEY_SECRET = "test_key_secret_for_regression_only";
 process.env.RAZORPAY_WEBHOOK_SECRET = "test_webhook_secret_for_regression_only";
+
+test("checkout works with the key pair while webhook delivery is disabled", () => {
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  delete process.env.RAZORPAY_WEBHOOK_SECRET;
+  assert.equal(isRazorpayConfigured(), true);
+  assert.equal(isRazorpayWebhookConfigured(), false);
+  process.env.RAZORPAY_WEBHOOK_SECRET = webhookSecret;
+});
 
 /**
  * Regression coverage for the CRITICAL signature rule (integration doc

@@ -29,6 +29,7 @@ export interface ISiteSettings extends Document {
   taxRate: number;   // percentage e.g. 5
   freeDeliveryAbove: number;   // e.g. 500 rupees
   deliveryCharge: number;   // flat rate when below threshold
+  deliveryRadiusKm: number;
 
   // Maintenance
   maintenanceMode: boolean;
@@ -63,6 +64,7 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
     taxRate: { type: Number, default: 5 },
     freeDeliveryAbove: { type: Number, default: 500 },
     deliveryCharge: { type: Number, default: 50 },
+    deliveryRadiusKm: { type: Number, default: 10, min: 1, max: 100 },
 
     maintenanceMode: { type: Boolean, default: false },
     maintenanceMsg: { type: String, default: "We'll be back soon!" },

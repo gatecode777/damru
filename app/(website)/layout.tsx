@@ -5,6 +5,9 @@ import SiteHeader from "@/components/website/SiteHeader";
 import SiteFooter from "@/components/website/SiteFooter";
 import { CartProvider } from "@/lib/CartContext";
 import { RewardsProvider } from "@/lib/rewards/RewardsProvider";
+import TopNavigationProgress from "@/components/TopNavigationProgress";
+import { Suspense } from "react";
+import { WebsiteToastProvider } from "@/components/website/Toast";
 
 import "@/styles/website/header.css";
 import "@/styles/website/style.css";
@@ -63,7 +66,10 @@ export default async function WebsiteLayout({ children }: { children: React.Reac
   }
 
   return (
-    <>
+    <WebsiteToastProvider>
+      <Suspense fallback={null}>
+        <TopNavigationProgress />
+      </Suspense>
       {/* Fonts & icon libraries */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -97,6 +103,6 @@ export default async function WebsiteLayout({ children }: { children: React.Reac
 
       {/* JS for animations (wheel, sliders etc.) */}
       <Script src="/js/main.js" strategy="afterInteractive" />
-    </>
+    </WebsiteToastProvider>
   );
 }

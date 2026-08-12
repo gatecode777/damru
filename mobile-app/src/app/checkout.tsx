@@ -20,10 +20,9 @@ import { Button, Field } from "../components/ui";
 import { colors, assetUrl } from "../config";
 import { get, post, ApiRequestError } from "../lib/api";
 import { useApp } from "../providers/AppProvider";
-import { StaticAssets } from "../constants/assets";
 import type { Address } from "../types";
-import { getRewardsDashboard, redeemDamru } from "../services/rewardsApi";
-import { createRazorpayOrder, verifyRazorpayPayment } from "../services/paymentApi";
+import { getRewardsDashboard } from "../services/rewardsApi";
+import { createRazorpayOrder, verifyRazorpayPayment, reportRazorpayPaymentFailed } from "../services/paymentApi";
 import { trackRewardEvent } from "../lib/rewardsAnalytics";
 import type { RazorpayCheckoutOptions, RazorpaySuccessResponse } from "react-native-razorpay";
 
@@ -57,12 +56,11 @@ const emptyAddress: Address = {
 export default function CheckoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { coupon, discount: discountParam } = useLocalSearchParams<{
+  const { coupon } = useLocalSearchParams<{
     coupon?: string;
-    discount?: string;
   }>();
 
-  const { user, cart, subtotal, clearCart } = useApp();
+  const { user, cart, clearCart } = useApp();
 
   const queryClient = useQueryClient();
 
@@ -73,14 +71,6 @@ export default function CheckoutScreen() {
     staleTime: 30 * 1000,
   });
   const [requestedDamru, setRequestedDamru] = useState("");
-
-  // Same tax/delivery config the backend's own order-total calculation uses —
-  // keeps this preview from drifting from what /api/orders will actually charge.
-  const { data: checkoutConfig } = useQuery({
-    queryKey: queryKeys.checkout.config(),
-    queryFn: () => get<{ taxRate: number; freeDeliveryAbove: number; deliveryCharge: number }>("/api/checkout/config"),
-    staleTime: 5 * 60 * 1000,
-  });
 
   const { data: addressesData } = useQuery({
     queryKey: queryKeys.profile.addresses(),
@@ -105,39 +95,33 @@ export default function CheckoutScreen() {
 
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-
-  // Bill calculations — mirrors the same taxRate/freeDeliveryAbove/deliveryCharge
-  // config app/api/orders/route.ts uses, so this preview doesn't drift from the
-  // real charge. Falls back to the same defaults lib/getSettings.ts uses if the
-  // config fetch hasn't resolved yet.
-  const taxRate = checkoutConfig?.taxRate ?? 5;
-  const freeDeliveryAbove = checkoutConfig?.freeDeliveryAbove ?? 500;
-  const deliveryCharge = checkoutConfig?.deliveryCharge ?? 50;
-  const discount = Number(discountParam || 0);
-  const subtotalAfterDiscount = Math.max(0, subtotal - discount);
-  const deliveryFee = subtotalAfterDiscount >= freeDeliveryAbove ? 0 : deliveryCharge;
-  const tax = Math.round(subtotalAfterDiscount * taxRate / 100);
-  const total = Math.max(0, subtotalAfterDiscount + tax + deliveryFee);
+  const { data: quoteData, isFetching: quoteLoading, error: quoteQueryError } = useQuery({
+    queryKey: ["checkout", "quote", selectedAddr, coupon || "", requestedDamru, cart.map(item => `${item.menuItemId}:${item.custom}:${item.qty}`).join("|")],
+    queryFn: () => post<{ totals: { subtotal: number; couponDiscount: number; deliveryFee: number; taxAmount: number; damruDiscount: number; finalAmount: number; taxName: string } }>("/api/checkout/quote", {
+      addressId: selectedAddr,
+      couponCode: coupon || undefined,
+      requestedDamru: Number(requestedDamru || 0),
+    }),
+    enabled: Boolean(user && selectedAddr && cart.length),
+    staleTime: 10 * 1000,
+    retry: false,
+  });
+  const quote = quoteData?.totals;
+  const subtotal = quote?.subtotal ?? 0;
+  const discount = quote?.couponDiscount ?? 0;
+  const deliveryFee = quote?.deliveryFee ?? 0;
+  const tax = quote?.taxAmount ?? 0;
+  const total = quote?.finalAmount ?? 0;
 
   // UI States
   const [billExpanded, setBillExpanded] = useState(false);
-  const [payMethod, setPayMethod] = useState<"upi" | "card" | "cod">("upi");
+  const [payMethod, setPayMethod] = useState<"razorpay" | "cod" | null>(null);
   
   // UPI ID client-side format-check states.
   // NOTE: This validates only the local-part@provider format.
   // It does NOT confirm that the UPI account exists or that the bank will
   // authorise a debit. Final payment validation must occur through the
   // payment provider (e.g. Razorpay, PhonePe) during payment processing.
-  const [upiId, setUpiId] = useState("");
-  const [upiFormatValid, setUpiFormatValid] = useState(false);
-  const [upiFormatError, setUpiFormatError] = useState("");
-  const [checkingUpiFormat, setCheckingUpiFormat] = useState(false);
-
-  // Card input states
-  const [cardHolder, setCardHolder] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExp, setCardExp] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
 
   // Address loading handled by useQuery query key caching above.
 
@@ -167,40 +151,21 @@ export default function CheckoutScreen() {
     }
   }
 
-  // Client-side UPI format validation.
-  // Accepts the common  local-part@provider  pattern used across Indian UPI apps.
-  // A passing check means the string is well-formed — it does NOT confirm
-  // account ownership or that funds can be debited.
-  function handleCheckUpiFormat() {
-    const trimmed = upiId.trim();
-    // Conservative pattern: non-empty local part, '@', 1-60 char provider
-    const UPI_FORMAT = /^[a-zA-Z0-9._-]+@[a-zA-Z]{2,60}$/;
-    setCheckingUpiFormat(true);
-    setUpiFormatError("");
-    if (!trimmed) {
-      setUpiFormatValid(false);
-      setUpiFormatError("Please enter a UPI ID.");
-      setCheckingUpiFormat(false);
-      return;
-    }
-    if (!UPI_FORMAT.test(trimmed)) {
-      setUpiFormatValid(false);
-      setUpiFormatError("Invalid format. Expected: name@upi, number@bank, etc.");
-      setCheckingUpiFormat(false);
-      return;
-    }
-    // Format is valid — this is NOT a bank/VPA verification.
-    setUpiFormatValid(true);
-    setCheckingUpiFormat(false);
-  }
-
   async function placeOrder() {
     if (!selectedAddr) {
       Alert.alert("Delivery address", "Please select or add an address.");
       return;
     }
+    if (!payMethod) {
+      Alert.alert("Payment method", "Please select Cash on Delivery or Pay Online.");
+      return;
+    }
     if (payMethod !== "cod" && !user) {
       Alert.alert("Login required", "Online payment requires login. Please log in, or choose Cash on Delivery.");
+      return;
+    }
+    if (!quote || quoteLoading) {
+      Alert.alert("Order total unavailable", quoteQueryError instanceof Error ? quoteQueryError.message : "Please wait while we calculate your order total.");
       return;
     }
 
@@ -208,26 +173,25 @@ export default function CheckoutScreen() {
     try {
       // Map "upi" and "card" selection securely to backend order creation
       const response = await post<{
-        order: { orderNumber?: string; _id: string };
+        order: { orderId: string; _id: string; total: number };
+        redemption?: { success: boolean; amount?: number; discount?: number; error?: string };
       }>("/api/orders", {
         addressId: selectedAddr,
         paymentMethod: payMethod,
         couponCode: coupon || undefined,
         notes: notes.trim(),
+        requestedDamru: Number(requestedDamru || 0),
       });
-
-      // Clear the local and database cart
-      await clearCart();
 
       // Damru redemption is chained after order creation — the backend
       // requires an existing, owned orderId to redeem against. This must run
       // BEFORE Razorpay order creation below, since the payable amount sent
       // to Razorpay is computed net of any Damru redeemed for this order.
       let redeemMessage = "";
-      const damruAmount = Number(requestedDamru);
-      if (user && damruAmount > 0) {
+      const result = response.redemption;
+      const damruAmount = Number(result?.amount || 0);
+      if (result) {
         trackRewardEvent("damru_redemption_started");
-        const result = await redeemDamru(response.order._id, damruAmount);
         if (result.success) {
           trackRewardEvent("damru_redemption_succeeded");
           redeemMessage = `\n\n🪙 ${damruAmount} Damru redeemed → ₹${result.discount} discount recorded.`;
@@ -238,7 +202,9 @@ export default function CheckoutScreen() {
         }
       }
 
-      const orderLabel = response.order.orderNumber ?? response.order._id.slice(-6);
+      await clearCart();
+
+      const orderLabel = response.order.orderId;
 
       if (payMethod === "cod") {
         Alert.alert(
@@ -264,8 +230,10 @@ export default function CheckoutScreen() {
   // Damru already redeemed for this order) — this only ever opens Razorpay's
   // native checkout for that server-returned amount, never one computed here.
   async function payWithRazorpay(internalOrderId: string, orderLabel: string, redeemMessage: string) {
+    let gatewayOrderId = "";
     try {
       const orderData = await createRazorpayOrder(internalOrderId);
+      gatewayOrderId = orderData.razorpayOrderId ?? "";
 
       if (orderData.zeroPayable) {
         Alert.alert(
@@ -308,6 +276,9 @@ export default function CheckoutScreen() {
         offerPaymentRetry(internalOrderId, orderLabel, redeemMessage, "We couldn't verify your payment.");
       }
     } catch (e: unknown) {
+      if (gatewayOrderId) {
+        reportRazorpayPaymentFailed({ orderId: internalOrderId, razorpayOrderId: gatewayOrderId }).catch(() => undefined);
+      }
       // RazorpayCheckout.open() rejects on user cancellation or a failed
       // payment attempt — either way, the order is saved and retryable, it
       // is never silently marked paid from this catch block alone.
@@ -404,11 +375,18 @@ export default function CheckoutScreen() {
                 )}
               </View>
               <View style={styles.billDetailRow}>
-                <Text style={styles.billDetailLabel}>Taxes ({taxRate}%)</Text>
+                <Text style={styles.billDetailLabel}>{quote?.taxName || "Tax"}</Text>
                 <Text style={styles.billDetailVal}>₹{tax.toFixed(2)}</Text>
               </View>
+              {(quote?.damruDiscount || 0) > 0 && (
+                <View style={styles.billDetailRow}>
+                  <Text style={[styles.billDetailLabel, { color: colors.green }]}>Damru</Text>
+                  <Text style={[styles.billDetailVal, { color: colors.green }]}>−₹{quote!.damruDiscount.toFixed(2)}</Text>
+                </View>
+              )}
             </View>
           )}
+          {quoteQueryError && <Text style={{ color: colors.danger, marginTop: 8, fontSize: 12 }}>{quoteQueryError instanceof Error ? quoteQueryError.message : "Unable to calculate order total."}</Text>}
         </View>
 
         {/* ── Delivery Address Section ── */}
@@ -507,158 +485,42 @@ export default function CheckoutScreen() {
         {/* ── Payment Methods Title ── */}
         <Text style={styles.sectionHeader}>Payment Method</Text>
 
-        {/* 1. Credit / Debit Card Option */}
-        <View style={styles.sectionCard}>
+        <View style={[styles.sectionCard, payMethod === "razorpay" && styles.selectedPaymentCard]}>
           <Pressable
-            onPress={() => setPayMethod("card")}
+            onPress={() => setPayMethod("razorpay")}
             style={styles.paymentMethodRow}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: payMethod === "razorpay" }}
+            accessibilityLabel="Pay online securely with Razorpay"
           >
-            <Ionicons name="card-outline" size={24} color={colors.ink} />
+            <Ionicons name="shield-checkmark-outline" size={24} color={colors.ink} />
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.paymentMethodTitle}>Credit / Debit Card</Text>
-              <Text style={styles.paymentMethodSubtitle}>Visa, Mastercard, RuPay</Text>
+              <Text style={styles.paymentMethodTitle}>Pay Online with Razorpay</Text>
+              <Text style={styles.paymentMethodSubtitle}>UPI · Credit/Debit Cards · Net Banking · Wallets</Text>
             </View>
-            <Ionicons
-              name={payMethod === "card" ? "chevron-up" : "chevron-down"}
-              size={18}
-              color={colors.muted}
-            />
-          </Pressable>
-
-          {payMethod === "card" && (
-            <View style={styles.paymentSubPanel}>
-              <Text style={styles.paymentWarning}>
-                Card checkout sandbox mode. Enter details to simulate.
-              </Text>
-              <TextInput
-                value={cardHolder}
-                onChangeText={setCardHolder}
-                placeholder="Cardholder Name"
-                placeholderTextColor="#a99c94"
-                style={styles.subInput}
-              />
-              <TextInput
-                value={cardNumber}
-                onChangeText={setCardNumber}
-                placeholder="Card Number"
-                placeholderTextColor="#a99c94"
-                keyboardType="number-pad"
-                style={styles.subInput}
-              />
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <TextInput
-                  value={cardExp}
-                  onChangeText={setCardExp}
-                  placeholder="MM/YY"
-                  placeholderTextColor="#a99c94"
-                  style={[styles.subInput, { flex: 1 }]}
-                />
-                <TextInput
-                  value={cardCvv}
-                  onChangeText={setCardCvv}
-                  placeholder="CVV"
-                  placeholderTextColor="#a99c94"
-                  keyboardType="number-pad"
-                  secureTextEntry
-                  maxLength={3}
-                  style={[styles.subInput, { flex: 1 }]}
-                />
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* 2. UPI / Scan QR Option */}
-        <View style={[styles.sectionCard, payMethod === "upi" && styles.selectedPaymentCard]}>
-          <Pressable
-            onPress={() => setPayMethod("upi")}
-            style={styles.paymentMethodRow}
-          >
-            <Ionicons name="qr-code-outline" size={24} color={colors.ink} />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.paymentMethodTitle}>UPI / Scan QR</Text>
-              <Text style={styles.paymentMethodSubtitle}>
-                Pay via GPay, PhonePe, Paytm
-              </Text>
-            </View>
-            {payMethod === "upi" ? (
+            {payMethod === "razorpay" ? (
               <Ionicons name="checkmark-circle" size={22} color={colors.orange} />
             ) : (
               <Ionicons name="chevron-down" size={18} color={colors.muted} />
             )}
           </Pressable>
-
-          {payMethod === "upi" && (
+          {payMethod === "razorpay" && (
             <View style={styles.paymentSubPanel}>
               <Text style={styles.amountToPayLabel}>AMOUNT TO PAY</Text>
               <Text style={styles.amountToPayVal}>₹{total.toFixed(2)}</Text>
-
-              {/* QR Image Box */}
-              <View style={styles.qrImageContainer}>
-                <Image
-                  source={StaticAssets.upiQr}
-                  style={styles.qrImage}
-                  contentFit="contain"
-                />
-              </View>
-
-              <Text style={styles.qrInstructions}>
-                Scan this QR using any UPI app
-              </Text>
-
-              {/* UPI ID input */}
-              <Text style={styles.upiLabel}>OR PAY VIA UPI ID</Text>
-              <View style={styles.upiInputRow}>
-                <TextInput
-                  value={upiId}
-                  onChangeText={(val: string) => {
-                    setUpiId(val);
-                    // Always reset format state when the UPI ID changes
-                    setUpiFormatValid(false);
-                    setUpiFormatError("");
-                  }}
-                  placeholder="example@upi"
-                  placeholderTextColor="#a99c94"
-                  autoCapitalize="none"
-                  style={styles.upiInput}
-                />
-                <Pressable
-                  onPress={handleCheckUpiFormat}
-                  disabled={checkingUpiFormat || upiFormatValid || !upiId.trim()}
-                  style={[
-                    styles.verifyBtn,
-                    (checkingUpiFormat || upiFormatValid || !upiId.trim()) &&
-                      styles.verifyBtnDisabled,
-                  ]}
-                >
-                  {checkingUpiFormat ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text style={styles.verifyBtnText}>
-                      {upiFormatValid ? "FORMAT OK ✓" : "CHECK"}
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
-              {/* Format error feedback */}
-              {!!upiFormatError && (
-                <Text style={styles.upiFormatError}>{upiFormatError}</Text>
-              )}
-              {/* Format-valid note: not a bank/account confirmation */}
-              {upiFormatValid && (
-                <Text style={styles.upiFormatNote}>
-                  Format looks valid. Actual payment confirmation happens via your UPI app.
-                </Text>
-              )}
+              <Text style={styles.onlineSecurityText}>Payments are securely processed by Razorpay. Damru does not store your card, CVV, or UPI credentials.</Text>
             </View>
           )}
         </View>
 
-        {/* 3. Cash on Delivery (COD) Option */}
+        {/* Cash on Delivery (COD) Option */}
         <View style={[styles.sectionCard, payMethod === "cod" && styles.selectedPaymentCard]}>
           <Pressable
             onPress={() => setPayMethod("cod")}
             style={styles.paymentMethodRow}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: payMethod === "cod" }}
+            accessibilityLabel="Cash on delivery"
           >
             <Ionicons name="cash-outline" size={24} color={colors.ink} />
             <View style={{ flex: 1, marginLeft: 12 }}>
@@ -711,10 +573,12 @@ export default function CheckoutScreen() {
       <View style={[styles.bottomBar, { bottom: insets.bottom > 0 ? insets.bottom + 80 : 96 }]}>
         <Pressable
           onPress={placeOrder}
-          disabled={busy}
+          disabled={busy || quoteLoading || !quote}
+          accessibilityRole="button"
+          accessibilityLabel={payMethod === "cod" ? "Place order with cash on delivery" : payMethod === "razorpay" ? `Pay ₹${total.toFixed(2)} securely with Razorpay` : "Select a payment method"}
           style={[
             styles.payBtn,
-            busy && styles.payBtnDisabled,
+            (busy || quoteLoading || !quote) && styles.payBtnDisabled,
           ]}
         >
           {busy ? (
@@ -724,7 +588,7 @@ export default function CheckoutScreen() {
               <Text style={styles.payBtnText}>
                 {payMethod === "cod"
                   ? `Place Order · ₹${total.toFixed(2)}`
-                  : `Pay Now ₹${total.toFixed(2)}`}
+                  : payMethod === "razorpay" ? `Pay ₹${total.toFixed(2)} Securely` : "Select Payment Method"}
               </Text>
               <Ionicons name="arrow-forward" size={18} color="#ffffff" />
             </>
@@ -734,7 +598,7 @@ export default function CheckoutScreen() {
         <View style={styles.securityRow}>
           <Ionicons name="shield-checkmark" size={13} color={colors.muted} />
           <Text style={styles.securityText}>
-            Payments are secured by 128-bit encryption
+            {payMethod === "cod" ? "Cash on delivery" : payMethod === "razorpay" ? "Secure payment powered by Razorpay" : "Choose COD or online payment above"}
           </Text>
         </View>
       </View>
@@ -970,23 +834,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(0, 0, 0, 0.05)",
   },
-  paymentWarning: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 11,
-    color: colors.muted,
-    marginBottom: 10,
-  },
-  subInput: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 10,
-    height: 40,
-    paddingHorizontal: 12,
-    fontFamily: "Poppins_400Regular",
-    fontSize: 13,
-    color: colors.ink,
-    marginBottom: 8,
-  },
   amountToPayLabel: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 10,
@@ -1002,76 +849,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 16,
   },
-  qrImageContainer: {
-    alignSelf: "center",
-    backgroundColor: "#f5f6f8",
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    marginBottom: 8,
-  },
-  qrImage: {
-    width: 140,
-    height: 140,
-  },
-  qrInstructions: {
-    fontFamily: "Poppins_500Medium",
+  onlineSecurityText: {
+    fontFamily: "Poppins_400Regular",
     fontSize: 11,
     color: colors.muted,
     textAlign: "center",
-    marginBottom: 20,
-  },
-  upiLabel: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 11,
-    color: colors.ink,
-    marginBottom: 8,
-  },
-  upiInputRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  upiInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 10,
-    height: 44,
-    paddingHorizontal: 12,
-    fontFamily: "Poppins_400Regular",
-    fontSize: 13,
-    color: colors.ink,
-  },
-  verifyBtn: {
-    backgroundColor: colors.orangeDark,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    minWidth: 80,
-  },
-  verifyBtnDisabled: {
-    backgroundColor: "#6b7280",
-    opacity: 0.8,
-  },
-  verifyBtnText: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 11,
-    color: "#ffffff",
-    letterSpacing: 0.5,
-  },
-  upiFormatError: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 11,
-    color: colors.danger,
-    marginTop: 6,
-  },
-  upiFormatNote: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 11,
-    color: colors.muted,
-    marginTop: 6,
     lineHeight: 15,
   },
   codInstructions: {

@@ -27,6 +27,9 @@ export async function PATCH(req: NextRequest) {
   if (deny) return deny;
   try {
     const body = await req.json();
+    if (body.deliveryRadiusKm != null && (!Number.isFinite(Number(body.deliveryRadiusKm)) || Number(body.deliveryRadiusKm) < 1 || Number(body.deliveryRadiusKm) > 100)) {
+      return NextResponse.json({ error: "Delivery radius must be between 1 and 100 km." }, { status: 400 });
+    }
     await connectDB();
     const updated = await SiteSettings.findOneAndUpdate(
       {},

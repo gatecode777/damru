@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { verifyWebhookSignature } from "@/lib/payments/razorpay";
+import { isRazorpayWebhookConfigured, verifyWebhookSignature } from "@/lib/payments/razorpay";
 import { finalizeRazorpayPayment, markRazorpayPaymentFailed } from "@/lib/payments/finalizePayment";
 import { finalizeRefund, markRefundFailed } from "@/lib/payments/refunds";
 import Order from "@/models/Order";
@@ -35,6 +35,9 @@ interface RazorpayWebhookEvent {
  * separate event-id dedup table is needed.
  */
 export async function POST(req: NextRequest) {
+  if (!isRazorpayWebhookConfigured()) {
+    return NextResponse.json({ error: "Razorpay webhook is not configured." }, { status: 503 });
+  }
   const rawBody = await req.text();
   const signature = req.headers.get("x-razorpay-signature");
 

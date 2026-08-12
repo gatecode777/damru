@@ -11,7 +11,9 @@ import RateLimit from "../models/RateLimit";
  */
 test("allows up to the limit, then blocks the next request in the same window", async () => {
   const key = `test-rate-limit:${Date.now()}:${Math.random()}`;
-  const opts = { limit: 3, windowSeconds: 60 };
+  // Use a day-long test window so a slow/shared CI database cannot cross the
+  // fixed-window boundary between these four sequential assertions.
+  const opts = { limit: 3, windowSeconds: 86400 };
 
   try {
     const r1 = await checkRateLimit(key, opts);
@@ -32,7 +34,7 @@ test("allows up to the limit, then blocks the next request in the same window", 
 test("different keys get independent windows", async () => {
   const keyA = `test-rate-limit-a:${Date.now()}:${Math.random()}`;
   const keyB = `test-rate-limit-b:${Date.now()}:${Math.random()}`;
-  const opts = { limit: 1, windowSeconds: 60 };
+  const opts = { limit: 1, windowSeconds: 86400 };
 
   try {
     const a1 = await checkRateLimit(keyA, opts);

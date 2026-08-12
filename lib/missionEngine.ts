@@ -7,7 +7,9 @@ import User from "@/models/User";
 import Order from "@/models/Order";
 import { awardDamru } from "@/lib/rewardEngine";
 import { isProfileComplete } from "@/lib/achievementEngine";
+import { awardCampaignBonuses } from "@/lib/rewards/campaignEngine";
 import { getPeriodKey, getPeriodEnd, MissionPeriodType } from "@/lib/missionPeriod";
+import { paymentEligibleOrderFilter } from "@/lib/orders/orderPaymentPolicy";
 
 function isDuplicateKeyError(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && (err as { code: number }).code === 11000;
@@ -96,6 +98,7 @@ async function applyMissionProgress(
       idempotencyKey: `mission:${userId}:${mission._id}:${periodKey}`,
     });
     if (!result.duplicate) transactionId = result.transaction?._id;
+    await awardCampaignBonuses({ trigger:"MISSION_COMPLETED", userId, sourceId:String(claimed._id), baseReward:mission.rewardDamruAmount, missionId:mission._id });
   }
 
   return UserMission.findByIdAndUpdate(
@@ -123,7 +126,7 @@ export async function evaluateOrderMissions(
     accountCreatedAt = u?.createdAt;
   }
   if (missions.some(m => m.eligibility?.minCompletedOrders)) {
-    completedOrderCount = await Order.countDocuments({ userId, status: "delivered" });
+    completedOrderCount = await Order.countDocuments({ userId, status: "delivered", ...paymentEligibleOrderFilter() });
   }
 
   const completed = [];

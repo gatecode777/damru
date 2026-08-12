@@ -10,6 +10,10 @@ export interface IAddress extends Document {
   city:      string;
   state:     string;
   pincode:   string;
+  latitude?: number;
+  longitude?: number;
+  geocodedAddress?: string;
+  geocodedAt?: Date;
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -26,6 +30,10 @@ const AddressSchema = new Schema<IAddress>(
     city:      { type: String, required: true, trim: true },
     state:     { type: String, required: true, trim: true },
     pincode:   { type: String, required: true, trim: true },
+    latitude:  { type: Number, min: -90, max: 90 },
+    longitude: { type: Number, min: -180, max: 180 },
+    geocodedAddress: { type: String, default: "" },
+    geocodedAt: { type: Date },
     isDefault: { type: Boolean, default: false },
   },
   { timestamps: true }

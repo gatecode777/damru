@@ -39,7 +39,7 @@ const PAY_LABELS: Record<string, string> = {
   pending: "Pending", paid: "Paid", failed: "Failed",
   refund_pending: "Refund Processing", partially_refunded: "Partially Refunded", refunded: "Refunded",
 };
-const PAY_METHOD: Record<string, string>  = { cod: "Cash on Delivery", upi: "UPI (Razorpay)", card: "Card (Razorpay)" };
+const PAY_METHOD: Record<string, string>  = { cod: "Cash on Delivery", razorpay: "Online Payment (Razorpay)", upi: "UPI (Legacy Razorpay)", card: "Card (Legacy Razorpay)" };
 
 const lbl: React.CSSProperties = { fontFamily: "DM Sans,sans-serif", fontSize: "0.72rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 };
 const val: React.CSSProperties = { fontFamily: "DM Sans,sans-serif", fontSize: "0.875rem", color: "#111827", fontWeight: 500 };

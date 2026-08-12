@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import LoyaltyTier, { ILoyaltyTier, LoyaltyQualificationType } from "@/models/LoyaltyTier";
 import User from "@/models/User";
 import Order from "@/models/Order";
+import { paymentEligibleOrderFilter } from "@/lib/orders/orderPaymentPolicy";
 
 export type LoyaltyRewardSource = "ORDER_REWARD" | "OTHER";
 
@@ -29,7 +30,7 @@ export function validateLoyaltyLadder(tiers: Pick<ILoyaltyTier, "qualificationTy
 
 async function qualificationValue(userId: string | mongoose.Types.ObjectId, type: LoyaltyQualificationType) {
   if (type === "DAMRU_EARNED") return (await User.findById(userId).select("damruTotalEarned").lean<{ damruTotalEarned: number }>())?.damruTotalEarned || 0;
-  const match = { userId: new mongoose.Types.ObjectId(String(userId)), status: "delivered" };
+  const match = { userId: new mongoose.Types.ObjectId(String(userId)), status: "delivered", ...paymentEligibleOrderFilter() };
   if (type === "COMPLETED_ORDERS") return Order.countDocuments(match);
   const rows = await Order.aggregate([{ $match: match }, { $group: { _id: null, value: { $sum: "$total" } } }]);
   return rows[0]?.value || 0;

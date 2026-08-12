@@ -1,265 +1,168 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Keyboard, Alert, ScrollView } from "react-native";
-import { Stack } from "expo-router";
-import { useProfile } from "@/hooks/useProfile";
-import { colors } from "@/config";
-import { Button, Field } from "@/components/ui";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Stack, router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { colors } from "@/config";
+import { get, getApiErrorMessage } from "@/lib/api";
+import { queryKeys } from "@/lib/queryClient";
+import { useApp } from "@/providers/AppProvider";
+import type { Address } from "@/types";
+
+const SECURE_METHODS = [
+  { icon: "phone-portrait-outline" as const, label: "UPI" },
+  { icon: "card-outline" as const, label: "Credit & Debit Cards" },
+  { icon: "business-outline" as const, label: "Net Banking" },
+  { icon: "wallet-outline" as const, label: "Wallets" },
+];
+
+function addressSummary(address: Address) {
+  return `${address.house}${address.area ? `, ${address.area}` : ""}\n${address.city}, ${address.state} ${address.pincode}`;
+}
 
 export default function PaymentMethodsScreen() {
-  const { paymentMethods, addPaymentMethod, deletePaymentMethod } = useProfile();
+  const insets = useSafeAreaInsets();
+  const { totalItems } = useApp();
+  const addressesQuery = useQuery({
+    queryKey: queryKeys.profile.addresses(),
+    queryFn: () => get<{ addresses: Address[] }>("/api/address"),
+    select: (data) => data.addresses ?? [],
+  });
+  const addresses = addressesQuery.data ?? [];
+  const defaultAddress = addresses.find((item) => item.isDefault) ?? addresses[0];
+  const [selectedId, setSelectedId] = useState<string | undefined>();
+  const selectedAddress = addresses.find((item) => item._id === selectedId) ?? defaultAddress;
 
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleAddCard = async () => {
-    const cleanNum = cardNumber.replace(/\s+/g, "");
-    if (cleanNum.length !== 16 || !/^\d+$/.test(cleanNum)) {
-      setError("Please enter a valid 16-digit card number.");
+  function selectAddress() {
+    if (!addresses.length) {
+      router.push("/add-address");
       return;
     }
-
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-      setError("Please enter a valid expiry date (MM/YY).");
-      return;
-    }
-
-    if (cvv.length !== 3 || !/^\d+$/.test(cvv)) {
-      setError("Please enter a valid 3-digit CVV.");
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-
-    // Simulate network delay
-    setTimeout(async () => {
-      try {
-        const last4 = cleanNum.slice(-4);
-        const brand = cleanNum.startsWith("4") ? "visa" : "mastercard";
-        await addPaymentMethod(brand, last4);
-        setCardNumber("");
-        setExpiry("");
-        setCvv("");
-        Keyboard.dismiss();
-        Alert.alert("Success", "Card added successfully!");
-      } catch (err) {
-        setError("Failed to add card.");
-      } finally {
-        setSaving(false);
-      }
-    }, 800);
-  };
-
-  const handleDelete = (id: string, last4: string) => {
     Alert.alert(
-      "Remove Card",
-      `Are you sure you want to remove card ending in ${last4}?`,
+      "Select Billing Address",
+      "Choose an address to use at checkout.",
       [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => deletePaymentMethod(id),
-        },
+        ...addresses.map((address) => ({
+          text: `${address.label}${address.isDefault ? " (Default)" : ""}`,
+          onPress: () => setSelectedId(address._id),
+        })),
+        { text: "Cancel", style: "cancel" as const },
       ]
     );
-  };
+  }
+
+  function continueSecurely() {
+    if (totalItems > 0) {
+      router.push("/cart");
+      return;
+    }
+    Alert.alert(
+      "Add during checkout",
+      "Choose your food first. Razorpay will securely present the available payment methods when you check out.",
+      [
+        { text: "Not now", style: "cancel" },
+        { text: "Browse Menu", onPress: () => router.push("/(tabs)/menu") },
+      ]
+    );
+  }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: "Payment Methods", headerShown: true }} />
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 108 }]}
+      showsVerticalScrollIndicator={false}
+    >
+      <Stack.Screen options={{ title: "Add Payment Method", headerShown: true }} />
 
-      <Text style={styles.sectionTitle}>Saved Cards</Text>
+      <View style={styles.heroIcon}>
+        <Ionicons name="shield-checkmark" size={30} color={colors.orange} />
+      </View>
+      <Text style={styles.title}>Secure Payment Method</Text>
+      <Text style={styles.subtitle}>Payment methods are entered and processed securely through Razorpay.</Text>
 
-      {paymentMethods.length === 0 ? (
-        <Text style={styles.emptyText}>No cards saved yet.</Text>
-      ) : (
-        <View style={styles.cardList}>
-          {paymentMethods.map((item) => (
-            <View key={item.id} style={styles.cardItem}>
-              <View style={styles.cardInfo}>
-                <View style={styles.chip} />
-                <View style={styles.cardDetails}>
-                  <Text style={styles.cardNumber}>•••• •••• •••• {item.last4}</Text>
-                  <Text style={styles.cardBrand}>{item.brand.toUpperCase()}</Text>
-                </View>
-              </View>
-
-              <Pressable
-                onPress={() => handleDelete(item.id, item.last4)}
-                style={styles.deleteBtn}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-              </Pressable>
+      <View style={styles.panel}>
+        <Text style={styles.panelTitle}>Available at checkout</Text>
+        <View style={styles.methodGrid}>
+          {SECURE_METHODS.map((method) => (
+            <View key={method.label} style={styles.methodItem}>
+              <View style={styles.methodIcon}><Ionicons name={method.icon} size={19} color={colors.orange} /></View>
+              <Text style={styles.methodLabel}>{method.label}</Text>
             </View>
           ))}
         </View>
-      )}
+      </View>
 
-      <View style={styles.formCard}>
-        <Text style={styles.formTitle}>Add New Card</Text>
+      <View style={styles.panel}>
+        <Text style={styles.panelTitle}>Billing Address</Text>
+        <Text style={styles.panelHint}>Use an address from your Address Book for checkout.</Text>
 
-        {error ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{error}</Text>
+        {addressesQuery.isLoading ? (
+          <View style={styles.addressLoading}><ActivityIndicator color={colors.orange} /></View>
+        ) : addressesQuery.isError ? (
+          <View style={styles.addressError}>
+            <Text style={styles.errorText}>{getApiErrorMessage(addressesQuery.error, "Unable to load addresses.")}</Text>
+            <Pressable onPress={() => addressesQuery.refetch()}><Text style={styles.retryText}>Retry</Text></Pressable>
           </View>
-        ) : null}
+        ) : (
+          <Pressable style={styles.addressPicker} onPress={selectAddress} accessibilityRole="button">
+            <Ionicons name={selectedAddress ? "location-outline" : "add-circle-outline"} size={21} color={colors.orange} />
+            <View style={styles.addressCopy}>
+              <Text style={styles.addressLabel}>{selectedAddress?.label ?? "Add Billing Address"}</Text>
+              <Text style={styles.addressValue}>{selectedAddress ? addressSummary(selectedAddress) : "No saved address"}</Text>
+            </View>
+            <Ionicons name="chevron-down" size={18} color={colors.muted} />
+          </Pressable>
+        )}
+      </View>
 
-        <Field
-          label="Card Number"
-          value={cardNumber}
-          onChangeText={(val) => setCardNumber(val.replace(/[^\d]/g, "").slice(0, 16))}
-          placeholder="1234 5678 1234 5678"
-          keyboardType="number-pad"
-        />
+      <View style={styles.securityNote}>
+        <Ionicons name="lock-closed-outline" size={18} color={colors.muted} />
+        <Text style={styles.securityText}>Damru does not collect or store your full card number, CVV, UPI PIN, or OTP.</Text>
+      </View>
 
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Field
-              label="Expiry (MM/YY)"
-              value={expiry}
-              onChangeText={(val) => {
-                const clean = val.replace(/[^\d]/g, "");
-                if (clean.length >= 2) {
-                  setExpiry(`${clean.slice(0, 2)}/${clean.slice(2, 4)}`);
-                } else {
-                  setExpiry(clean);
-                }
-              }}
-              placeholder="12/29"
-              keyboardType="number-pad"
-              maxLength={5}
-            />
-          </View>
-          <View style={styles.col}>
-            <Field
-              label="CVV"
-              value={cvv}
-              onChangeText={(val) => setCvv(val.replace(/[^\d]/g, "").slice(0, 3))}
-              placeholder="123"
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={3}
-            />
-          </View>
-        </View>
-
-        <View style={styles.btnWrapper}>
-          <Button
-            label={saving ? "Saving Card..." : "Save Card"}
-            onPress={handleAddCard}
-            disabled={saving}
-          />
-        </View>
+      <Pressable
+        style={({ pressed }) => [styles.cta, pressed && { opacity: 0.86 }]}
+        onPress={continueSecurely}
+        accessibilityRole="button"
+        accessibilityLabel={totalItems > 0 ? "Continue to secure checkout" : "Browse menu to start checkout"}
+      >
+        <Text style={styles.ctaText}>{totalItems > 0 ? "Continue to Secure Checkout" : "Browse Menu to Continue"}</Text>
+      </Pressable>
+      <View style={styles.providerRow}>
+        <Ionicons name="shield-checkmark-outline" size={16} color={colors.muted} />
+        <Text style={styles.providerText}>Secured by Razorpay</Text>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#faf9f6",
-  },
-  content: {
-    padding: 20,
-    gap: 20,
-  },
-  sectionTitle: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 16,
-    color: colors.ink,
-    marginBottom: -8,
-  },
-  cardList: {
-    gap: 12,
-  },
-  cardItem: {
-    backgroundColor: "#20272c",
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  cardInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  chip: {
-    width: 36,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: "#3a4650",
-    marginRight: 14,
-  },
-  cardDetails: {
-    flex: 1,
-  },
-  cardNumber: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 14,
-    color: "#ffffff",
-    letterSpacing: 1.5,
-  },
-  cardBrand: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 11,
-    color: "#a99c94",
-    marginTop: 2,
-  },
-  deleteBtn: {
-    padding: 8,
-  },
-  emptyText: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 13,
-    color: "#a99c94",
-  },
-  formCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#eee3da",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  formTitle: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 15,
-    color: colors.ink,
-    marginBottom: 16,
-  },
-  row: {
-    flexDirection: "row",
-    gap: 14,
-  },
-  col: {
-    flex: 1,
-  },
-  btnWrapper: {
-    marginTop: 10,
-  },
-  errorCard: {
-    backgroundColor: "#ffebee",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#ef9a9a",
-    marginBottom: 14,
-  },
-  errorText: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 13,
-    color: colors.danger,
-  },
+  container: { flex: 1, backgroundColor: "#faf9f6" },
+  content: { paddingHorizontal: 18, paddingTop: 26 },
+  heroIcon: { width: 62, height: 62, borderRadius: 31, alignSelf: "center", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(229,121,34,0.1)" },
+  title: { marginTop: 14, fontFamily: "Poppins_700Bold", fontSize: 22, color: colors.ink, textAlign: "center" },
+  subtitle: { marginTop: 6, alignSelf: "center", maxWidth: 330, fontFamily: "Poppins_400Regular", fontSize: 13, lineHeight: 20, color: colors.muted, textAlign: "center" },
+  panel: { marginTop: 22, padding: 16, borderRadius: 20, borderWidth: 1, borderColor: colors.line, backgroundColor: "#fff" },
+  panelTitle: { fontFamily: "Poppins_600SemiBold", fontSize: 15, color: colors.ink },
+  panelHint: { marginTop: 4, fontFamily: "Poppins_400Regular", fontSize: 12, lineHeight: 18, color: colors.muted },
+  methodGrid: { marginTop: 14, flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  methodItem: { width: "48%", minHeight: 58, borderRadius: 13, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.cream, borderWidth: 1, borderColor: colors.line },
+  methodIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(229,121,34,0.09)", alignItems: "center", justifyContent: "center" },
+  methodLabel: { flex: 1, fontFamily: "Poppins_500Medium", fontSize: 11.5, lineHeight: 16, color: colors.ink },
+  addressLoading: { height: 76, alignItems: "center", justifyContent: "center" },
+  addressError: { minHeight: 70, marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: "#fff4f3", alignItems: "center", justifyContent: "center" },
+  errorText: { fontFamily: "Poppins_400Regular", fontSize: 12, color: colors.danger, textAlign: "center" },
+  retryText: { marginTop: 7, fontFamily: "Poppins_600SemiBold", fontSize: 12, color: colors.orange },
+  addressPicker: { minHeight: 82, marginTop: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.line, padding: 13, flexDirection: "row", alignItems: "center", gap: 10 },
+  addressCopy: { flex: 1 },
+  addressLabel: { fontFamily: "Poppins_600SemiBold", fontSize: 13, color: colors.ink },
+  addressValue: { marginTop: 3, fontFamily: "Poppins_400Regular", fontSize: 11, lineHeight: 16, color: colors.muted },
+  securityNote: { marginTop: 16, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.cream, flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  securityText: { flex: 1, fontFamily: "Poppins_400Regular", fontSize: 11.5, lineHeight: 18, color: colors.muted },
+  cta: { minHeight: 52, marginTop: 19, borderRadius: 14, paddingHorizontal: 16, alignItems: "center", justifyContent: "center", backgroundColor: colors.orange },
+  ctaText: { fontFamily: "Poppins_600SemiBold", fontSize: 15, color: "#fff", textAlign: "center" },
+  providerRow: { marginTop: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6 },
+  providerText: { fontFamily: "Poppins_400Regular", fontSize: 12, color: colors.muted },
 });

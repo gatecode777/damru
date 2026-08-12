@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@/components/website/Toast";
+import { getUserErrorMessage, getUserResponseError } from "@/lib/getUserErrorMessage";
 
 interface User { id: string; name: string; email: string }
 
@@ -35,59 +37,14 @@ function maxDateStr() {
   return d.toISOString().split("T")[0];
 }
 
-function clampDateString(val: string): string {
-  // Keep only digits and dashes
-  let clean = val.replace(/[^0-9-]/g, "");
-  const parts = clean.split("-");
-  const maxYear = new Date().getFullYear() + 2;
-
-  // Year: max 4 digits, max year limit
-  if (parts[0]) {
-    parts[0] = parts[0].slice(0, 4);
-    const y = parseInt(parts[0], 10);
-    if (parts[0].length === 4 && y > maxYear) {
-      parts[0] = String(maxYear);
-    }
-  }
-
-  // Month: max 2 digits, max 12
-  if (parts[1]) {
-    parts[1] = parts[1].slice(0, 2);
-    const m = parseInt(parts[1], 10);
-    if (parts[1].length === 2 && (m < 1 || m > 12)) {
-      parts[1] = "12";
-    }
-  }
-
-  // Day: max 2 digits, max 31
-  if (parts[2]) {
-    parts[2] = parts[2].slice(0, 2);
-    const d = parseInt(parts[2], 10);
-    if (parts[2].length === 2 && (d < 1 || d > 31)) {
-      parts[2] = "31";
-    }
-  }
-
-  let formatted = parts.join("-");
-  if (formatted.length > 10) {
-    formatted = formatted.slice(0, 10);
-  }
-  return formatted;
-}
-
 export default function ReservationForm() {
+  const toast = useToast();
   const [user,        setUser]        = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [date,        setDate]        = useState(todayStr);
   const [time,        setTime]        = useState("7:00 pm");
   const [persons,     setPersons]     = useState("2 Persons");
   const [submitting,  setSubmitting]  = useState(false);
-  const [toast,       setToast]       = useState<{ msg: string; type: "success" | "error" } | null>(null);
-
-  function showToast(msg: string, type: "success" | "error") {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4500);
-  }
 
   useEffect(() => {
     fetch("/api/user/me")
@@ -105,7 +62,7 @@ export default function ReservationForm() {
       return;
     }
     if (!date || date.length < 10) {
-      showToast("Please enter a valid date (YYYY-MM-DD).", "error");
+      toast.error("Invalid reservation date", "Please enter a valid date (YYYY-MM-DD).");
       return;
     }
 
@@ -118,11 +75,11 @@ export default function ReservationForm() {
     maxDate.setFullYear(maxDate.getFullYear() + 2);
 
     if (selectedDate < today) {
-      showToast("Reservations cannot be in the past.", "error");
+      toast.error("Invalid reservation date", "Reservations cannot be in the past.");
       return;
     }
     if (selectedDate > maxDate) {
-      showToast("Reservations can only be made up to 2 years in advance.", "error");
+      toast.error("Invalid reservation date", "Reservations can only be made up to 2 years in advance.");
       return;
     }
 
@@ -134,14 +91,14 @@ export default function ReservationForm() {
         body:    JSON.stringify({ date, time, persons }),
       });
       const data = await res.json();
-      if (data.error) {
-        showToast(data.error, "error");
+      if (!res.ok || data.error) {
+        toast.error("Reservation not created", getUserResponseError(res,data,"Unable to submit reservation."), { id: "reservation-submit" });
       } else {
-        showToast(`Reservation confirmed for ${new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "long" })} at ${time} for ${persons}. We'll see you soon! 🎉`, "success");
+        toast.success("Reservation confirmed", `${new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "long" })} at ${time} for ${persons}. We'll see you soon! 🎉`, { id: "reservation-submit" });
         setDate(todayStr());
       }
-    } catch {
-      showToast("Something went wrong. Please try again.", "error");
+    } catch (error) {
+      toast.error("Reservation not created", getUserErrorMessage(error,"Unable to submit reservation."), { id: "reservation-submit" });
     } finally {
       setSubmitting(false);
     }
@@ -159,9 +116,7 @@ export default function ReservationForm() {
               min={todayStr()}
               max={maxDateStr()}
               value={date}
-              onChange={e => {
-                setDate(clampDateString(e.target.value));
-              }}
+              onChange={e => setDate(e.target.value)}
               onKeyDown={e => e.preventDefault()}
               onPaste={e => e.preventDefault()}
               required
@@ -199,28 +154,6 @@ export default function ReservationForm() {
         </div>
       </form>
 
-      {/* Bottom-center toast */}
-      {toast && (
-        <div style={{
-          position: "fixed", bottom: 28, left: "50%",
-          transform: "translateX(-50%)", zIndex: 99999,
-          background: toast.type === "success" ? "#15803d" : "#dc2626",
-          color: "#fff", padding: "14px 28px", borderRadius: 14,
-          fontFamily: "Poppins, sans-serif", fontSize: "0.9rem", fontWeight: 500,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.22)", maxWidth: "90vw",
-          textAlign: "center", lineHeight: 1.6,
-          animation: "resSlideUp 0.25s ease",
-        }}>
-          {toast.type === "success" ? "✓ " : "⚠ "}{toast.msg}
-        </div>
-      )}
-
-      <style jsx>{`
-        @keyframes resSlideUp {
-          from { transform: translateX(-50%) translateY(20px); opacity: 0; }
-          to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }

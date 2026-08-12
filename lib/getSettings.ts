@@ -30,6 +30,7 @@ export type AppSettings = {
   taxRate: number;
   freeDeliveryAbove: number;
   deliveryCharge: number;
+  deliveryRadiusKm: number;
   maintenanceMode: boolean;
   maintenanceMsg: string;
 };
@@ -56,6 +57,7 @@ const DEFAULTS: AppSettings = {
   taxRate: 5,
   freeDeliveryAbove: 500,
   deliveryCharge: 50,
+  deliveryRadiusKm: 10,
   maintenanceMode: false,
   maintenanceMsg: "We'll be back soon!",
 };

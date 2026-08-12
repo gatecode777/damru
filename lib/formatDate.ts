@@ -43,10 +43,19 @@ export function fmtDateLong(d: string | Date | null | undefined): string {
 }
 
 /** "29 April 2026" — for reservation display */
-export function fmtDateFull(d: string | Date | null | undefined): string {
+export function fmtDateFull(d: string | Date | null | undefined, fallbackDate?: string | Date | null): string {
   if (!d) return "";
   try {
-    return new Date(d).toLocaleDateString("en-IN", {
+    let parsed = new Date(d);
+    if (Number.isNaN(parsed.getTime()) && typeof d === "string" && fallbackDate) {
+      const trailingMonthDay = /-(\d{2})-(\d{2})$/.exec(d.trim());
+      const fallback = new Date(fallbackDate);
+      if (trailingMonthDay && !Number.isNaN(fallback.getTime())) {
+        parsed = new Date(fallback.getFullYear(), Number(trailingMonthDay[1]) - 1, Number(trailingMonthDay[2]));
+      }
+    }
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toLocaleDateString("en-IN", {
       day: "2-digit", month: "long", year: "numeric",
       timeZone: "Asia/Kolkata",
     });

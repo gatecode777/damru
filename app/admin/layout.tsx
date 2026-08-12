@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import AdminSessionProvider from "@/components/admin/AdminSessionProvider";
 import { ToastProvider } from "@/components/admin/Toast";
+import TopNavigationProgress from "@/components/TopNavigationProgress";
+import { Suspense } from "react";
 
 import "@/styles/admin/table.css";
 import "@/styles/admin/category.css";
@@ -11,6 +13,8 @@ import "@/styles/admin/menu.css";
 import "@/styles/admin/menu-form.css";
 import "@/styles/admin/blog-form.css";
 import "@/styles/admin/tables.css";
+import "@/styles/admin/confirm-dialog.css";
+import "@/styles/admin/reservations.css";
 
 export const metadata: Metadata = {
   title: { default: "Dashboard", template: "%s | Damru Admin" },
@@ -23,6 +27,9 @@ export const metadata: Metadata = {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <Suspense fallback={null}>
+        <TopNavigationProgress />
+      </Suspense>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link

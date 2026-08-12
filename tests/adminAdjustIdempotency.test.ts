@@ -16,6 +16,7 @@ test("retrying the same requestId does not double-apply; a new requestId still w
   await connectDB();
 
   const adminId = new mongoose.Types.ObjectId();
+  const requestPrefix = `adjust-test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const user = await User.create({
     name: "Regression Test User",
     email: `idempotency-test-${Date.now()}@example.test`,
@@ -26,7 +27,7 @@ test("retrying the same requestId does not double-apply; a new requestId still w
   try {
     const credit1 = await adjustDamru({
       userId: user._id, amount: 100, direction: "credit",
-      reason: "regression test credit", adminId, requestId: "req-1",
+      reason: "regression test credit", adminId, requestId: `${requestPrefix}-1`,
     });
     assert.equal(credit1.success, true);
     assert.equal(credit1.success && credit1.newBalance, 100);
@@ -35,7 +36,7 @@ test("retrying the same requestId does not double-apply; a new requestId still w
     // and the balance must be unchanged, not credited a second time.
     const retry = await adjustDamru({
       userId: user._id, amount: 100, direction: "credit",
-      reason: "regression test credit", adminId, requestId: "req-1",
+      reason: "regression test credit", adminId, requestId: `${requestPrefix}-1`,
     });
     assert.equal(retry.success, false);
     assert.equal(!retry.success && retry.duplicate, true);
@@ -47,7 +48,7 @@ test("retrying the same requestId does not double-apply; a new requestId still w
     // intentional repeated adjustments are a required, not accidental, use case.
     const credit2 = await adjustDamru({
       userId: user._id, amount: 50, direction: "credit",
-      reason: "regression test second credit", adminId, requestId: "req-2",
+      reason: "regression test second credit", adminId, requestId: `${requestPrefix}-2`,
     });
     assert.equal(credit2.success, true);
     assert.equal(credit2.success && credit2.newBalance, 150);
@@ -55,14 +56,14 @@ test("retrying the same requestId does not double-apply; a new requestId still w
     // Debit path: same retry protection, with its rollback-on-duplicate branch exercised.
     const debit1 = await adjustDamru({
       userId: user._id, amount: 40, direction: "debit",
-      reason: "regression test debit", adminId, requestId: "req-3",
+      reason: "regression test debit", adminId, requestId: `${requestPrefix}-3`,
     });
     assert.equal(debit1.success, true);
     assert.equal(debit1.success && debit1.newBalance, 110);
 
     const debitRetry = await adjustDamru({
       userId: user._id, amount: 40, direction: "debit",
-      reason: "regression test debit", adminId, requestId: "req-3",
+      reason: "regression test debit", adminId, requestId: `${requestPrefix}-3`,
     });
     assert.equal(debitRetry.success, false);
     assert.equal(!debitRetry.success && debitRetry.duplicate, true);

@@ -41,7 +41,7 @@ const REQUIRED_PRODUCTION_ENV = [
 // intentionally still COD-only and startup must not fail over it. If ANY
 // one is set, all three become required — a half-configured gateway is
 // worse than none (e.g. a key with no way to verify its webhooks).
-const RAZORPAY_ENV = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"];
+const RAZORPAY_CHECKOUT_ENV = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"];
 
 /**
  * Central production startup check. Returns only the names of missing
@@ -52,9 +52,9 @@ export function validateProductionEnv(): string[] {
   if (!isProduction) return [];
   const missing = REQUIRED_PRODUCTION_ENV.filter((name) => !process.env[name]);
 
-  const razorpayEnabled = RAZORPAY_ENV.some((name) => process.env[name]);
+  const razorpayEnabled = RAZORPAY_CHECKOUT_ENV.some((name) => process.env[name]);
   if (razorpayEnabled) {
-    missing.push(...RAZORPAY_ENV.filter((name) => !process.env[name]));
+    missing.push(...RAZORPAY_CHECKOUT_ENV.filter((name) => !process.env[name]));
   }
 
   return missing;

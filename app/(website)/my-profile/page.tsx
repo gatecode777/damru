@@ -8,11 +8,14 @@ import { useRewards } from "@/lib/rewards/RewardsProvider";
 import * as rewardApi from "@/lib/rewards/rewardApi";
 import { trackRewardEvent } from "@/lib/rewards/rewardAnalytics";
 import type { RewardTransaction, RewardCoupon, RewardsUpcoming, AchievementsResponse, MissionsResponse, ReferralsResponse } from "@/lib/rewards/rewardTypes";
+import ActiveCampaignOffers from "@/components/rewards/ActiveCampaignOffers";
+import { useToast } from "@/components/website/Toast";
+import { getSafeUserMessage, getUserErrorMessage, getUserResponseError } from "@/lib/getUserErrorMessage";
 
 interface UserInfo { id?: string; name: string; email: string; phone: string; city: string; avatar: string; createdAt?: string }
 interface Address { _id: string; label: string; fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string; isDefault: boolean }
 interface OrderItem { name: string; custom: string; price: number; qty: number; image?: string }
-interface Order { _id: string; orderId: string; status: string; paymentMethod: string; paymentStatus?: string; paymentAmount?: number; refundedAmount?: number; total: number; subtotal: number; discount: number; couponCode: string; tax: number; shipping: number; items: OrderItem[]; deliveryAddress: { fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string }; createdAt: string; tableNumber?: string; tableName?: string }
+interface Order { _id: string; orderId: string; status: string; paymentMethod: string; paymentStatus?: string; paymentAmount?: number; refundedAmount?: number; total: number; subtotal: number; discount: number; couponCode: string; tax: number; shipping: number; items: OrderItem[]; deliveryAddress: { fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string }; createdAt: string; tableNumber?: string; tableName?: string; cancellationReason?: string; cancelledBy?: "customer"|"admin"|"system"; cancelledAt?: string }
 
 // Backend-confirmed states only — never inferred from order.status. See
 // docs/PAYMENT_RELIABILITY_REFUNDS.md's Payment State Machine.
@@ -41,7 +44,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; icon: string }> 
 
 // ── Help & Support section — Tabs: Complaint Form | My Complaints | My Reservations ──
 interface ComplaintRecord { _id: string; issueType: string; subject: string; description: string; status: string; attachment?: string; adminNote?: string; createdAt: string }
-interface ReservationRecord { _id: string; date: string; time: string; persons: string; notes?: string; status: string; createdAt: string }
+interface ReservationRecord { _id: string; date: string; time: string; persons: string; notes?: string; status: string; declineReason?: string; createdAt: string }
 
 const COMPLAINT_STATUS: Record<string, { bg: string; color: string }> = {
   open:        { bg:"#fef2f2", color:"#b91c1c" },
@@ -55,7 +58,7 @@ const RESERVATION_STATUS: Record<string, { bg: string; color: string }> = {
   cancelled: { bg:"#fef2f2", color:"#b91c1c" },
 };
 
-function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
+function HelpSection({ showToast }: { showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [helpView,  setHelpView]  = useState<"home"|"faq"|"complaint">("home");
   const [activeTab, setActiveTab] = useState<"form"|"mycomplaints"|"myreservations">("form");
   const [faqCat,    setFaqCat]    = useState("all");
@@ -160,15 +163,16 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
       let attachmentFilename = "";
       if (imageFile) {
         const fd = new FormData(); fd.append("file", imageFile); fd.append("target", "complaints");
-        const up = await (await fetch("/api/upload", { method:"POST", body:fd })).json();
-        if (up.filename) attachmentFilename = up.filename;
+        const uploadResponse=await fetch("/api/upload", { method:"POST", body:fd });const up=await uploadResponse.json();
+        if(!uploadResponse.ok||!up.filename){showToast(getUserResponseError(uploadResponse,up,"Unable to upload complaint attachment."));return;}
+        attachmentFilename = up.filename;
       }
       const res = await fetch("/api/complaints", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ ...complaintForm, attachment: attachmentFilename }),
       });
       const data = await res.json();
-      if (data.error) { showToast(data.error); return; }
+      if (!res.ok||data.error) { showToast(getUserResponseError(res,data,"Unable to submit complaint.")); return; }
       setComplaintForm({ issueType:"", subject:"", description:"" });
       removeImage();
       setComplaintsLoaded(false); // triggers useEffect to reload
@@ -192,7 +196,7 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
           <div className="profile__help-icon-wrap"><i className="fa-solid fa-phone"></i></div>
           <div className="profile__help-card-title">Contact Us</div>
           <div className="profile__help-card-desc">Get in touch with our support team</div>
-          <button className="profile__help-btn" onClick={()=>showToast("Our team will contact you shortly!")}>Get In Touch</button>
+          <button className="profile__help-btn" onClick={()=>showToast("Use the contact page or call the restaurant to reach our support team.","info")}>Get In Touch</button>
         </div>
         <div className="profile__help-card">
           <div className="profile__help-icon-wrap"><i className="fa-regular fa-pen-to-square"></i></div>
@@ -245,7 +249,7 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
           <span><strong>Still Need Help?</strong><br/><span style={{fontSize:12,fontWeight:400}}>Can't find the answer you are looking for?</span></span>
         </div>
         <div className="profile__faq-still-btns">
-          <button className="profile__faq-contact-btn" onClick={()=>showToast("Connecting to support...")}>Contact Support</button>
+          <button className="profile__faq-contact-btn" onClick={()=>showToast("Use the contact page or call the restaurant to reach our support team.","info")}>Contact Support</button>
           <button className="profile__faq-raise-btn" onClick={()=>setHelpView("complaint")}>Raise a Complaint</button>
         </div>
       </div>
@@ -390,7 +394,7 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
                         <div>
                           <div style={{fontFamily:"Poppins,sans-serif",fontSize:13,fontWeight:600,color:"#1a1a1a"}}>
                             <i className="fa-solid fa-calendar-days" style={{color:"#e67e22",marginRight:6}}></i>
-                            {fmtDateFull(r.date)}
+                            {fmtDateFull(r.date, r.createdAt) || "Date unavailable"}
                           </div>
                           <div style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",marginTop:3}}>
                             <i className="fa-regular fa-clock" style={{marginRight:5}}></i>{r.time}
@@ -399,12 +403,18 @@ function HelpSection({ showToast }: { showToast: (msg: string) => void }) {
                           </div>
                         </div>
                         <span style={{fontFamily:"Poppins,sans-serif",fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:rs.bg,color:rs.color,flexShrink:0}}>
-                          {r.status.charAt(0).toUpperCase()+r.status.slice(1)}
+                          {r.status === "cancelled" ? "Declined" : r.status.charAt(0).toUpperCase()+r.status.slice(1)}
                         </span>
                       </div>
                       {r.notes && (
                         <div style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#555",background:"#fafafa",padding:"8px 12px",borderRadius:8,borderLeft:"3px solid #e67e22"}}>
                           {r.notes}
+                        </div>
+                      )}
+                      {r.status === "cancelled" && r.declineReason && (
+                        <div style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#991b1b",background:"#fef2f2",padding:"10px 12px",borderRadius:8,borderLeft:"3px solid #dc2626",marginTop:8,lineHeight:1.5}}>
+                          <strong style={{display:"block",marginBottom:2}}>Why we couldn&apos;t accept your request</strong>
+                          {r.declineReason}
                         </div>
                       )}
                       <div style={{fontFamily:"Poppins,sans-serif",fontSize:11,color:"#bbb",marginTop:8,textAlign:"right"}}>
@@ -447,13 +457,13 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 function MyProfileContent() {
+  const actionToast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { dashboard: rewardsDashboard } = useRewards();
   const [section,setSection]  = useState<Section>("overview");
   const [user,setUser]        = useState<UserInfo|null>(null);
   const [loading,setLoading]  = useState(true);
-  const [toast,setToast]      = useState("");
   const [addresses,setAddresses]     = useState<Address[]>([]);
   const [orders,setOrders]           = useState<Order[]>([]);
   const [ordersLoaded,setOrdersLoaded]=useState(false);
@@ -461,6 +471,10 @@ function MyProfileContent() {
   const [couponsLoaded,setCouponsLoaded]=useState(false);
   const [copiedCode,setCopiedCode]   = useState("");
   const [viewOrder,setViewOrder]     = useState<Order|null>(null);
+  const [cancelOrderOpen,setCancelOrderOpen] = useState(false);
+  const [cancelMessage,setCancelMessage] = useState("");
+  const [cancelSaving,setCancelSaving] = useState(false);
+  const [cancelError,setCancelError] = useState("");
   const [showEditModal,setShowEditModal]=useState(false);
   const [editForm,setEditForm]       = useState({name:"",phone:"",city:""});
   const [avatarFile,setAvatarFile]   = useState<File|null>(null);
@@ -505,7 +519,12 @@ function MyProfileContent() {
   const [notifPrefs,setNotifPrefs]         = useState<{orderUpdates:boolean;rewardUpdates:boolean;promotionalPush:boolean;promotionalEmail:boolean;promotionalInApp:boolean}|null>(null);
   const [notifPrefsSaving,setNotifPrefsSaving] = useState(false);
 
-  function showToast(msg:string){setToast(msg);setTimeout(()=>setToast(""),3200);}
+  function showToast(msg:string, type?:"success"|"error"|"info"){
+    const resolved = type ?? (/fail|unable|invalid|required|match|fill|wrong|error|please (select|enter)/i.test(msg) ? "error" : "success");
+    if(resolved==="error")actionToast.error("Action not completed",msg);
+    else if(resolved==="info")actionToast.info("Update",msg);
+    else actionToast.success("Action completed",msg);
+  }
 
   useEffect(()=>{
     fetch("/api/user/me").then(r=>r.json()).then(d=>{
@@ -528,6 +547,22 @@ function MyProfileContent() {
     if(ordersLoaded)return;
     const r=await fetch("/api/orders");const d=await r.json();
     setOrders(d.orders||[]);setOrdersLoaded(true);
+  }
+  async function submitOrderCancellation(){
+    if(!viewOrder || cancelSaving)return;
+    const message=cancelMessage.trim();
+    if(message.length<5){const error="Please tell us why you are cancelling (at least 5 characters).";setCancelError(error);actionToast.error("Order not cancelled",error);return;}
+    setCancelSaving(true);setCancelError("");
+    try{
+      const r=await fetch(`/api/orders/${viewOrder._id}/cancel`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message})});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||"Unable to cancel order.");
+      const updated=d.order as Order;
+      setOrders(items=>items.map(order=>order._id===updated._id?updated:order));
+      setViewOrder(updated);setCancelOrderOpen(false);setCancelMessage("");
+      showToast("Order cancelled successfully.");
+    }catch(error){const message=getUserErrorMessage(error,"Unable to cancel order.");setCancelError(message);actionToast.error("Order not cancelled",message);}
+    finally{setCancelSaving(false);}
   }
   async function loadCoupons(){
     if(couponsLoaded)return;
@@ -567,12 +602,16 @@ function MyProfileContent() {
 
   async function markNotifRead(id:string){
     setNotifItems(prev=>prev.map(n=>n._id===id?{...n,isRead:true}:n));
-    await fetch(`/api/notifications/${id}/read`,{method:"PATCH"});
+    const r=await fetch(`/api/notifications/${id}/read`,{method:"PATCH"});
+    if(r.ok)actionToast.success("Notification marked as read",undefined,{id:`notification-read-${id}`});
+    else actionToast.error("Notification not updated",getUserResponseError(r),{id:`notification-read-${id}`});
   }
 
   async function markAllNotifsRead(){
     setNotifItems(prev=>prev.map(n=>({...n,isRead:true})));
-    await fetch("/api/notifications/read-all",{method:"PATCH"});
+    const r=await fetch("/api/notifications/read-all",{method:"PATCH"});
+    if(r.ok)actionToast.success("Notifications updated","All notifications were marked as read.",{id:"notifications-read-all"});
+    else actionToast.error("Notifications not updated",getUserResponseError(r),{id:"notifications-read-all"});
   }
 
   async function saveNotifPref(key:string,value:boolean){
@@ -581,7 +620,9 @@ function MyProfileContent() {
     try{
       const r=await fetch("/api/user/notification-preferences",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({[key]:value})});
       const d=await r.json();
-      if(r.ok)setNotifPrefs(d.preferences);
+      if(r.ok){setNotifPrefs(d.preferences);actionToast.success("Preferences saved",undefined,{id:"notification-preferences"});}
+      else {setNotifPrefs(prev=>prev?{...prev,[key]:!value}:prev);actionToast.error("Preferences not saved",getUserResponseError(r,d),{id:"notification-preferences"});}
+    }catch(error){setNotifPrefs(prev=>prev?{...prev,[key]:!value}:prev);actionToast.error("Preferences not saved",getUserErrorMessage(error),{id:"notification-preferences"});
     }finally{setNotifPrefsSaving(false);}
   }
 
@@ -620,9 +661,10 @@ function MyProfileContent() {
   async function copyReferral(kind:"code"|"link"){
     if(!referralsData)return;
     const text=kind==="code"?referralsData.referralCode:referralsData.share.link;
-    await navigator.clipboard.writeText(text);
+    try{await navigator.clipboard.writeText(text);}catch{actionToast.error("Referral not copied","Clipboard access was unavailable.",{id:`referral-${kind}-copied`});return;}
     setReferralCopied(kind);
     trackRewardEvent(kind==="code"?"referral_code_copied":"referral_link_copied");
+    actionToast.success(kind==="code"?"Referral code copied":"Referral link copied",undefined,{id:`referral-${kind}-copied`});
     setTimeout(()=>setReferralCopied(""),2000);
   }
 
@@ -660,22 +702,22 @@ function MyProfileContent() {
   }
 
   async function handleSaveDob(){
-    if(!dobInput){setDobError("Please select a date.");return;}
+    if(!dobInput){setDobError("Please select a date.");actionToast.warning("Birthday not saved","Please select a date.",{id:"birthday-save"});return;}
     setDobSaving(true);setDobError("");
     const res=await rewardApi.updateDateOfBirth(dobInput);
     setDobSaving(false);
-    if(!res.success){setDobError(res.error||"Could not save.");return;}
+    if(!res.success){const message=getSafeUserMessage(res.error,"Could not save.");setDobError(message);actionToast.error("Birthday not saved",message,{id:"birthday-save"});return;}
     trackRewardEvent("birthday_added");
     await loadRewardsUpcoming();
     showToast("Date of birth saved!");
   }
 
   async function handleSaveAnniversary(){
-    if(!annivInput){setAnnivError("Please select a date.");return;}
+    if(!annivInput){setAnnivError("Please select a date.");actionToast.warning("Anniversary not saved","Please select a date.",{id:"anniversary-save"});return;}
     setAnnivSaving(true);setAnnivError("");
     const res=await rewardApi.updateMarriageAnniversary(annivInput);
     setAnnivSaving(false);
-    if(!res.success){setAnnivError(res.error||"Could not save.");return;}
+    if(!res.success){const message=getSafeUserMessage(res.error,"Could not save.");setAnnivError(message);actionToast.error("Anniversary not saved",message,{id:"anniversary-save"});return;}
     trackRewardEvent("anniversary_added");
     await loadRewardsUpcoming();
     showToast("Anniversary date saved!");
@@ -705,7 +747,7 @@ function MyProfileContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[searchParams]);
 
-  async function handleLogout(){await fetch("/api/user/logout",{method:"POST"});window.location.href="/";}
+  async function handleLogout(){const r=await fetch("/api/user/logout",{method:"POST"});if(!r.ok){actionToast.error("Unable to sign out",getUserResponseError(r));return;}actionToast.success("Signed out successfully");router.push("/");router.refresh();}
 
   async function handleSaveProfile(){
     if(!editForm.name.trim()){showToast("Name is required.");return;}
@@ -715,20 +757,21 @@ function MyProfileContent() {
       let avatarFilename=user?.avatar||"";
       if(avatarFile){
         const fd=new FormData();fd.append("file",avatarFile);fd.append("target","avatar");
-        const up=await(await fetch("/api/upload",{method:"POST",body:fd})).json();
-        if(up.filename)avatarFilename=up.filename;
+        const uploadResponse=await fetch("/api/upload",{method:"POST",body:fd});const up=await uploadResponse.json();
+        if(!uploadResponse.ok||!up.filename){const message=getUserResponseError(uploadResponse,up,"Unable to upload profile photo.");actionToast.error("Photo not uploaded",message,{id:"profile-save"});return;}
+        avatarFilename=up.filename;
       }
       const r=await fetch("/api/user/me",{method:"PATCH",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({action:"updateProfile",...editForm,avatar:avatarFilename})});
       const d=await r.json();
-      if(d.error){showToast(d.error);return;}
+      if(!r.ok||d.error){showToast(getUserResponseError(r,d,"Unable to update profile."),"error");return;}
       setUser(prev=>prev?{...prev,...d.user}:prev);
       setAvatarPreview(avatarFilename?`/uploads/avatars/${avatarFilename}`:"");
       if (typeof window !== "undefined" && d.user) {
         window.dispatchEvent(new CustomEvent("user-profile-updated", { detail: d.user }));
       }
       setShowEditModal(false);setAvatarFile(null);showToast("Profile updated successfully!");
-    }finally{setEditSaving(false);}
+    }catch(error){actionToast.error("Profile not updated",getUserErrorMessage(error),{id:"profile-save"});}finally{setEditSaving(false);}
   }
 
   async function handleChangePassword(){
@@ -740,7 +783,7 @@ function MyProfileContent() {
       body:JSON.stringify({action:"changePassword",currentPassword:pwForm.current,newPassword:pwForm.newPw})});
     const d=await r.json();
     setPwSaving(false);
-    if(d.error){showToast(d.error);return;}
+    if(!r.ok||d.error){showToast(getUserResponseError(r,d,"Unable to change password."),"error");return;}
     setPwForm({current:"",newPw:"",confirm:""});showToast("Password updated successfully!");
   }
 
@@ -755,18 +798,19 @@ function MyProfileContent() {
       body:JSON.stringify(editingAddr?{id:editingAddr._id,...addrForm}:addrForm)});
     const d=await r.json();
     setAddrSaving(false);
-    if(d.error){showToast(d.error);return;}
+    if(!r.ok||d.error){showToast(getUserResponseError(r,d,"Unable to save address."),"error");return;}
     await loadAddresses();setShowAddrModal(false);showToast(editingAddr?"Address updated!":"Address added!");
   }
 
   async function handleDeleteAddress(id:string){
     if(!confirm("Delete this address?"))return;
-    await fetch("/api/address",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+    const r=await fetch("/api/address",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+    const d=await r.json();if(!r.ok){showToast(getUserResponseError(r,d,"Unable to delete address."),"error");return;}
     await loadAddresses();showToast("Address deleted!");
   }
 
   function copyCoupon(code:string){
-    navigator.clipboard.writeText(code).then(()=>{setCopiedCode(code);setTimeout(()=>setCopiedCode(""),2000);showToast(`"${code}" copied to clipboard!`);});
+    navigator.clipboard.writeText(code).then(()=>{setCopiedCode(code);setTimeout(()=>setCopiedCode(""),2000);showToast(`"${code}" copied to clipboard!`);}).catch(()=>actionToast.error("Coupon not copied","Clipboard access was unavailable.",{id:"coupon-copy"}));
   }
 
   if (loading) return <ProfileSkeleton />;
@@ -871,6 +915,7 @@ function MyProfileContent() {
           <section className="profile__section active">
             <h1 className="profile__page-title">Damru Rewards</h1>
             <p className="profile__page-subtitle">Your Damru wallet, coupons, and upcoming rewards</p>
+            <ActiveCampaignOffers />
 
             {!rewardsDashboard ? (
               <div className="profile__card"><p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading your wallet…</p></div>
@@ -894,6 +939,7 @@ function MyProfileContent() {
                     <p className="rewards__wallet-stat-value">{rewardsDashboard.loyalty?.currentTier?.badgeIcon} {rewardsDashboard.loyalty?.currentTier?.name || rewardsDashboard.loyaltyLevel}</p>
                   </div>
                 </div>
+                {rewardsDashboard.rewardDebt > 0 && <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#b91c1c",margin:"12px 0 0"}}>Future rewards will first settle {rewardsDashboard.rewardDebt} Damru from a prior reward adjustment.</p>}
                 {rewardsDashboard.loyalty?.nextTier && (
                   <div>
                     <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",margin:"0 0 4px"}}>
@@ -1341,7 +1387,7 @@ function MyProfileContent() {
         {/* ORDER DETAIL */}
         {section==="orders"&&viewOrder&&(
           <section className="profile__section active">
-            <div className="profile__order-detail-back" onClick={()=>setViewOrder(null)}><i className="fa-solid fa-arrow-left"></i> Back to Orders</div>
+            <button type="button" className="profile__order-detail-back" onClick={()=>{setViewOrder(null);setCancelOrderOpen(false);}} style={{border:0,background:"transparent",padding:0,cursor:"pointer"}}><i className="fa-solid fa-arrow-left"></i> Back to Orders</button>
             <h1 className="profile__page-title">{viewOrder.orderId}</h1>
             <p className="profile__page-subtitle">
               {fmtDate(viewOrder.createdAt)} · {viewOrder.paymentMethod.toUpperCase()}
@@ -1368,7 +1414,7 @@ function MyProfileContent() {
               <div className="profile__cart-section-title" style={{marginBottom:16}}>Order Status</div>
               {(() => {
                 const STEPS = [
-                  { key:"pending",          label:"Order Placed",  icon:"fa-regular fa-clock" },
+                  { key:"pending",          label:viewOrder.paymentMethod !== "cod" && viewOrder.paymentStatus !== "paid" ? "Payment Pending" : "Order Placed",  icon:"fa-regular fa-clock" },
                   { key:"confirmed",        label:"Confirmed",     icon:"fa-regular fa-circle-check" },
                   { key:"preparing",        label:"Preparing",     icon:"fa-solid fa-utensils" },
                   { key:"out_for_delivery", label:"Out for Delivery", icon:"fa-solid fa-truck" },
@@ -1426,7 +1472,7 @@ function MyProfileContent() {
               {viewOrder.status === "cancelled" && (
                 <div style={{display:"flex",alignItems:"center",gap:10,marginTop:12,padding:"10px 14px",background:"#fef2f2",borderRadius:10,fontFamily:"Poppins,sans-serif",fontSize:13,color:"#b91c1c"}}>
                   <i className="fa-solid fa-ban" style={{fontSize:16}}></i>
-                  <span><strong>Order Cancelled</strong> — This order was cancelled.</span>
+                  <span><strong>Order Cancelled</strong> — {viewOrder.cancellationReason || "This order was cancelled."}</span>
                 </div>
               )}
             </div>
@@ -1461,7 +1507,30 @@ function MyProfileContent() {
                   Type: QR Code Scan Ordering
                 </div>
               )}
+              {["pending","confirmed"].includes(viewOrder.status) && (viewOrder.paymentMethod === "cod" || viewOrder.paymentStatus !== "paid") && (
+                <div style={{marginTop:18,paddingTop:16,borderTop:"1px solid #f3f4f6",display:"flex",justifyContent:"flex-end"}}>
+                  <button type="button" onClick={()=>{setCancelError("");setCancelOrderOpen(true);}} style={{border:"1px solid #fecaca",background:"#fff",color:"#dc2626",borderRadius:10,padding:"10px 18px",fontFamily:"Poppins,sans-serif",fontWeight:600,cursor:"pointer"}}>Cancel Order</button>
+                </div>
+              )}
             </div>
+
+            {cancelOrderOpen&&(
+              <div role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget&&!cancelSaving)setCancelOrderOpen(false);}} style={{position:"fixed",inset:0,zIndex:10000,background:"rgba(15,23,42,.58)",backdropFilter:"blur(5px)",display:"grid",placeItems:"center",padding:20}}>
+                <div role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" style={{width:"min(540px,100%)",background:"#fff",borderRadius:22,padding:28,boxShadow:"0 28px 80px rgba(15,23,42,.28)",borderTop:"4px solid #ef4444"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",gap:16,alignItems:"flex-start"}}>
+                    <div><h2 id="cancel-order-title" style={{fontFamily:"Poppins,sans-serif",fontSize:24,margin:"0 0 6px",color:"#111827"}}>Cancel this order?</h2><p style={{fontFamily:"Poppins,sans-serif",fontSize:14,color:"#6b7280",margin:0}}>Order #{viewOrder.orderId} will be cancelled. Tell the restaurant why.</p></div>
+                    <button type="button" aria-label="Close cancellation dialog" disabled={cancelSaving} onClick={()=>setCancelOrderOpen(false)} style={{border:0,background:"transparent",fontSize:24,color:"#9ca3af",cursor:"pointer"}}>×</button>
+                  </div>
+                  <label htmlFor="cancel-order-message" style={{display:"block",fontFamily:"Poppins,sans-serif",fontWeight:600,fontSize:14,marginTop:22,marginBottom:8}}>Cancellation message</label>
+                  <textarea id="cancel-order-message" autoFocus maxLength={500} value={cancelMessage} onChange={e=>{setCancelMessage(e.target.value);setCancelError("");}} placeholder="For example: I placed this order by mistake." style={{width:"100%",minHeight:120,resize:"vertical",border:`1px solid ${cancelError?"#fca5a5":"#d1d5db"}`,borderRadius:12,padding:"12px 14px",fontFamily:"Poppins,sans-serif",fontSize:14,outline:"none",boxSizing:"border-box"}} />
+                  <div style={{display:"flex",justifyContent:"space-between",fontFamily:"Poppins,sans-serif",fontSize:12,marginTop:6,color:cancelError?"#dc2626":"#9ca3af"}}><span>{cancelError||"This message is saved with the order."}</span><span>{cancelMessage.length}/500</span></div>
+                  <div style={{display:"flex",gap:12,justifyContent:"flex-end",marginTop:22,flexWrap:"wrap"}}>
+                    <button type="button" disabled={cancelSaving} onClick={()=>setCancelOrderOpen(false)} style={{border:"1px solid #d1d5db",background:"#fff",color:"#374151",borderRadius:10,padding:"11px 18px",fontFamily:"Poppins,sans-serif",fontWeight:600,cursor:"pointer"}}>Keep Order</button>
+                    <button type="button" disabled={cancelSaving||cancelMessage.trim().length<5} onClick={submitOrderCancellation} style={{border:0,background:"#ef4444",color:"#fff",borderRadius:10,padding:"11px 20px",fontFamily:"Poppins,sans-serif",fontWeight:700,cursor:"pointer",opacity:(cancelSaving||cancelMessage.trim().length<5)?.55:1}}>{cancelSaving?"Cancelling…":"Confirm Cancellation"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -1533,7 +1602,7 @@ function MyProfileContent() {
               <div className="profile__settings-group-title"><i className="fa-regular fa-user-xmark"></i> Delete Account</div>
               <div className="profile__delete-row">
                 <span className="profile__delete-info">Permanently delete your account and all associated data.</span>
-                <button className="profile__delete-btn" onClick={()=>{if(confirm("Are you sure? This cannot be undone."))showToast("Account deletion requested.");}}>Delete Account</button>
+                <button className="profile__delete-btn" onClick={()=>{if(confirm("Are you sure? This cannot be undone."))actionToast.warning("Account deletion unavailable","Please contact support to request account deletion.");}}>Delete Account</button>
               </div>
             </div>
           </section>
@@ -1663,7 +1732,6 @@ function MyProfileContent() {
         </div>
       )}
 
-      <div className={`profile__toast${toast?" show":""}`}>{toast}</div>
     </div>
   );
 }
