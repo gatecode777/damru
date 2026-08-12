@@ -4,12 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
-<<<<<<< Updated upstream
-import { uploadedImageUrl } from "@/lib/imageUrl";
-=======
 import { useToast } from "@/components/website/Toast";
->>>>>>> Stashed changes
-
 interface Variant { label: string; price: number }
 
 interface Props {
@@ -179,7 +174,7 @@ export default function MenuItemCard({
         <div className="menu-img-box">
           {image ? (
             <Image
-              src={uploadedImageUrl("menu-items", image)}
+              src={`/uploads/menu-items/${image}`}
               alt={name}
               width={360}
               height={270}

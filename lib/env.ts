@@ -23,12 +23,16 @@ export function getRequiredSecret(name: string): string {
   return `dev-only-insecure-${name.toLowerCase()}`;
 }
 
+/** Use a dedicated JWT secret when configured, otherwise the required auth secret. */
+export function getJwtSecret(): string {
+  return process.env.JWT_SECRET || getRequiredSecret("AUTH_SECRET");
+}
+
 // Vars required for every production deployment.
 const REQUIRED_PRODUCTION_ENV = [
   "MONGODB_URI",
   "AUTH_SECRET",
   "NEXTAUTH_URL",
-  "JWT_SECRET",
   "CRON_SECRET",
   "SMTP_HOST",
   "SMTP_PORT",

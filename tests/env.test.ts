@@ -46,3 +46,13 @@ test("production: a missing required secret throws instead of falling back", () 
     assert.match(String(err.stderr), /Missing required environment variable: SOME_TEST_SECRET_NOT_SET_ANYWHERE/);
   }
 });
+
+test("JWT signing uses AUTH_SECRET when a dedicated JWT_SECRET is absent", () => {
+  const value = runFixture("printJwtSecretFallback.ts", "production");
+  assert.equal(value, "auth-secret-fallback");
+});
+
+test("JWT_SECRET takes precedence when it is configured", () => {
+  const value = runFixture("printDedicatedJwtSecret.ts", "production");
+  assert.equal(value, "dedicated-jwt-secret");
+});
