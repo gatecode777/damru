@@ -61,7 +61,34 @@ if (!cache.promise) {
 
 export async function connectDB() {
   // If already connected, return immediately — no await needed
-  if (cache.conn) return cache.conn;
+  if (cache.conn && mongoose.connection.readyState === 1) return cache.conn;
+
+  // A resolved promise can outlive a dropped serverless or local connection.
+  // If disconnected (0) or promise doesn't exist, reset cache and re-connect.
+  if (mongoose.connection.readyState === 0 || !cache.promise) {
+    console.log("🔄 MongoDB: starting connection...");
+    cache.conn = null;
+    cache.promise = mongoose
+      .connect(MONGODB_URI, {
+        serverSelectionTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
+        tls: true,
+        tlsAllowInvalidCertificates: false,
+      })
+      .then((m) => {
+        cache.conn = m;
+        console.log("✅ MongoDB connected");
+        return m;
+      })
+      .catch((err) => {
+        console.error("❌ MongoDB connection error:", err);
+        cache.promise = null; // allow retry
+        cache.conn = null;
+        throw err;
+      });
+  }
+
   cache.conn = await cache.promise;
   return cache.conn;
 }
+

@@ -28,6 +28,14 @@ export function signUserSession(res: NextResponse, user: UserPayload): NextRespo
     path:     "/",
   });
 
+  res.cookies.set("damru_logged_in", "true", {
+    httpOnly: false,
+    secure:   process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge:   SESSION_EXPIRY_DAYS * 24 * 60 * 60,
+    path:     "/",
+  });
+
   return res;
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef } from "react";
 
 export function BranchesClient({ items }: { items: any[] }) {
@@ -53,9 +54,15 @@ export function BranchesClient({ items }: { items: any[] }) {
             className="banquet__card"
             ref={(el) => { cardsRef.current[i] = el; }}
           >
-            <div className="banquet__card-img-wrap">
-              <Link href={href} style={{ display: "block", width: "100%", height: "100%" }}>
-                <img src={imgSrc} alt={b.name} loading="lazy" />
+            <div className="banquet__card-img-wrap" style={{ position: "relative" }}>
+              <Link href={href} style={{ display: "block", width: "100%", height: "100%", position: "relative" }}>
+                <Image
+                  src={imgSrc}
+                  alt={b.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  style={{ objectFit: "cover" }}
+                />
               </Link>
             </div>
             <div className="banquet__card-body">

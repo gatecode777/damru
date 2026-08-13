@@ -195,3 +195,86 @@ export async function expireStaleUserMissions(userId: mongoose.Types.ObjectId | 
     await UserMission.updateMany({ _id: { $in: toExpire } }, { $set: { status: "EXPIRED" } });
   }
 }
+
+/**
+ * Clawback path — called when a full order invalidation (cancellation or full
+ * refund) removes one order from a user's delivered order history.
+ *
+ * For each CLAIMED, reversible ORDER_COUNT/SPENDING_AMOUNT mission:
+ * 1. Recompute true progress excluding the invalidated order.
+ * 2. If progress < target, reverse the mission reward and mark as revoked.
+ *
+ * Idempotent via `applyReversal`'s compound unique index on
+ * (originalTransactionId, triggerId).
+ *
+ * Returns the count of Damru reversed across all affected missions.
+ */
+export async function recomputeMissionProgress(
+  userId: string | mongoose.Types.ObjectId,
+  invalidatedOrderId: string | mongoose.Types.ObjectId,
+  triggerId: string
+): Promise<{ reversed: number }> {
+  await connectDB();
+
+  // Find all CLAIMED, non-revoked UserMissions for reversible ORDER_COUNT/SPENDING_AMOUNT missions.
+  const claimedMissions = await UserMission.find({
+    userId,
+    status: "CLAIMED",
+    isRevoked: { $ne: true },
+  }).populate<{ missionId: IMission }>("missionId", "missionType targetValue isReversible periodType").lean();
+
+  if (claimedMissions.length === 0) return { reversed: 0 };
+
+  // Current aggregate counts from valid orders (excluding the invalidated one).
+  const [agg] = await Order.aggregate([
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(String(userId)),
+        _id: { $ne: new mongoose.Types.ObjectId(String(invalidatedOrderId)) },
+        status: "delivered",
+        ...paymentEligibleOrderFilter(),
+      },
+    },
+    { $group: { _id: null, count: { $sum: 1 }, total: { $sum: "$total" } } },
+  ]);
+  const validOrderCount = agg?.count ?? 0;
+  const validOrderSpend = agg?.total ?? 0;
+
+  const { applyReversal: _applyReversal } = await import("@/lib/rewards/reversalEngine");
+  let totalReversed = 0;
+
+  for (const um of claimedMissions) {
+    const mission = um.missionId as IMission;
+    if (!mission) continue;
+    if (!mission.isReversible) continue;
+    if (mission.missionType !== "ORDER_COUNT" && mission.missionType !== "SPENDING_AMOUNT") continue;
+
+    const currentProgress = mission.missionType === "ORDER_COUNT" ? validOrderCount : validOrderSpend;
+    if (currentProgress >= mission.targetValue) continue;
+
+    // Progress has regressed — reverse the mission reward.
+    const rewardTxId = (um as { rewardTransactionId?: mongoose.Types.ObjectId | null }).rewardTransactionId;
+    if (!rewardTxId) continue;
+
+    const reversalResult = await _applyReversal(rewardTxId, {
+      reason: "ORDER_CANCELLED",
+      triggerId,
+      allowManualCredit: true,
+      note: `Mission "${mission.name}" progress fell below target after order ${String(invalidatedOrderId)} was invalidated.`,
+    });
+
+    if (reversalResult.applied) {
+      totalReversed += (reversalResult.transaction?.amount ?? 0);
+      await UserMission.findByIdAndUpdate(um._id, {
+        $set: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedTransactionId: reversalResult.transaction?._id || null,
+        },
+      });
+    }
+  }
+
+  return { reversed: totalReversed };
+}
+

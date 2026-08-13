@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/website/bookingpolicy.css";
 
 export const metadata: Metadata = {
   title: "Booking Policy | Damru By Namo",

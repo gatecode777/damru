@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/website/contactus.css";
 import ReservationForm from "../ReservationForm";
 
 export const metadata: Metadata = {

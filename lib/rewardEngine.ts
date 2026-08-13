@@ -359,22 +359,39 @@ export async function checkAndAwardWelcomeReward(userId: string | mongoose.Types
   });
 }
 
-export async function checkAndAwardFirstOrderReward(userId: string | mongoose.Types.ObjectId, orderId: string | mongoose.Types.ObjectId) {
+export async function checkAndAwardFirstOrderReward(
+  userId: string | mongoose.Types.ObjectId,
+  orderId: string | mongoose.Types.ObjectId,
+  options?: { requalificationSuffix?: string }
+) {
   await connectDB();
   const rule = await RewardRule.findOne({ category: "first_order", isActive: true });
   if (!rule || rule.amount <= 0) return { skipped: true as const };
 
   const order = await Order.exists({ _id: orderId, userId, status: "delivered", ...paymentEligibleOrderFilter() });
   if (!order) return { skipped: true as const };
-  const deliveredCount = await Order.countDocuments({ userId, status: "delivered", ...paymentEligibleOrderFilter() });
-  if (deliveredCount !== 1) return { skipped: true as const };
+
+  if (options?.requalificationSuffix) {
+    // Requalification path: the caller has already verified this is the correct
+    // next eligible order after the previous first_order reward was reversed.
+    // We skip the count === 1 check since there may be other delivered orders
+    // (the original invalidated one is still "delivered" status in history,
+    // but its reward has been reversed by the clawback flow).
+  } else {
+    const deliveredCount = await Order.countDocuments({ userId, status: "delivered", ...paymentEligibleOrderFilter() });
+    if (deliveredCount !== 1) return { skipped: true as const };
+  }
+
+  const idempotencyKey = options?.requalificationSuffix
+    ? `first_order_requalified:${userId}:${options.requalificationSuffix}`
+    : `first_order_${userId}`;
 
   return awardDamru({
     userId,
     category: "first_order",
     amount: rule.amount,
     description: rule.label || "First Order Reward",
-    idempotencyKey: `first_order_${userId}`,
+    idempotencyKey,
     ruleId: rule._id,
     orderId,
   });

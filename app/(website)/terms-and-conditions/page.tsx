@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/website/terms.css";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions | Damru By Namo",

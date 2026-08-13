@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/website/menu.css";
 import { connectDB } from "@/lib/mongodb";
 import CategoryModel from "@/models/Category";
 import MenuItemModel from "@/models/MenuItem";

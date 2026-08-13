@@ -70,6 +70,7 @@ MenuItemSchema.pre("save", function (next) {
 // (menu listing, suggestions) and `{category,isActive}` (homepage category sections).
 MenuItemSchema.index({ isActive: 1, isFeatured: 1 });
 MenuItemSchema.index({ category: 1, isActive: 1 });
+MenuItemSchema.index({ isActive: 1, sortOrder: 1 });
 
 const MenuItem: Model<IMenuItem> =
   mongoose.models.MenuItem ||

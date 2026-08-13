@@ -12,23 +12,6 @@ import { WebsiteToastProvider } from "@/components/website/Toast";
 import "@/styles/website/header.css";
 import "@/styles/website/style.css";
 import "@/styles/website/footer.css";
-import "@/styles/website/menu.css";
-import "@/styles/website/aboutus.css";
-import "@/styles/website/contactus.css";
-import "@/styles/website/myprofile.css";
-import "@/styles/website/rewards.css";
-import "@/styles/website/banquet.css";
-import "@/styles/website/cart.css";
-import "@/styles/website/checkout.css";
-import "@/styles/website/gallery.css";
-import "@/styles/website/privacypolicy.css";
-import "@/styles/website/refundpolicy.css";
-import "@/styles/website/shippingpolicy.css";
-import "@/styles/website/bookingpolicy.css";
-import "@/styles/website/terms.css";
-import "@/styles/website/blog.css";
-import "@/styles/website/blogdetails.css";
-import "@/styles/website/banquetdetail.css";
 
 export const metadata: Metadata = {
   title: {

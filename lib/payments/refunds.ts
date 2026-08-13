@@ -11,6 +11,7 @@ import { assignLotFields } from "@/lib/rewards/damruAllocation";
 import { notifyRewardEvent } from "@/lib/notifications/rewardNotificationService";
 import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
 import { reverseOrderRewards } from "@/lib/rewards/reversalEngine";
+import { recomputeRewardEntitlements } from "@/lib/rewards/recomputeEntitlements";
 import { evaluateRefundRisk, evaluateRiskSafely } from "@/lib/rewards/riskEngine";
 
 /**
@@ -175,21 +176,45 @@ export async function finalizeRefund(refundId: string | mongoose.Types.ObjectId)
     await syncOrderPaymentStatus(refund.orderId);
   }
 
-  // Policy A (see docs/PAYMENT_RELIABILITY_REFUNDS.md): restore Damru only
-  // once the order has been refunded IN FULL — proportional restoration for
-  // partial refunds is explicitly deferred, undefined product policy.
-  const order = await Order.findById(refund.orderId).select("orderId paymentAmount refundedAmount userId").lean<{
-    orderId: string; paymentAmount?: number; refundedAmount: number; userId?: mongoose.Types.ObjectId;
-  }>();
+  // Fetch the order with updated refund counters — needed by both the full-refund
+  // Damru restoration and the reward recomputation orchestrator.
+  const order = await Order.findById(refund.orderId)
+    .select("orderId paymentAmount refundedAmount userId")
+    .lean<{ orderId: string; paymentAmount?: number; refundedAmount: number; userId?: mongoose.Types.ObjectId }>();
+
+  // Full-refund: restore Damru that was redeemed at checkout. This is intentionally
+  // separate from reward reversal — it returns money already paid, not earned rewards.
   if (order && order.paymentAmount != null && order.paymentAmount > 0 && order.refundedAmount >= order.paymentAmount) {
     await restoreDamruForOrder(refund.orderId, order.userId, String(refund._id));
-    await reverseOrderRewards({
+  }
+
+  // Reward policy recomputation (PRD 4H).
+  // Full refund: reverse all order-linked rewards, run first-order requalification,
+  //   referral clawback, mission recomputation, achievement recomputation, and loyalty downgrade.
+  // Partial refund: apply proportional reward reversal only (no clawback of other rewards).
+  if (order?.userId && newlyFinalized) {
+    const isFullRefund = order.paymentAmount != null && order.paymentAmount > 0 && order.refundedAmount >= order.paymentAmount;
+    await recomputeRewardEntitlements({
+      userId: order.userId,
       orderId: refund.orderId,
-      refundId: refund._id,
-      reason: "FULL_REFUND",
-      triggerId: `refund:${refund._id}`,
-      createdBy: refund.requestedBy,
-    });
+      trigger: "REFUND_PROCESSED",
+      triggerId: String(refund._id),
+      partialRefundAmount: refund.amount,
+      totalRefundedAmount: order.refundedAmount,
+      paymentAmount: order.paymentAmount,
+    }).catch((err) => console.error("[finalizeRefund] recomputeRewardEntitlements failed:", err));
+
+    if (!isFullRefund) {
+      // Partial refund: run risk evaluation separately since the orchestrator
+      // only fires risk signals on full-refund paths.
+      await evaluateRiskSafely("partial-refund-risk", () =>
+        evaluateRefundRisk({
+          userId: order.userId as mongoose.Types.ObjectId,
+          refundId: refund!._id,
+          orderId: refund!.orderId,
+        })
+      );
+    }
   }
 
   if (order?.userId) {
@@ -202,15 +227,11 @@ export async function finalizeRefund(refundId: string | mongoose.Types.ObjectId)
       orderNumber: order.orderId,
       route: `/my-profile?tab=orders`,
     });
-    await evaluateRiskSafely("refund-processed", () => evaluateRefundRisk({
-      userId: order.userId as mongoose.Types.ObjectId,
-      refundId: refund._id,
-      orderId: refund.orderId,
-    }));
   }
 
   return { alreadyFinalized: !newlyFinalized, refund };
 }
+
 
 /**
  * Idempotent refund-failure handling — shared by the synchronous request path

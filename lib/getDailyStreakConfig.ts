@@ -25,17 +25,28 @@ const DEFAULTS: DailyStreakConfigValues = {
   gracePeriodDays: 0,
 };
 
+let cachedConfig: DailyStreakConfigValues | null = null;
+let cacheExpiry = 0;
+
 export async function getDailyStreakConfig(): Promise<DailyStreakConfigValues> {
+  const now = Date.now();
+  if (cachedConfig && now < cacheExpiry) {
+    return cachedConfig;
+  }
+
   await connectDB();
   const doc = await DailyStreakConfig.findOne().lean<IDailyStreakConfig>();
-  if (!doc) return DEFAULTS;
-  return {
+  const config = !doc ? DEFAULTS : {
     isActive: doc.isActive,
     dayRewards: doc.dayRewards.map(d => ({ day: d.day, amount: d.amount })).sort((a, b) => a.day - b.day),
     cycleBehavior: doc.cycleBehavior,
     allowStreakRecovery: doc.allowStreakRecovery,
     gracePeriodDays: doc.gracePeriodDays,
   };
+
+  cachedConfig = config;
+  cacheExpiry = now + 60000;
+  return config;
 }
 
 export async function getOrCreateDailyStreakConfig() {

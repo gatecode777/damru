@@ -1,5 +1,7 @@
 "use client";
 
+import "@/styles/website/myprofile.css";
+import "@/styles/website/rewards.css";
 import { fmtDate, fmtDateFull, fmtDateTime, todayISO } from "@/lib/formatDate";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
