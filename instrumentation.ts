@@ -14,12 +14,5 @@ export async function register() {
       // with an incomplete production configuration.
       throw new Error(`Missing required production environment variables: ${missing.join(", ")}`);
     }
-
-    try {
-      await import("@/lib/mongodb");
-      console.log("🚀 MongoDB module loaded at startup");
-    } catch (err) {
-      console.error("⚠️ Failed to load MongoDB module at startup (will retry on demand):", err);
-    }
   }
 }

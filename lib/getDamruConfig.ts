@@ -23,12 +23,19 @@ const DEFAULTS: DamruConfigValues = {
   loyaltyThresholds: { silver: 1000, gold: 5000, platinum: 10000 },
 };
 
+let cachedConfig: DamruConfigValues | null = null;
+let cacheExpiry = 0;
+
 /** Fetch the singleton DamruConfig, creating it with defaults if it doesn't exist yet. */
 export async function getDamruConfig(): Promise<DamruConfigValues> {
+  const now = Date.now();
+  if (cachedConfig && now < cacheExpiry) {
+    return cachedConfig;
+  }
+
   await connectDB();
   const doc = await DamruConfig.findOne().lean<IDamruConfig>();
-  if (!doc) return DEFAULTS;
-  return {
+  const config = !doc ? DEFAULTS : {
     redemptionRate: doc.redemptionRate,
     minRedemption: doc.minRedemption,
     maxRedemptionPerOrder: doc.maxRedemptionPerOrder,
@@ -38,6 +45,10 @@ export async function getDamruConfig(): Promise<DamruConfigValues> {
     expiryWarningDays: doc.expiryWarningDays ?? 30,
     loyaltyThresholds: doc.loyaltyThresholds,
   };
+
+  cachedConfig = config;
+  cacheExpiry = now + 60000;
+  return config;
 }
 
 export async function getOrCreateDamruConfig() {

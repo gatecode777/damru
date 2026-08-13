@@ -28,6 +28,12 @@ export interface IAchievement extends Document {
   badgeIcon?: string;
   priority: number;
   isActive: boolean;
+  /** When true, a claimed achievement reward may be reversed if the
+   *  underlying qualifying metric regresses (e.g. a refund reduces
+   *  lifetime_spend below the threshold). Only meaningful for ORDER_COUNT
+   *  and LIFETIME_SPEND. LOGIN_STREAK, PROFILE_COMPLETE, ACCOUNT_AGE_DAYS
+   *  are inherently non-reversible — set this to false for those. */
+  isReversible: boolean;
   startsAt?: Date | null;
   endsAt?: Date | null;
   createdAt: Date;
@@ -55,6 +61,7 @@ const AchievementSchema = new Schema<IAchievement>(
     badgeIcon: { type: String },
     priority: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    isReversible: { type: Boolean, default: true },
     startsAt: { type: Date, default: null },
     endsAt: { type: Date, default: null },
   },

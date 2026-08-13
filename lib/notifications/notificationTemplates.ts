@@ -65,8 +65,18 @@ export function buildNotificationCopy(type: NotificationType, ctx: NotificationC
         title: "⭐ Loyalty Tier Upgrade",
         message: amount > 0 ? `${description || "You reached a new tier"} — +${amount} Damru bonus` : (description || "You reached a new loyalty tier — new benefits are now active."),
       };
+    case "LOYALTY_TIER_DOWNGRADED":
+      return {
+        title: "Loyalty Tier Update",
+        message: description || "Your loyalty tier has been updated based on your recent activity.",
+      };
     case "LOYALTY_BENEFIT_AVAILABLE":
       return { title: "⭐ New Loyalty Benefit", message: description || "A new loyalty benefit is now available to you." };
+    case "MISSION_PROGRESS_ADJUSTED":
+      return {
+        title: "Mission Update",
+        message: description || "A mission's progress has been updated due to recent account activity.",
+      };
     case "COUPON_ISSUED":
       return {
         title: "🎟 New Reward Coupon",

@@ -20,6 +20,11 @@ export interface IMission extends Document {
   endsAt?: Date | null;
   priority: number;
   isActive: boolean;
+  /** When true, a completed+claimed reward for this mission may be reversed
+   *  if the underlying qualifying event is later invalidated (e.g. a refund).
+   *  Defaults true for ORDER_COUNT and SPENDING_AMOUNT mission types;
+   *  defaults false for LOGIN_STREAK and PROFILE_COMPLETE. */
+  isReversible: boolean;
   eligibility?: IMissionEligibility;
   createdBy?: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
@@ -56,6 +61,7 @@ const MissionSchema = new Schema<IMission>(
     endsAt: { type: Date, default: null },
     priority: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    isReversible: { type: Boolean, default: true },
     eligibility: { type: MissionEligibilitySchema, default: undefined },
     createdBy: { type: Schema.Types.ObjectId, ref: "Admin" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "Admin" },

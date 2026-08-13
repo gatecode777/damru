@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/website/aboutus.css";
 import Link from "next/link";
 import ReservationForm from "../ReservationForm";
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/website/blog.css";
 import Link from "next/link";
 import { connectDB } from "@/lib/mongodb";
 import Blog from "@/models/Blog";

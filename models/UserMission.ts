@@ -13,6 +13,13 @@ export interface IUserMission extends Document {
   completedAt?: Date | null;
   rewardIssuedAt?: Date | null;
   rewardTransactionId?: mongoose.Types.ObjectId | null;
+  /** Set to true when the mission's reward is reversed because its ORDER_COUNT
+   *  or SPENDING_AMOUNT progress dropped below target after a refund/cancellation.
+   *  The record is preserved for audit; a later requalification re-awards with a
+   *  new idempotency key. */
+  isRevoked: boolean;
+  revokedAt?: Date | null;
+  revokedTransactionId?: mongoose.Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +36,9 @@ const UserMissionSchema = new Schema<IUserMission>(
     completedAt: { type: Date, default: null },
     rewardIssuedAt: { type: Date, default: null },
     rewardTransactionId: { type: Schema.Types.ObjectId, ref: "DamruTransaction", default: null },
+    isRevoked: { type: Boolean, default: false },
+    revokedAt: { type: Date, default: null },
+    revokedTransactionId: { type: Schema.Types.ObjectId, ref: "DamruTransaction", default: null },
   },
   { timestamps: true }
 );

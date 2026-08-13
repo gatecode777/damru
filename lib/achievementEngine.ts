@@ -148,3 +148,85 @@ export async function evaluateAccountAgeAchievements(userId: mongoose.Types.Obje
   }
   return unlocked;
 }
+
+/**
+ * Clawback path — called when a full order invalidation (cancellation or full
+ * refund) removes one order from a user's delivered order history.
+ *
+ * For each CLAIMED, reversible, non-revoked ORDER_COUNT/LIFETIME_SPEND
+ * UserAchievement:
+ * 1. Recompute the true metric excluding the invalidated order.
+ * 2. If metric < conditionValue, reverse the achievement reward and mark
+ *    the UserAchievement as revoked.
+ *
+ * Idempotent via `applyReversal`'s compound unique index on
+ * (originalTransactionId, triggerId).
+ *
+ * Returns the count of Damru reversed across all affected achievements.
+ */
+export async function recomputeAchievementProgress(
+  userId: string | mongoose.Types.ObjectId,
+  triggerId: string
+): Promise<{ reversed: number }> {
+  await connectDB();
+
+  const claimedUserAchievements = await UserAchievement.find({
+    userId,
+    status: "CLAIMED",
+    isRevoked: { $ne: true },
+  }).populate<{ achievementId: IAchievement }>("achievementId", "conditionType conditionValue isReversible rewardDamruAmount").lean();
+
+  if (claimedUserAchievements.length === 0) return { reversed: 0 };
+
+  // Compute current aggregate counts from valid delivered orders.
+  const [agg] = await Order.aggregate([
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(String(userId)),
+        status: "delivered",
+        ...paymentEligibleOrderFilter(),
+      },
+    },
+    { $group: { _id: null, count: { $sum: 1 }, total: { $sum: "$total" } } },
+  ]);
+  const orderCount = agg?.count ?? 0;
+  const lifetimeSpend = agg?.total ?? 0;
+
+  const { applyReversal: _applyReversal } = await import("@/lib/rewards/reversalEngine");
+  let totalReversed = 0;
+
+  for (const ua of claimedUserAchievements) {
+    const achievement = ua.achievementId as IAchievement;
+    if (!achievement) continue;
+    if (!achievement.isReversible) continue;
+    if (achievement.conditionType !== "ORDER_COUNT" && achievement.conditionType !== "LIFETIME_SPEND") continue;
+
+    const currentMetric = achievement.conditionType === "ORDER_COUNT" ? orderCount : lifetimeSpend;
+    if (currentMetric >= achievement.conditionValue) continue;
+
+    // Metric has regressed below the unlock threshold — reverse the reward.
+    const rewardTxId = (ua as { rewardTransactionId?: mongoose.Types.ObjectId | null }).rewardTransactionId;
+    if (!rewardTxId) continue;
+
+    const reversalResult = await _applyReversal(rewardTxId, {
+      reason: "ORDER_CANCELLED",
+      triggerId,
+      allowManualCredit: true,
+      note: `Achievement "${achievement.name}" metric regressed below threshold after order invalidation.`,
+    });
+
+    if (reversalResult.applied) {
+      totalReversed += (reversalResult.transaction?.amount ?? 0);
+      await UserAchievement.findByIdAndUpdate(ua._id, {
+        $set: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedTransactionId: reversalResult.transaction?._id || null,
+        },
+      });
+    }
+  }
+
+  return { reversed: totalReversed };
+}
+

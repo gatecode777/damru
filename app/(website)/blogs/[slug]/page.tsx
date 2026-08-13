@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import "@/styles/website/blog.css";
+import "@/styles/website/blogdetails.css";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { BlogSidebar, BlogComments } from "@/components/website/BlogDetailClient";

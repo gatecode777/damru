@@ -14,7 +14,11 @@
     if (!wheel || thumbs.length === 0) return;
 
     let currentIndex = 0;
-    let autoRotateInterval;
+    
+    // Clear previous interval if running
+    if (window._damruHeroInterval) {
+      clearInterval(window._damruHeroInterval);
+    }
 
     function rotateTo(index) {
       currentIndex = index;
@@ -32,12 +36,12 @@
     });
 
     function startTimer() {
-      autoRotateInterval = setInterval(() => {
+      window._damruHeroInterval = setInterval(() => {
         currentIndex = (currentIndex + 1) % thumbs.length;
         rotateTo(currentIndex);
       }, 5000);
     }
-    function resetTimer() { clearInterval(autoRotateInterval); startTimer(); }
+    function resetTimer() { clearInterval(window._damruHeroInterval); startTimer(); }
 
     rotateTo(0);
     startTimer();
@@ -47,8 +51,13 @@
   function initBannerSlider() {
     const slides = document.querySelectorAll(".damru-hero-slider .slide");
     if (slides.length === 0) return;
+    
+    if (window._damruBannerInterval) {
+      clearInterval(window._damruBannerInterval);
+    }
+
     let current = 0;
-    setInterval(() => {
+    window._damruBannerInterval = setInterval(() => {
       slides[current].classList.remove("active");
       current = (current + 1) % slides.length;
       slides[current].classList.add("active");
@@ -79,6 +88,10 @@
       revealStagger(".lens-reveal", 150, 200);
     }
 
+    if (window._damruScrollRevealListener) {
+      window.removeEventListener("scroll", window._damruScrollRevealListener);
+    }
+    window._damruScrollRevealListener = runAll;
     window.addEventListener("scroll", runAll, { passive: true });
     runAll(); // run once immediately for above-fold elements
   }
@@ -92,7 +105,10 @@
     ];
 
     let idx = 0;
-    let autoScrollInterval;
+    
+    if (window._damruTestiInterval) {
+      clearInterval(window._damruTestiInterval);
+    }
 
     function goTo(newIdx) {
       idx = (newIdx + testimonials.length) % testimonials.length;
@@ -124,19 +140,19 @@
     }
 
     function startAutoScroll() {
-      clearInterval(autoScrollInterval);
-      autoScrollInterval = setInterval(() => {
+      clearInterval(window._damruTestiInterval);
+      window._damruTestiInterval = setInterval(() => {
         const textEl = document.getElementById("testi-text");
         if (!textEl) {
-          clearInterval(autoScrollInterval);
+          clearInterval(window._damruTestiInterval);
           return;
         }
         goTo(idx + 1);
-      }, 5000); // Auto-scroll every 5 seconds
+      }, 5000);
     }
 
     function resetAutoScroll() {
-      clearInterval(autoScrollInterval);
+      clearInterval(window._damruTestiInterval);
       startAutoScroll();
     }
 
@@ -145,7 +161,10 @@
       startAutoScroll();
     }
 
-    document.addEventListener("click", e => {
+    if (window._damruTestiClickListener) {
+      document.removeEventListener("click", window._damruTestiClickListener);
+    }
+    const clickHandler = e => {
       const nextBtn = e.target.closest(".testi-next");
       const prevBtn = e.target.closest(".testi-prev");
       if (nextBtn) {
@@ -156,16 +175,24 @@
         goTo(idx - 1);
         resetAutoScroll();
       }
-    });
+    };
+    window._damruTestiClickListener = clickHandler;
+    document.addEventListener("click", clickHandler);
   }
 
   // ── 5. HEADER SCROLL EFFECT ─────────────────────────────
   function initHeaderScroll() {
-    const header = document.querySelector("header.main-header");
-    if (!header) return;
-    window.addEventListener("scroll", () => {
-      header.classList.toggle("header-scrolled", window.scrollY > 80);
-    }, { passive: true });
+    if (window._damruHeaderScrollListener) {
+      window.removeEventListener("scroll", window._damruHeaderScrollListener);
+    }
+    const handler = () => {
+      const header = document.querySelector("header.main-header");
+      if (header) {
+        header.classList.toggle("header-scrolled", window.scrollY > 80);
+      }
+    };
+    window._damruHeaderScrollListener = handler;
+    window.addEventListener("scroll", handler, { passive: true });
   }
 
   // ── 6. QUANTITY SELECTOR (menu page) ────────────────────
@@ -192,7 +219,6 @@
   initAll();
 
   // Re-run on Next.js client-side navigation via history API patch
-  // (MutationObserver on body causes infinite loop — use pushState intercept instead)
   let lastPath = location.pathname;
   function checkRouteChange() {
     if (location.pathname !== lastPath) {

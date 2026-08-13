@@ -211,3 +211,131 @@ export async function processDueReferralRewards() {
   }
   return results;
 }
+
+/**
+ * Clawback path — called when a REWARDED referral's qualification order is
+ * fully refunded or cancelled.
+ *
+ * Flow:
+ * 1. Find the REWARDED referral whose qualificationOrderId matches this order.
+ * 2. Reverse the referrer's Damru (if issued) via applyReversal.
+ * 3. Reverse the referred user's Damru (if issued) via applyReversal.
+ * 4. Mark the referral as INVALIDATED (preserves record for audit).
+ * 5. Immediately attempt re-qualification from remaining eligible orders.
+ *
+ * Idempotent: triggerId discriminates each reversal within the RewardReversal
+ * schema's compound unique index, so replaying this function with the same
+ * triggerId is safe.
+ */
+export async function evaluateReferralClawback(
+  orderId: string | mongoose.Types.ObjectId,
+  triggerId: string
+): Promise<{ skipped: boolean; clawedBack?: boolean; requalified?: boolean }> {
+  await connectDB();
+
+  // Only act on REWARDED referrals whose qualification order is this order.
+  const referral = await Referral.findOne({
+    qualificationOrderId: orderId,
+    status: "REWARDED",
+  });
+  if (!referral) return { skipped: true };
+
+  const { applyReversal: _applyReversal } = await import("@/lib/rewards/reversalEngine");
+  const reversalInput = {
+    reason: "ORDER_CANCELLED" as const,
+    triggerId,
+    orderId,
+    allowManualCredit: true as const,
+  };
+
+  // Reverse referrer reward.
+  if (referral.referrerTransactionId) {
+    await _applyReversal(referral.referrerTransactionId, {
+      ...reversalInput,
+      note: "Referral reward reversed — qualification order was refunded/cancelled.",
+    });
+  }
+
+  // Reverse referred user reward.
+  if (referral.referredTransactionId) {
+    await _applyReversal(referral.referredTransactionId, {
+      ...reversalInput,
+      note: "Referral bonus reversed — qualification order was refunded/cancelled.",
+    });
+  }
+
+  // Transition to INVALIDATED atomically.
+  const invalidated = await Referral.findOneAndUpdate(
+    { _id: referral._id, status: "REWARDED" },
+    {
+      $set: {
+        status: "INVALIDATED",
+        invalidatedAt: new Date(),
+        invalidationOrderId: orderId,
+        invalidationReason: `Qualification order refunded/cancelled (triggerId: ${triggerId})`,
+      },
+      $inc: { requalificationCount: 1 },
+    },
+    { new: true }
+  );
+  if (!invalidated) return { skipped: true }; // Another caller won the race.
+
+  // Immediately attempt requalification.
+  const requalResult = await evaluateReferralRequalification(invalidated.referredUserId, triggerId);
+
+  return { skipped: false, clawedBack: true, requalified: requalResult.requalified };
+}
+
+/**
+ * Attempts to requalify an INVALIDATED referral for the referred user's next
+ * eligible delivered order. Called immediately after clawback and also
+ * available as a standalone retry (e.g. from a scheduled job).
+ *
+ * Resets the referral to PENDING_QUALIFICATION then fires
+ * evaluateReferralQualification against each eligible delivered order in
+ * ascending order, stopping at the first that qualifies.
+ */
+export async function evaluateReferralRequalification(
+  referredUserId: string | mongoose.Types.ObjectId,
+  context: string
+): Promise<{ requalified: boolean; skipped?: boolean }> {
+  await connectDB();
+
+  const referral = await Referral.findOneAndUpdate(
+    { referredUserId, status: "INVALIDATED" },
+    {
+      $set: {
+        status: "PENDING_QUALIFICATION",
+        qualifiedAt: null,
+        rewardEligibleAt: null,
+        rewardedAt: null,
+        referrerTransactionId: null,
+        referredTransactionId: null,
+      },
+    },
+    { new: true }
+  );
+  if (!referral) return { skipped: true, requalified: false };
+
+  // Try each eligible delivered order in chronological order.
+  const config = await getReferralConfig();
+  if (!config.isActive) return { requalified: false };
+
+  const eligibleOrders = await Order.find({
+    userId: referredUserId,
+    status: "delivered",
+    total: { $gte: config.minimumOrderAmount },
+    ...paymentEligibleOrderFilter(),
+  })
+    .sort({ createdAt: 1 })
+    .select("_id total")
+    .lean<Array<{ _id: mongoose.Types.ObjectId; total: number }>>();
+
+  for (const order of eligibleOrders) {
+    const result = await evaluateReferralQualification(referredUserId, order._id, order.total);
+    if ("qualified" in result && result.qualified) return { requalified: true };
+  }
+
+  return { requalified: false };
+}
+

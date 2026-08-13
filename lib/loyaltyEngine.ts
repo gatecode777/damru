@@ -7,9 +7,19 @@ import { paymentEligibleOrderFilter } from "@/lib/orders/orderPaymentPolicy";
 
 export type LoyaltyRewardSource = "ORDER_REWARD" | "OTHER";
 
+let cachedTiers: ILoyaltyTier[] | null = null;
+let tiersExpiry = 0;
+
 export async function getActiveLoyaltyTiers() {
+  const now = Date.now();
+  if (cachedTiers && now < tiersExpiry) {
+    return cachedTiers;
+  }
   await connectDB();
-  return LoyaltyTier.find({ isActive: true }).sort({ rank: 1 }).lean<ILoyaltyTier[]>();
+  const tiers = await LoyaltyTier.find({ isActive: true }).sort({ rank: 1 }).lean<ILoyaltyTier[]>();
+  cachedTiers = tiers;
+  tiersExpiry = now + 60000;
+  return tiers;
 }
 
 export function validateLoyaltyLadder(tiers: Pick<ILoyaltyTier, "qualificationType" | "minimumValue" | "maximumValue" | "rank">[]) {
@@ -40,11 +50,21 @@ function publicTier(tier: ILoyaltyTier) {
   return { id: String(tier._id), code: tier.code, name: tier.name, rank: tier.rank, badgeName: tier.badgeName || null, badgeIcon: tier.badgeIcon || null, damruMultiplier: tier.damruMultiplier };
 }
 
-export async function getLoyaltySummary(userId: string | mongoose.Types.ObjectId) {
+export async function getLoyaltySummary(
+  userId: string | mongoose.Types.ObjectId,
+  preFetchedEarned?: number
+) {
   const tiers = await getActiveLoyaltyTiers();
   if (!tiers.length) return { currentTier: null, qualification: null, nextTier: null, progress: { percentage: 0, remainingValue: 0 }, benefits: [], tiers: [] };
   const type = tiers[0].qualificationType;
-  const currentValue = await qualificationValue(userId, type);
+  
+  let currentValue = 0;
+  if (type === "DAMRU_EARNED" && typeof preFetchedEarned === "number") {
+    currentValue = preFetchedEarned;
+  } else {
+    currentValue = await qualificationValue(userId, type);
+  }
+
   const current = [...tiers].reverse().find(t => currentValue >= t.minimumValue && (t.maximumValue === null || currentValue < t.maximumValue)) || tiers[0];
   const next = tiers.find(t => t.rank > current.rank) || null;
   const span = next ? next.minimumValue - current.minimumValue : 0;
@@ -58,19 +78,47 @@ export async function getLoyaltySummary(userId: string | mongoose.Types.ObjectId
 
 export async function evaluateLoyaltyTier(userId: string | mongoose.Types.ObjectId, options: { issueBonus?: boolean } = {}) {
   const summary = await getLoyaltySummary(userId);
-  if (!summary.currentTier) return { ...summary, changed: false };
-  const user = await User.findById(userId).select("loyaltyTierId");
-  if (!user) return { ...summary, changed: false };
-  const changed = String(user.loyaltyTierId || "") !== summary.currentTier.id;
-  await User.findByIdAndUpdate(userId, { loyaltyTierId: summary.currentTier.id, loyaltyTierCode: summary.currentTier.code, loyaltyTierUpdatedAt: new Date() });
-  if (changed && options.issueBonus) {
+  if (!summary.currentTier) return { ...summary, changed: false, downgraded: false };
+  const user = await User.findById(userId).select("loyaltyTierId loyaltyTierCode loyaltyTierRank");
+  if (!user) return { ...summary, changed: false, downgraded: false };
+
+  const previousTierId = String(user.loyaltyTierId || "");
+  const previousTierCode = (user as { loyaltyTierCode?: string }).loyaltyTierCode || null;
+  const previousTierRank = (user as { loyaltyTierRank?: number }).loyaltyTierRank ?? null;
+
+  const changed = previousTierId !== summary.currentTier.id;
+  const downgraded = changed && previousTierRank !== null && summary.currentTier.rank < previousTierRank;
+
+  await User.findByIdAndUpdate(userId, {
+    loyaltyTierId: summary.currentTier.id,
+    loyaltyTierCode: summary.currentTier.code,
+    loyaltyTierRank: summary.currentTier.rank,
+    loyaltyTierUpdatedAt: new Date(),
+  });
+
+  if (changed && options.issueBonus && !downgraded) {
+    // Upgrade bonus: permanent, never reversed on downgrade (policy Q1).
     const tier = await LoyaltyTier.findById(summary.currentTier.id).select("tierBonusDamru name");
     if (tier?.tierBonusDamru) {
       const { awardDamru } = await import("@/lib/rewardEngine");
       await awardDamru({ userId, category: "loyalty_tier", amount: tier.tierBonusDamru, description: `${tier.name} tier upgrade bonus`, idempotencyKey: `loyalty-tier:${userId}:${tier._id}` });
     }
   }
-  return { ...summary, changed };
+
+  if (downgraded) {
+    // Notify the user about the downgrade — informational only, no Damru change.
+    const { notifyRewardEvent } = await import("@/lib/notifications/rewardNotificationService");
+    await notifyRewardEvent({
+      userId,
+      type: "LOYALTY_TIER_DOWNGRADED",
+      sourceType: "User",
+      sourceId: String(userId),
+      description: `Your loyalty tier has changed from ${previousTierCode ?? "your previous tier"} to ${summary.currentTier.name}.`,
+      route: "/my-profile?tab=rewards",
+    }).catch((err) => console.error("[loyaltyEngine] downgrade notification failed:", err));
+  }
+
+  return { ...summary, changed, downgraded, previousTierCode };
 }
 
 export async function getLoyaltyRewardMultiplier(userId: string | mongoose.Types.ObjectId, source: LoyaltyRewardSource) {

@@ -53,14 +53,13 @@ export async function GET(req: NextRequest) {
       activeMissionCount,
       completedMissionCount,
       featuredMissions,
-      referralCode,
       referralPending,
       referralSuccessful,
       referralEarnedAgg,
       loyalty,
     ] = await Promise.all([
       User.findById(sessionUser.id)
-        .select("damruBalance damruTotalEarned damruTotalRedeemed rewardDebt loyaltyLevel currentStreak longestStreak lastEligibleActivityDate")
+        .select("damruBalance damruTotalEarned damruTotalRedeemed rewardDebt loyaltyLevel currentStreak longestStreak lastEligibleActivityDate referralCode")
         .lean(),
       getDamruConfig(),
       Coupon.find({
@@ -92,7 +91,6 @@ export async function GET(req: NextRequest) {
         .limit(3)
         .populate("missionId", "name rewardDamruAmount")
         .lean<PopulatedUserMission[]>(),
-      getOrCreateReferralCode(sessionUser.id),
       Referral.countDocuments({ referrerUserId: sessionUser.id, status: { $in: ACTIVE_REFERRAL_STATUSES } }),
       Referral.countDocuments({ referrerUserId: sessionUser.id, status: "REWARDED" }),
       Referral.aggregate([
@@ -104,6 +102,12 @@ export async function GET(req: NextRequest) {
 
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
     const u = user as any;
+    
+    let finalReferralCode = u.referralCode;
+    if (!finalReferralCode) {
+      finalReferralCode = await getOrCreateReferralCode(sessionUser.id);
+    }
+    
     const expirySummary = await getExpiringSummary(sessionUser.id, config);
 
     const currentIdx = LEVEL_ORDER.indexOf(u.loyaltyLevel);
@@ -176,7 +180,7 @@ export async function GET(req: NextRequest) {
         successful: referralSuccessful,
         pending: referralPending,
         totalDamruEarned: referralEarnedAgg[0]?.total || 0,
-        referralCode,
+        referralCode: finalReferralCode,
       },
       loyalty: { currentTier: loyalty.currentTier, nextTier: loyalty.nextTier, progressPercentage: loyalty.progress.percentage, remainingValue: loyalty.progress.remainingValue },
       expiry: expirySummary,

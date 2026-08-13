@@ -117,6 +117,7 @@ BlogSchema.index({ status: 1 });
 BlogSchema.index({ isFeatured: 1 });
 BlogSchema.index({ publishedAt: -1 });
 BlogSchema.index({ tags: 1 });
+BlogSchema.index({ status: 1, publishedAt: -1, createdAt: -1 });
 
 // Use async pre-save — no `next` parameter needed in Mongoose 7+
 BlogSchema.pre("save", async function () {

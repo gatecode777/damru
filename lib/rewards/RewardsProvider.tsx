@@ -21,6 +21,12 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
+      const isLoggedIn = typeof document !== "undefined" && document.cookie.includes("damru_logged_in=true");
+      if (!isLoggedIn) {
+        setDashboard(null);
+        setLoading(false);
+        return;
+      }
       const data = await rewardApi.getDashboard();
       if ("error" in data && data.error) {
         setDashboard(null);

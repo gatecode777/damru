@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { connectDB } from "@/lib/mongodb";
 import Branch from "@/models/Branch";
@@ -81,8 +82,14 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
             )}
           </div>
           {b.cardImage && (
-            <div className="banqplace__intro-img reveal-right">
-              <img src={`/uploads/branches/${b.cardImage}`} alt={b.cardAlt || b.name} />
+            <div className="banqplace__intro-img reveal-right" style={{ position: "relative" }}>
+              <Image
+                src={`/uploads/branches/${b.cardImage}`}
+                alt={b.cardAlt || b.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                style={{ objectFit: "cover" }}
+              />
             </div>
           )}
         </div>

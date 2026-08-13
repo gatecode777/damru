@@ -11,6 +11,13 @@ export interface IUserAchievement extends Document {
   unlockedAt?: Date | null;
   rewardIssuedAt?: Date | null;
   rewardTransactionId?: mongoose.Types.ObjectId | null;
+  /** Set to true when this achievement's reward is reversed because the
+   *  underlying qualifying metric fell below the threshold (e.g. a refund
+   *  reduces lifetime_spend). The record is NOT deleted — isRevoked allows
+   *  the engine to re-award cleanly if the metric later recovers. */
+  isRevoked: boolean;
+  revokedAt?: Date | null;
+  revokedTransactionId?: mongoose.Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +32,9 @@ const UserAchievementSchema = new Schema<IUserAchievement>(
     unlockedAt: { type: Date, default: null },
     rewardIssuedAt: { type: Date, default: null },
     rewardTransactionId: { type: Schema.Types.ObjectId, ref: "DamruTransaction", default: null },
+    isRevoked: { type: Boolean, default: false },
+    revokedAt: { type: Date, default: null },
+    revokedTransactionId: { type: Schema.Types.ObjectId, ref: "DamruTransaction", default: null },
   },
   { timestamps: true }
 );

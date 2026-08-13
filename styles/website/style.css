@@ -2986,11 +2986,13 @@
 .excellent-title {
   font-family: "Playfair Display", serif;
   font-size: clamp(3.5rem, 4.7vw, 5rem);
-  line-height: 0.98;
+  line-height: 1.1; /* slightly increased to prevent top/bottom clipping */
   margin-bottom: 18px;
   font-weight: 700;
   position: relative;
   display: inline-block;
+  padding-right: 0.15em; /* prevents right-side drop-shadow clipping on the last letter 'e' */
+
 
   /* 1. Base White Text with Grey Shine Wave */
 
@@ -3126,104 +3128,160 @@
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1199px) {
   .chef-static-img {
     max-width: 440px;
     height: 390px;
   }
 
   .excellent-title {
-    font-size: 3.7rem !important;
+    font-size: 3.5rem !important;
+    padding-right: 0.15em;
   }
 
   .cook-content {
-    padding: 40px 38px 40px 24px;
+    padding: 40px 30px;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .cook-flex {
-    flex-direction: row !important;
-    align-items: flex-end;
-    flex-wrap: nowrap;
+    flex-direction: column-reverse !important; /* Stack: text on top, chef image at the bottom */
+    align-items: center;
+    text-align: center;
+    min-height: auto;
+    padding-top: 40px;
   }
 
   .chef-side {
-    width: 45%;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    justify-content: center;
   }
 
   .chef-static-img {
     width: 100%;
-    max-width: 100%;
+    max-width: 320px;
     height: auto;
-    margin-bottom: -20px !important;
+    margin-bottom: -27px !important; /* Sits flush with bottom of container */
   }
 
+  .cook-content {
+    width: 100%;
+    padding: 20px 30px 40px 30px !important;
+    text-align: center !important;
+  }
+
+  .cook-eyebrow {
+    justify-content: center;
+  }
+
+  .excellent-title {
+    font-size: 3.2rem !important;
+    line-height: 1.1;
+    padding-right: 0.15em;
+  }
+
+  .excellent-desc {
+    max-width: 100%;
+    font-size: 0.95rem !important;
+    margin-bottom: 25px;
+    display: block !important;
+    -webkit-line-clamp: none !important;
+    overflow: visible !important;
+  }
+
+  .leaf-top {
+    top: 30px;
+    left: 4%;
+  }
+
+  .leaf-bottom {
+    bottom: 30px;
+    right: 4%;
+  }
+}
+
+@media (max-width: 768px) {
   .excellent-cook-section {
     padding: 42px 18px !important;
   }
 
   .cook-flex {
-    min-height: 370px;
     border-radius: 22px;
+    padding-top: 30px;
+  }
+
+  .chef-static-img {
+    max-width: 260px;
   }
 
   .cook-content {
-    width: 55%;
-    padding: 30px 22px 30px 14px !important;
-    text-align: left !important;
+    padding: 10px 20px 30px 20px !important;
   }
 
   .excellent-title {
-    font-size: 2.55rem !important;
-    line-height: 1.05;
+    font-size: 2.4rem !important;
+    padding-right: 0.15em;
   }
 
   .excellent-desc {
-    font-size: 0.82rem !important;
-    max-width: 100%;
-    line-height: 1.4;
-    display: -webkit-box;
-    line-clamp: 4;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    font-size: 0.88rem !important;
+    line-height: 1.5;
   }
 
-  .cook-eyebrow { font-size: 0.62rem; letter-spacing: 0.12em; }
-  .cook-menu-link { min-height: 42px; padding: 0 16px; font-size: 0.78rem; }
+  .cook-menu-link {
+    min-height: 42px;
+    padding: 0 20px;
+    font-size: 0.85rem;
+  }
 
-  /* Leaves ko mobile par chota kiya gaya */
+  /* Leaves ko mobile par chota kiya */
   .leaf-3d-ani {
     width: 80px !important;
   }
 }
 
 @media (max-width: 480px) {
-  .excellent-title {
-    font-size: 2.2rem !important;
-  }
-
-  .excellent-desc {
-    font-size: 0.8rem !important;
-    display: -webkit-box;
-    line-clamp: 5;
-    -webkit-line-clamp: 5;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .cook-content {
-    padding-bottom: 20px !important;
-  }
-
   .excellent-cook-section {
     padding: 30px 14px !important;
   }
 
-  .cook-flex { min-height: 310px; border-radius: 18px; }
-  .cook-eyebrow { margin-bottom: 9px; }
-  .cook-menu-link { min-height: 38px; padding: 0 13px; }
+  .cook-flex {
+    border-radius: 18px;
+    padding-top: 25px;
+  }
+
+  .chef-static-img {
+    max-width: 200px;
+  }
+
+  .cook-content {
+    padding: 5px 15px 25px 15px !important;
+  }
+
+  .excellent-title {
+    font-size: 2.0rem !important;
+    padding-right: 0.15em;
+  }
+
+  .excellent-desc {
+    font-size: 0.82rem !important;
+    line-height: 1.45;
+  }
+
+  .cook-eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    margin-bottom: 9px;
+  }
+
+  .cook-menu-link {
+    min-height: 38px;
+    padding: 0 16px;
+    font-size: 0.8rem;
+  }
 }
 
 /* Make a Reservation section  */

@@ -1,5 +1,6 @@
 "use client";
 
+import "@/styles/website/checkout.css";
 import { fmtINR } from "@/lib/formatDate";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";

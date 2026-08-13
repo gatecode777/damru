@@ -14,6 +14,7 @@ import { evaluateLoyaltyTier } from "@/lib/loyaltyEngine";
 import { notifyOrderEvent } from "@/lib/notifications/orderNotificationService";
 import type { NotificationType } from "@/models/Notification";
 import { reverseOrderRewards } from "@/lib/rewards/reversalEngine";
+import { recomputeRewardEntitlements } from "@/lib/rewards/recomputeEntitlements";
 import { evaluateOrderRisk, evaluateRiskSafely } from "@/lib/rewards/riskEngine";
 import { getOrderStatusPaymentError } from "@/lib/orders/orderPaymentPolicy";
 
@@ -93,7 +94,12 @@ export async function updateOrderStatus(id: string, status: string) {
 
   if (order?.userId && status === "cancelled") {
     try {
-      await reverseOrderRewards({ orderId: order._id, reason: "ORDER_CANCELLED", triggerId: `cancel:${order._id}` });
+      await recomputeRewardEntitlements({
+        userId: order.userId,
+        orderId: order._id,
+        trigger: "ORDER_CANCELLED",
+        triggerId: `cancel:${order._id}`,
+      });
       await evaluateRiskSafely("order-cancelled", () => evaluateOrderRisk({ userId: order.userId!, orderId: order._id }));
     } catch (err) {
       console.error("Order reward reversal failed:", err);
@@ -184,7 +190,12 @@ export async function cancelOrder(id: string) {
 
   const order = transitionedOrder || await Order.findOne({ _id: id, status: "cancelled" });
   if (order) {
-    await reverseOrderRewards({ orderId: order._id, reason: "ORDER_CANCELLED", triggerId: `cancel:${order._id}` });
+    await recomputeRewardEntitlements({
+      userId: order.userId!,
+      orderId: order._id,
+      trigger: "ORDER_CANCELLED",
+      triggerId: `cancel:${order._id}`,
+    }).catch((err) => console.error("cancelOrder recomputeRewardEntitlements failed:", err));
     if (order.userId) await evaluateRiskSafely("order-cancelled", () => evaluateOrderRisk({ userId: order.userId!, orderId: order._id }));
   }
 

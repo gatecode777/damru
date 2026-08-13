@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/website/gallery.css";
 import { connectDB } from "@/lib/mongodb";
 import GalleryTab from "@/models/GalleryTab";
 import GalleryClient from "./GalleryClient";

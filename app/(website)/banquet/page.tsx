@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import "@/styles/website/banquet.css";
+import "@/styles/website/banquetdetail.css";
 import Link from "next/link";
 import BanquetForm from "./BanquetForm";
 
