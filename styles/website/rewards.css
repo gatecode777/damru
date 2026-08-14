@@ -3,6 +3,7 @@
 .rewards__wallet-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  align-items: start;
   gap: 14px;
   margin-bottom: 20px;
 }
@@ -11,14 +12,21 @@
   background: #fff7ed;
   border: 1px solid #fde3c8;
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 14px 18px !important;
+  box-shadow: 0 1px 4px rgba(230, 126, 34, 0.08);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.rewards__wallet-stat:hover {
+  border-color: #f8cd94;
+  box-shadow: 0 3px 10px rgba(230, 126, 34, 0.14);
 }
 
 .rewards__wallet-stat-label {
   font-family: "Poppins", sans-serif;
   font-size: 0.72rem;
   color: #9a7b52;
-  margin: 0 0 4px;
+  margin: 0 0 6px !important;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -28,7 +36,7 @@
   font-size: 1.35rem;
   font-weight: 700;
   color: #e67e22;
-  margin: 0;
+  margin: 0 !important;
   text-transform: capitalize;
 }
 
@@ -38,6 +46,27 @@
   height: 8px;
   overflow: hidden;
   margin: 6px 0 4px;
+}
+
+/* Big screens — a little more room to breathe instead of the same compact
+   mobile sizing stretched wide. */
+@media (min-width: 900px) {
+  .rewards__wallet-grid {
+    gap: 26px;
+  }
+
+  .rewards__wallet-stat {
+    padding: 20px 24px !important;
+  }
+
+  .rewards__wallet-stat-label {
+    font-size: 0.78rem;
+    margin-bottom: 8px !important;
+  }
+
+  .rewards__wallet-stat-value {
+    font-size: 1.6rem;
+  }
 }
 
 .rewards__progress-fill {
@@ -125,13 +154,33 @@
   margin-top: 8px;
 }
 
+@media (max-width: 640px) {
+  .rewards__occasion-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px 0 !important;
+  }
+
+  .rewards__occasion-input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 11px 12px !important;
+    font-size: 14px !important;
+  }
+
+  .rewards__occasion-warning {
+    margin-top: 10px !important;
+  }
+}
+
 .rewards__streak-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 14px !important;
 }
 
 .rewards__streak-current {
@@ -139,7 +188,7 @@
   font-weight: 700;
   font-size: 1.3rem;
   color: #e67e22;
-  margin: 0;
+  margin: 0 !important;
 }
 
 .rewards__streak-next {
@@ -147,7 +196,7 @@
   font-weight: 700;
   font-size: 1rem;
   color: #16a34a;
-  margin: 0;
+  margin: 0 !important;
 }
 
 .rewards__streak-dots {
@@ -163,7 +212,7 @@
   justify-content: center;
   gap: 2px;
   min-width: 44px;
-  padding: 8px 6px;
+  padding: 8px 6px !important;
   border-radius: 10px;
   background: #f7f5f2;
   border: 1px solid #eee;
@@ -333,19 +382,36 @@
 }
 
 .rewards__nav-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   background: #fff7ed;
   border: 1px solid #fde3c8;
   color: #e67e22;
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: 6px 13px;
   font-family: "Poppins", sans-serif;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(230, 126, 34, 0.12);
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.rewards__nav-pill:hover {
+  background: #ffedd9;
+  border-color: #f8cd94;
+  box-shadow: 0 2px 8px rgba(230, 126, 34, 0.2);
+}
+
+.rewards__nav-pill-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.rewards__nav-pill-value {
+  letter-spacing: 0.02em;
 }
 
 .rewards__redeem-box {
@@ -372,5 +438,13 @@
 }
 
 @media (max-width: 640px) {
-  .rewards__wallet-grid { grid-template-columns: repeat(2, 1fr); }
+  .rewards__wallet-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .rewards__wallet-stat { padding: 12px 14px !important; }
+  .rewards__wallet-stat-value { font-size: 1.2rem; }
+}
+
+@media (max-width: 400px) {
+  .rewards__wallet-stat { padding: 10px 12px !important; }
+  .rewards__wallet-stat-label { font-size: 0.66rem; }
+  .rewards__wallet-stat-value { font-size: 1.05rem; }
 }

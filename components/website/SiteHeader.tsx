@@ -1,5 +1,6 @@
 "use client";
 
+import "@/styles/website/rewards.css";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -681,7 +682,8 @@ export default function Header() {
             {/* Damru balance pill — desktop/tablet only; shown in the profile menu on small screens */}
             {!isMobile && !userLoading && user && rewardsDashboard && (
               <Link href="/my-profile?tab=rewards" className="rewards__nav-pill" title="My Damru Rewards">
-                🪙 {rewardsDashboard.damruBalance}
+                <span className="rewards__nav-pill-icon">🪙</span>
+                <span className="rewards__nav-pill-value">{rewardsDashboard.damruBalance}</span>
               </Link>
             )}
 

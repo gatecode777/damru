@@ -108,7 +108,7 @@ export function WebsiteToastProvider({ children }: { children: ReactNode }) {
         .website-toast__close{position:absolute;top:8px;right:7px;width:24px;height:24px;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:#9ca3af;cursor:pointer}.website-toast__close:hover,.website-toast__close:focus-visible{background:#f3f4f6;color:#111827;outline:2px solid #fed7aa;outline-offset:1px}
         .website-toast__progress{position:absolute;left:0;bottom:0;height:3px;background:var(--toast-accent);animation:website-toast-progress var(--toast-duration) linear forwards}
         @keyframes website-toast-in{from{opacity:0;transform:translate3d(24px,-4px,0)}to{opacity:1;transform:none}}@keyframes website-toast-out{to{opacity:0;transform:translate3d(18px,0,0)}}@keyframes website-toast-progress{from{width:100%}to{width:0}}
-        @media(max-width:600px){.website-toast-stack{top:max(12px,calc(env(safe-area-inset-top) + 8px));left:12px;right:12px;width:auto}.website-toast{border-radius:12px;padding-right:36px}}
+        @media(max-width:600px){.website-toast-stack{display:none}}
         @media(prefers-reduced-motion:reduce){.website-toast,.website-toast--out,.website-toast__progress{animation:none}}
       `}</style>
     </ToastContext.Provider>

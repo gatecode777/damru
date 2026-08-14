@@ -24,17 +24,20 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
       const isLoggedIn = typeof document !== "undefined" && document.cookie.includes("damru_logged_in=true");
       if (!isLoggedIn) {
         setDashboard(null);
+        setError("");
         setLoading(false);
         return;
       }
       const data = await rewardApi.getDashboard();
       if ("error" in data && data.error) {
         setDashboard(null);
+        setError(data.error);
       } else {
         setDashboard(data);
+        setError("");
       }
-      setError("");
     } catch {
+      setDashboard(null);
       setError("Could not load Damru rewards.");
     } finally {
       setLoading(false);
