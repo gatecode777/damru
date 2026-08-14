@@ -1,11 +1,46 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Text, ScrollView, Switch, Pressable, ActivityIndicator } from "react-native";
+import { View, StyleSheet, Text, ScrollView, Switch, Pressable } from "react-native";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { get, post, patch } from "@/lib/api";
 import { colors } from "@/config";
 import { Button, Field } from "@/components/ui";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
+
+function AddressFormSkeleton() {
+  const fieldLabels = ["Receiver Name *", "Receiver Phone Number *", "Flat / House No / Building *", "Area / Street / Sector"];
+  return (
+    <>
+      <Text style={styles.sectionLabel}>Address Type</Text>
+      <View style={styles.labelTabs}>
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} height={44} radius={10} />
+        ))}
+      </View>
+      {fieldLabels.map((label) => (
+        <View key={label} style={{ gap: 6, marginBottom: 14 }}>
+          <Text style={styles.sectionLabel}>{label}</Text>
+          <Skeleton height={50} radius={13} />
+        </View>
+      ))}
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <View style={{ gap: 6 }}>
+            <Text style={styles.sectionLabel}>City *</Text>
+            <Skeleton height={50} radius={13} />
+          </View>
+        </View>
+        <View style={styles.col}>
+          <View style={{ gap: 6 }}>
+            <Text style={styles.sectionLabel}>State *</Text>
+            <Skeleton height={50} radius={13} />
+          </View>
+        </View>
+      </View>
+    </>
+  );
+}
 
 export default function AddAddressScreen() {
   const router = useRouter();
@@ -119,7 +154,7 @@ export default function AddAddressScreen() {
       <Stack.Screen options={{ title: id ? "Edit Address" : "Add Address", headerShown: true }} />
 
       {loading ? (
-        <ActivityIndicator size="large" color={colors.orange} style={{ marginTop: 40 }} />
+        <AddressFormSkeleton />
       ) : (
         <>
           {error ? (

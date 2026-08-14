@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -176,8 +176,9 @@ export default function MenuScreen() {
   }, []);
 
   // Filter products based on selected category
-  const filteredProducts = allItems.filter(
-    (item) => item.category === selectedCategory
+  const filteredProducts = useMemo(
+    () => allItems.filter((item) => item.category === selectedCategory),
+    [allItems, selectedCategory]
   );
 
   const activeCategoryObj = categories.find((c) => c._id === selectedCategory);

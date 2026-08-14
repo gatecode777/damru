@@ -25,15 +25,15 @@ import {
    same hardcoded strings the website uses.
 ───────────────────────────────────────────── */
 const INDO_CHINESE_PRODUCTS: IndoChineseProduct[] = [
-  { key: 'IC1', name: 'Paneer in Hot Garlic Sauce', image: require('@/assets/images/IC1.png') },
-  { key: 'IC2', name: 'Honey Chilli Potato',        image: require('@/assets/images/IC2.png') },
-  { key: 'IC3', name: 'EOK Tossed Waterchestnut',   image: require('@/assets/images/IC3.png') },
-  { key: 'IC4', name: 'Mushroom Chilli Dry',         image: require('@/assets/images/IC4.png') },
-  { key: 'IC5', name: 'Spring Roll',                 image: require('@/assets/images/IC5.png') },
-  { key: 'IC6', name: 'Paneer 65',                   image: require('@/assets/images/IC6.png') },
-  { key: 'IC7', name: 'Crispy Corn',                 image: require('@/assets/images/IC7.png') },
-  { key: 'IC8', name: 'Paneer Kung Pao',             image: require('@/assets/images/IC8.png') },
-  { key: 'IC9', name: 'Schezwan Vegetables in Hot',  image: require('@/assets/images/IC9.png') },
+  { key: 'IC1', name: 'Paneer in Hot Garlic Sauce', image: require('@/assets/images/IC1.webp') },
+  { key: 'IC2', name: 'Honey Chilli Potato',        image: require('@/assets/images/IC2.webp') },
+  { key: 'IC3', name: 'EOK Tossed Waterchestnut',   image: require('@/assets/images/IC3.webp') },
+  { key: 'IC4', name: 'Mushroom Chilli Dry',         image: require('@/assets/images/IC4.webp') },
+  { key: 'IC5', name: 'Spring Roll',                 image: require('@/assets/images/IC5.webp') },
+  { key: 'IC6', name: 'Paneer 65',                   image: require('@/assets/images/IC6.webp') },
+  { key: 'IC7', name: 'Crispy Corn',                 image: require('@/assets/images/IC7.webp') },
+  { key: 'IC8', name: 'Paneer Kung Pao',             image: require('@/assets/images/IC8.webp') },
+  { key: 'IC9', name: 'Schezwan Vegetables in Hot',  image: require('@/assets/images/IC9.webp') },
 ];
 
 const { width: SCREEN_W } = Dimensions.get('window');

@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   ScrollView,

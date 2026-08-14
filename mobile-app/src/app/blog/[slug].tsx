@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   Share,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native';
 import { Image } from '../../components/ui/Image';

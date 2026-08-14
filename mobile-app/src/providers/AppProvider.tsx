@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useRef } from "react";
 import { queryClient } from "@/lib/queryClient";
-import { get, post } from "@/lib/api";
+import { get, post, ApiRequestError } from "@/lib/api";
 import type { CartItem, MenuItem, User } from "@/types";
 
 type AppContextValue = {
@@ -50,8 +50,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await get<{ user: User }>("/api/user/me");
       setUserState(data.user);
-    } catch {
-      setUserState(null);
+    } catch (error) {
+      // Only a real 401 means "not logged in" — a network blip, timeout, or
+      // 5xx is a transient failure, not a logout, so the last-known user
+      // state is left alone rather than silently signing them out.
+      const isUnauthorized = error instanceof ApiRequestError && error.status === 401;
+      if (isUnauthorized) {
+        setUserState(null);
+      } else if (__DEV__) {
+        console.warn("[AppProvider] refreshUser failed (keeping current session):", error);
+      }
     }
   }, []);
 

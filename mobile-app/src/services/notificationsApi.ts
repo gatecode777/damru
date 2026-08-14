@@ -1,4 +1,4 @@
-import { get, patch } from "@/lib/api";
+import { get, patch, del } from "@/lib/api";
 import type { NotificationsPage, NotificationPreferences } from "@/types/notifications";
 
 export const getNotifications = (page = 1, limit = 20) =>
@@ -9,6 +9,9 @@ export const getUnreadCount = () => get<{ count: number }>("/api/notifications/u
 export const markNotificationRead = (id: string) => patch<{ success: boolean }>(`/api/notifications/${id}/read`);
 
 export const markAllNotificationsRead = () => patch<{ success: boolean; count: number }>("/api/notifications/read-all");
+
+export const deleteNotifications = (ids: string[]) =>
+  del<{ success: boolean; deletedCount: number }>("/api/notifications/bulk-delete", { ids });
 
 export const getNotificationPreferences = () => get<{ preferences: NotificationPreferences }>("/api/user/notification-preferences");
 

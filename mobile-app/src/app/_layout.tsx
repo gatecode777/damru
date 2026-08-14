@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { useFonts, PlayfairDisplay_800ExtraBold, PlayfairDisplay_700Bold, PlayfairDisplay_500Medium, PlayfairDisplay_400Regular } from "@expo-google-fonts/playfair-display";
+import {
+  useFonts,
+  PlayfairDisplay_800ExtraBold,
+  PlayfairDisplay_700Bold,
+  PlayfairDisplay_400Regular,
+  PlayfairDisplay_500Medium_Italic,
+} from "@expo-google-fonts/playfair-display";
 import { Montserrat_400Regular, Montserrat_600SemiBold, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
 import {
-  Poppins_300Light,
   Poppins_400Regular,
   Poppins_500Medium,
   Poppins_600SemiBold,
@@ -14,11 +20,17 @@ import {
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProvider } from "@/providers/AppProvider";
 import { colors } from "@/config";
-import { ActivityIndicator, AppState, Image, Platform, StatusBar, StyleSheet, View, type AppStateStatus } from "react-native";
+import { AppState, Platform, StatusBar, type AppStateStatus } from "react-native";
+import { BrandSplash } from "@/components/splash/BrandSplash";
 
 import { GlobalBottomBar } from "@/components/navigation/GlobalBottomBar";
 
 import { useApp } from "@/providers/AppProvider";
+
+// Keep the native splash (see app.json's expo-splash-screen plugin config)
+// visible until the JS-rendered BrandSplash has mounted and taken over, so
+// there's no blank-white flash between the native and JS splash stages.
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: any }) {
   const { ready } = useApp();
@@ -44,19 +56,23 @@ function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; f
     return () => subscription.remove();
   }, []);
 
+  // Hand off from the native splash (static, OS-level) to the JS-rendered
+  // BrandSplash (animated) the moment fonts are ready — BrandSplash has
+  // already been mounted underneath, so there's no gap between the two.
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [fontsLoaded, fontError]);
+
   const startupReady = ((fontsLoaded || Boolean(fontError)) && ready) || startupTimeoutElapsed;
 
   if (!minimumSplashElapsed || !startupReady) {
     return (
-      <View style={styles.splash}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFF9F4" />
-        <Image
-          source={require("../../assets/images/splash-icon.png")}
-          style={styles.splashLogo}
-          resizeMode="contain"
-        />
-        <ActivityIndicator color={colors.orange} size="small" />
-      </View>
+      <>
+        <StatusBar barStyle="light-content" backgroundColor="#3d0f16" />
+        <BrandSplash fontsLoaded={fontsLoaded || Boolean(fontError)} />
+      </>
     );
   }
 
@@ -88,30 +104,15 @@ function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; f
   );
 }
 
-const styles = StyleSheet.create({
-  splash: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
-    backgroundColor: "#FFF9F4",
-  },
-  splashLogo: {
-    width: 96,
-    height: 96,
-  },
-});
-
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     PlayfairDisplay_800ExtraBold,
     PlayfairDisplay_700Bold,
-    PlayfairDisplay_500Medium,
     PlayfairDisplay_400Regular,
+    PlayfairDisplay_500Medium_Italic,
     Montserrat_400Regular,
     Montserrat_600SemiBold,
     Montserrat_700Bold,
-    Poppins_300Light,
     Poppins_400Regular,
     Poppins_500Medium,
     Poppins_600SemiBold,

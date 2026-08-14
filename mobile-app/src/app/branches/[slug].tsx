@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +19,7 @@ import { colors } from "../../config";
 import { useHomepageBranches } from "../../hooks/useHomepageBranches";
 import { LocalAssets, getWebImageUri } from "../../constants/assets";
 import type { Branch } from "../../types";
+import { Skeleton } from "../../components/ui/Skeleton";
 
 const STATIC_FALLBACK: Branch[] = [
   {
@@ -124,8 +124,16 @@ export default function BranchDetailPage() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.orange} />
+      <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+        <Skeleton height={260} radius={0} />
+        <View style={{ padding: 20, gap: 12 }}>
+          <Skeleton width="70%" height={24} />
+          <Skeleton width="40%" height={14} />
+          <Skeleton height={13} style={{ marginTop: 10 }} />
+          <Skeleton width="90%" height={13} />
+          <Skeleton width="60%" height={13} />
+          <Skeleton height={180} radius={16} style={{ marginTop: 14 }} />
+        </View>
       </View>
     );
   }
@@ -284,7 +292,7 @@ export default function BranchDetailPage() {
         {/* SECTIONS 4+ — ALTERNATING BANQUET HALL CARDS */}
         {branch.hallCards && branch.hallCards.length > 0 ? (
           <View style={styles.hallSection}>
-            {branch.hallCards
+            {[...branch.hallCards]
               .sort((a: any, x: any) => (a.sortOrder || 0) - (x.sortOrder || 0))
               .map((hall: any, i: number) => (
                 <BranchHallCard key={i} hall={hall} index={i} />
