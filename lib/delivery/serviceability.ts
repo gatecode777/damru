@@ -110,8 +110,18 @@ export async function checkDeliveryServiceability(address: IAddress, radiusKm = 
   if (!destination) return { serviceable: false, reason: "ADDRESS_NOT_FOUND" };
 
   let nearest: { branch: IBranch; distanceKm: number } | null = null;
-  for (const branch of branches) {
-    const origin = await branchPoint(branch);
+  const locatedBranches = branches.filter(branch =>
+    Number.isFinite(branch.latitude) && Number.isFinite(branch.longitude),
+  );
+
+  // Checkout must not wait on a third-party geocoder for every quote. Branch
+  // coordinates are managed/persisted separately; use all currently verified
+  // locations immediately. Only fall back to geocoding when none are usable.
+  const candidates = locatedBranches.length ? locatedBranches : branches;
+  for (const branch of candidates) {
+    const origin = locatedBranches.length
+      ? { latitude: branch.latitude as number, longitude: branch.longitude as number }
+      : await branchPoint(branch);
     if (!origin) continue;
     const distance = distanceKm(origin, destination);
     if (!nearest || distance < nearest.distanceKm) nearest = { branch, distanceKm: distance };

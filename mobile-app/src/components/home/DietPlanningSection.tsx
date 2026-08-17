@@ -13,7 +13,7 @@ const SOUP_CATEGORY: FoodCategory = {
   description: 'Fresh • Creamy • Healthy',
   image: LocalAssets.dietPlan1,
   icon: LocalAssets.soup,
-  chefImage: LocalAssets.chef,
+  chefImage: LocalAssets.chef2,
   chefPosition: 'right',
   targetRoute: '/menu',
   height: 220, // default height

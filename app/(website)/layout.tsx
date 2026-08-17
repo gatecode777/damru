@@ -13,6 +13,10 @@ import "@/styles/website/header.css";
 import "@/styles/website/style.css";
 import "@/styles/website/footer.css";
 
+// Render every public website route on the server for each request. Interactive
+// components are still hydrated in the browser after their initial SSR HTML.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     default: "Damru By Namo | Restaurant & Banquet, Jaipur",

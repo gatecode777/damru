@@ -12,12 +12,15 @@ import { BlogsSection } from '../../components/home/BlogsSection';
 import { ReservationSection } from '../../components/home/ReservationSection';
 import { TasteThroughLensSection } from '../../components/home/TasteThroughLensSection';
 import { Colors } from '../../constants/theme';
+import { PremiumRefreshControl } from '../../components/ui/PremiumRefreshControl';
+import { useGlobalRefresh } from '../../hooks/useGlobalRefresh';
 
 export default function HomeScreen() {
   // Defer below-the-fold sections until after the initial screen has painted
   // and interactions/animations have settled, so first paint isn't competing
   // with 7 extra sections' image decode + Reanimated setup for the JS/UI thread.
   const [belowFoldReady, setBelowFoldReady] = useState(false);
+  const refresh = useGlobalRefresh();
 
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {
@@ -30,7 +33,11 @@ export default function HomeScreen() {
     <View style={styles.screen}>
       <HomeHeader />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<PremiumRefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} />}
+      >
         {/* ── 1. HERO SECTION ── */}
         <HeroSection />
 

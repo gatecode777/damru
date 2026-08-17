@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, Alert } from "react-native";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/config";
@@ -10,6 +10,7 @@ import type { AppNotification } from "@/types/notifications";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
 import { getApiErrorMessage } from "@/lib/api";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 function NotificationCardSkeleton() {
   return (
@@ -176,7 +177,7 @@ export default function NotificationsScreen() {
           keyExtractor={(item) => item._id}
           contentContainerStyle={[styles.listContent, selectMode && selectedIds.size > 0 && styles.listContentWithBar]}
           refreshControl={
-            React.createElement(RefreshControl as any, {
+            React.createElement(PremiumRefreshControl, {
               refreshing,
               onRefresh: () => load(1, "refresh"),
               colors: [colors.orange],

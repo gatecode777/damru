@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl, ActivityIndicator, TextInput } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, TextInput } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -11,6 +11,7 @@ import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import { EmptyState } from "@/components/ui";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { RewardsDashboard, RewardsUpcoming } from "@/types/rewards";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 import { getApiErrorMessage } from "@/lib/api";
 
 const LEVEL_LABEL: Record<string, string> = { bronze: "Bronze", silver: "Silver", gold: "Gold", platinum: "Platinum" };
@@ -162,7 +163,7 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
   return (
     <ScrollView
       contentContainerStyle={styles.scrollContent}
-      refreshControl={React.createElement(RefreshControl as any, { refreshing, onRefresh: handleRefresh, colors: [colors.orange] })}
+      refreshControl={React.createElement(PremiumRefreshControl, { refreshing, onRefresh: handleRefresh })}
     >
       {!!campaignsQuery.data?.campaigns.length&&<><Text style={styles.sectionTitle}>Active Offers</Text>{campaignsQuery.data.campaigns.map(c=><View key={c._id} style={styles.campaignCard}><Text style={styles.campaignTitle}>🔥 {c.name}</Text><Text style={styles.campaignText}>{c.description||`${c.rewardMode.replace(/_/g," ")} ${c.rewardValue}`}</Text><Text style={styles.campaignEnds}>Ends {new Date(c.endsAt).toLocaleString("en-IN")}</Text></View>)}</>}
       {/* Wallet */}

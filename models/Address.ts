@@ -40,6 +40,7 @@ const AddressSchema = new Schema<IAddress>(
 );
 
 AddressSchema.index({ userId: 1 });
+AddressSchema.index({ userId: 1, isDefault: -1, createdAt: -1 });
 
 const Address: Model<IAddress> =
   mongoose.models.Address || mongoose.model<IAddress>("Address", AddressSchema);

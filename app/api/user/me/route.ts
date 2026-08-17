@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { getUserFromCookie, signUserSession } from "@/lib/userSession";
 import { connectDB } from "@/lib/mongodb";
 import UserModel from "@/models/User";
@@ -20,21 +20,28 @@ export async function GET(req: NextRequest) {
       .lean() as any;
     if (!dbUser) return NextResponse.json({ user: null }, { status: 401 });
 
-    try {
-      const streakResult = await checkAndAwardDailyLogin(user.id);
-      if ("currentStreak" in streakResult) {
-        await evaluateStreakAchievements(user.id, streakResult.currentStreak);
-        await evaluateStreakMissions(user.id, streakResult.currentStreak);
+    // Reward maintenance must not delay session restoration or Profile paint.
+    // `after` keeps the existing idempotent reward flow authoritative while
+    // allowing the user response to be sent as soon as the lightweight lookup finishes.
+    after(async () => {
+      try {
+        const streakResult = await checkAndAwardDailyLogin(user.id);
+        if ("currentStreak" in streakResult) {
+          await Promise.all([
+            evaluateStreakAchievements(user.id, streakResult.currentStreak),
+            evaluateStreakMissions(user.id, streakResult.currentStreak),
+          ]);
+        }
+      } catch (err) {
+        console.error("checkAndAwardDailyLogin failed:", err);
       }
-    } catch (err) {
-      console.error("checkAndAwardDailyLogin failed:", err);
-    }
 
-    try {
-      await evaluateAccountAgeAchievements(user.id, dbUser.createdAt);
-    } catch (err) {
-      console.error("evaluateAccountAgeAchievements failed:", err);
-    }
+      try {
+        await evaluateAccountAgeAchievements(user.id, dbUser.createdAt);
+      } catch (err) {
+        console.error("evaluateAccountAgeAchievements failed:", err);
+      }
+    });
 
     return NextResponse.json({
       user: {

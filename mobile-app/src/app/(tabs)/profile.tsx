@@ -2,7 +2,6 @@ import React, { useCallback, useState } from "react";
 import {
   Alert,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,14 +22,11 @@ import { Button, EmptyState, ScreenTitle } from "@/components/ui";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { ProfileNavigationTabs, ProfileTab } from "@/components/profile/ProfileNavigationTabs";
 import { UserProfileCard } from "@/components/profile/UserProfileCard";
-import { AddressBookCard } from "@/components/profile/AddressBookCard";
-import { OrdersCard } from "@/components/profile/OrdersCard";
-import { PaymentMethodCard } from "@/components/profile/PaymentMethodCard";
-import { CouponCard } from "@/components/profile/CouponCard";
 import { LoadingSkeleton } from "@/components/profile/LoadingSkeleton";
 import { HelpSupportSection } from "@/components/profile/HelpSupportSection";
 import { RewardsSection } from "@/components/profile/RewardsSection";
 import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSection";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 export default function ProfileScreen() {
   const { user, setUser, ready } = useApp();
@@ -48,7 +44,7 @@ export default function ProfileScreen() {
     error,
     refreshData,
     reload,
-  } = useProfile();
+  } = useProfile(activeTab);
 
   const handleRefresh = useCallback(async () => {
     setManualRefreshing(true);
@@ -147,7 +143,7 @@ export default function ProfileScreen() {
                 <ScrollView
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
-                    React.createElement(RefreshControl as any, {
+                    React.createElement(PremiumRefreshControl, {
                       refreshing: manualRefreshing,
                       onRefresh: handleRefresh,
                       colors: [colors.orange],
@@ -155,10 +151,6 @@ export default function ProfileScreen() {
                   }
                 >
                   <UserProfileCard user={user} />
-                  <AddressBookCard addresses={addresses} />
-                  <OrdersCard orders={orders} />
-                  <PaymentMethodCard />
-                  <CouponCard coupons={coupons} />
 
                   <View style={styles.logoutWrapper}>
                     <Pressable
@@ -189,7 +181,7 @@ export default function ProfileScreen() {
                   keyExtractor={(item) => item._id || ""}
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
-                    React.createElement(RefreshControl as any, {
+                    React.createElement(PremiumRefreshControl, {
                       refreshing: manualRefreshing,
                       onRefresh: handleRefresh,
                       colors: [colors.orange],
@@ -259,7 +251,7 @@ export default function ProfileScreen() {
                   keyExtractor={(item) => item._id}
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
-                    React.createElement(RefreshControl as any, {
+                    React.createElement(PremiumRefreshControl, {
                       refreshing: manualRefreshing,
                       onRefresh: handleRefresh,
                       colors: [colors.orange],
@@ -303,7 +295,7 @@ export default function ProfileScreen() {
                   keyExtractor={(item) => item._id}
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
-                    React.createElement(RefreshControl as any, {
+                    React.createElement(PremiumRefreshControl, {
                       refreshing: manualRefreshing,
                       onRefresh: handleRefresh,
                       colors: [colors.orange],
@@ -344,7 +336,7 @@ export default function ProfileScreen() {
                 <ScrollView
                   contentContainerStyle={styles.scrollContent}
                   refreshControl={
-                    React.createElement(RefreshControl as any, {
+                    React.createElement(PremiumRefreshControl, {
                       refreshing: manualRefreshing,
                       onRefresh: handleRefresh,
                       colors: [colors.orange],

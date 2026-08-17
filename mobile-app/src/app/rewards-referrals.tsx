@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Share } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, Share } from "react-native";
 import { Stack } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { colors } from "@/config";
@@ -9,6 +9,7 @@ import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import type { ReferralHistoryEntry, ReferralsResponse } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 const STATUS_LABEL: Record<string, string> = {
   REGISTERED: "Registered",
@@ -103,7 +104,7 @@ export default function RewardsReferralsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            React.createElement(RefreshControl as any, {
+            React.createElement(PremiumRefreshControl, {
               refreshing,
               onRefresh: () => load("refresh"),
               colors: [colors.orange],

@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "@/config";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 export function PaymentMethodsSection() {
   const insets = useSafeAreaInsets();
@@ -18,7 +19,7 @@ export function PaymentMethodsSection() {
       contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 112 }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} colors={[colors.orange]} />
+        <PremiumRefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} />
       }
     >
       <Text style={styles.title}>Payment Methods</Text>

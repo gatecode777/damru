@@ -20,6 +20,7 @@ type AppContextValue = {
 
 const AppContext = createContext<AppContextValue | null>(null);
 const GUEST_CART = "damru.mobile.guest-cart.v1";
+const CACHED_USER = "damru.mobile.user.v1";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
@@ -50,6 +51,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await get<{ user: User }>("/api/user/me");
       setUserState(data.user);
+      AsyncStorage.setItem(CACHED_USER, JSON.stringify(data.user)).catch(() => undefined);
     } catch (error) {
       // Only a real 401 means "not logged in" — a network blip, timeout, or
       // 5xx is a transient failure, not a logout, so the last-known user
@@ -57,6 +59,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const isUnauthorized = error instanceof ApiRequestError && error.status === 401;
       if (isUnauthorized) {
         setUserState(null);
+        AsyncStorage.removeItem(CACHED_USER).catch(() => undefined);
       } else if (__DEV__) {
         console.warn("[AppProvider] refreshUser failed (keeping current session):", error);
       }
@@ -66,18 +69,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const start = Date.now();
     
-    // Fetch user session in the background without blocking the initial App mount
-    refreshUser().finally(() => {
-      if (__DEV__) {
-        console.info(`[Startup] Background session restore finished in ${(Date.now() - start).toFixed(2)}ms`);
-      }
-    });
-
-    // Only block initial mount on restoring the local guest cart from AsyncStorage (which is local and fast)
-    AsyncStorage.getItem(GUEST_CART).then((raw) => {
-      if (raw) {
+    // Paint immediately from local state, then validate it against the backend.
+    // Hydrating first also prevents a slower cache read from overwriting fresher network data.
+    Promise.all([AsyncStorage.getItem(GUEST_CART), AsyncStorage.getItem(CACHED_USER)]).then(([rawCart, rawUser]) => {
+      if (rawUser) {
         try {
-          setCart(JSON.parse(raw));
+          setUserState(JSON.parse(rawUser));
+        } catch {
+          AsyncStorage.removeItem(CACHED_USER).catch(() => undefined);
+        }
+      }
+
+      if (rawCart) {
+        try {
+          setCart(JSON.parse(rawCart));
         } catch (error) {
           if (__DEV__) {
             console.error("Failed to parse guest cart from AsyncStorage:", error);
@@ -91,6 +96,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }).finally(() => {
       setReady(true);
+      refreshUser().finally(() => {
+        if (__DEV__) {
+          console.info(`[Startup] Background session refresh finished in ${(Date.now() - start).toFixed(2)}ms`);
+        }
+      });
       if (__DEV__) {
         console.info(`[Startup] AppProvider initialized (ready) in ${(Date.now() - start).toFixed(2)}ms`);
       }
@@ -103,6 +113,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setUser = useCallback((next: User | null) => {
     setUserState(next);
+    if (next) AsyncStorage.setItem(CACHED_USER, JSON.stringify(next)).catch(() => undefined);
+    else AsyncStorage.removeItem(CACHED_USER).catch(() => undefined);
     // Clear user-specific cache on login/logout to prevent private data leakage
     queryClient.clear();
 

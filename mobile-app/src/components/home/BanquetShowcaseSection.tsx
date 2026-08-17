@@ -32,10 +32,6 @@ const CTA_ROUTE = '/branches';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-/* ─────────────────────────────────────────
-   Explore Now Button
-────────────────────────────────────────── */
 function ExploreButton({ onPress }: { onPress: () => void }) {
   const scale = useSharedValue(1);
 
@@ -139,7 +135,6 @@ export function BanquetShowcaseSection() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   /* Explicitly styled absolute container to ensure stacking layers */
   slideContainer: {

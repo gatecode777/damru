@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, Alert } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { get, del } from "@/lib/api";
 import { colors } from "@/config";
@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 function AddressCardSkeleton() {
   return (
@@ -108,7 +109,7 @@ export default function AddressListScreen() {
           data={addresses}
           keyExtractor={(item) => item._id || ""}
           refreshControl={
-            React.createElement(RefreshControl as any, {
+            React.createElement(PremiumRefreshControl, {
               refreshing: refreshing,
               onRefresh: () => fetchAddresses(true),
               colors: [colors.orange],

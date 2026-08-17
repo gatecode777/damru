@@ -32,7 +32,27 @@ const MONTH_NAMES = ["January","February","March","April","May","June","July","A
 const WEEKDAY_LABELS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
 function todayStr() {
-  return new Date().toISOString().split("T")[0];
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value || "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function indiaMinutesNow(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find(part => part.type === type)?.value || 0);
+  return value("hour") * 60 + value("minute");
+}
+
+function timeToMinutes(value: string) {
+  const match = /^(\d{1,2}):(\d{2})\s(am|pm)$/.exec(value);
+  if (!match) return -1;
+  let hour = Number(match[1]) % 12;
+  if (match[3] === "pm") hour += 12;
+  return hour * 60 + Number(match[2]);
 }
 
 function maxDateObj() {
@@ -56,6 +76,7 @@ export default function ReservationForm() {
   const [submitting,  setSubmitting]  = useState(false);
   const [booked,      setBooked]      = useState(false);
   const [openModal,   setOpenModal]   = useState<ModalKind>(null);
+  const [clock,       setClock]       = useState(() => new Date());
 
   const today = new Date();
   const [calYear,  setCalYear]  = useState(today.getFullYear());
@@ -79,9 +100,26 @@ export default function ReservationForm() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [openModal]);
 
-  function pickDate(d: string) { setDate(d); setBooked(false); setOpenModal(null); }
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function pickDate(d: string) {
+    setDate(d);
+    if (d === todayStr() && timeToMinutes(time) <= indiaMinutesNow(clock)) {
+      const nextSlot = TIMES.find(slot => timeToMinutes(slot) > indiaMinutesNow(clock));
+      if (nextSlot) setTime(nextSlot);
+    }
+    setBooked(false);
+    setOpenModal(null);
+  }
   function pickTime(t: string) { setTime(t); setBooked(false); setOpenModal(null); }
   function pickPersons(p: string) { setPersons(p); setBooked(false); setOpenModal(null); }
+
+  function isPastTime(t: string) {
+    return date === todayStr() && timeToMinutes(t) <= indiaMinutesNow(clock);
+  }
 
   function changeMonth(dir: -1 | 1) {
     let m = calMonth + dir, y = calYear;
@@ -152,7 +190,8 @@ export default function ReservationForm() {
     const dayDate = new Date(calYear, calMonth, day);
     const isPast = dayDate < todayMidnight;
     const isTooFar = dayDate > maxDateLimit;
-    const isDisabled = isPast || isTooFar;
+    const hasNoRemainingSlot = dayStr === todayStr() && TIMES.every(slot => timeToMinutes(slot) <= indiaMinutesNow(clock));
+    const isDisabled = isPast || isTooFar || hasNoRemainingSlot;
     const isSelected = date === dayStr;
     const isToday = todayStr() === dayStr;
     calendarCells.push(
@@ -238,7 +277,15 @@ export default function ReservationForm() {
             <h3 className="resv__modal-title">Select Time Slot</h3>
             <div className="resv__pill-grid resv__pill-grid--scroll">
               {TIMES.map(t => (
-                <button key={t} type="button" className={`resv__pill${time === t ? " resv__pill--active" : ""}`} onClick={() => pickTime(t)}>{t}</button>
+                <button
+                  key={t}
+                  type="button"
+                  disabled={isPastTime(t)}
+                  aria-disabled={isPastTime(t)}
+                  title={isPastTime(t) ? "This time has already passed" : undefined}
+                  className={`resv__pill${time === t ? " resv__pill--active" : ""}${isPastTime(t) ? " resv__pill--disabled" : ""}`}
+                  onClick={() => pickTime(t)}
+                >{t}</button>
               ))}
             </div>
           </section>
@@ -305,6 +352,8 @@ export default function ReservationForm() {
         .resv__pill{ border:1px solid #ecdfd0; background:#fff; color:#2a2117; border-radius:10px; padding:8px 13px; font-family:Poppins,sans-serif; font-size:.83rem; cursor:pointer; transition:border-color .15s ease, background .15s ease, color .15s ease; }
         .resv__pill:hover{ border-color:#e9c299; }
         .resv__pill--active{ background:#e67e22; border-color:#e67e22; color:#fff; font-weight:600; }
+        .resv__pill--disabled,
+        .resv__pill--disabled:hover{ background:#f5f2ee; border-color:#e7dfd7; color:#aaa29a; cursor:not-allowed; opacity:.58; font-weight:400; }
 
         @keyframes resv-backdrop-in{ from{ opacity:0; } to{ opacity:1; } }
         @keyframes resv-modal-in{ from{ opacity:0; transform:translateY(8px) scale(.98); } to{ opacity:1; transform:translateY(0) scale(1); } }

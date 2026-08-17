@@ -19,6 +19,7 @@ import { assetUrl, colors } from "@/config";
 import { get } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
 import type { GalleryItem, GalleryTab } from "@/types";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 const PAGE_SIZE = 10;
 const FALLBACK_BANNER = "https://ik.imagekit.io/zp0tch54w/DAMRU/All%20menu%20page.webp";
@@ -29,7 +30,7 @@ export default function GalleryScreen() {
 
   // Cached via react-query so re-focusing the Gallery tab doesn't re-download
   // the whole collection every time.
-  const { data, isLoading: loading } = useQuery({
+  const { data, isLoading: loading, isRefetching, refetch } = useQuery({
     queryKey: queryKeys.gallery.list(),
     queryFn: () => get<{ tabs: GalleryTab[] }>("/api/gallery"),
     staleTime: 5 * 60 * 1000,
@@ -122,6 +123,7 @@ export default function GalleryScreen() {
         keyExtractor={(item, idx) => item._id ?? `gallery-item-${idx}`}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<PremiumRefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         ListHeaderComponent={
           <View style={styles.headerComponent}>
             {/* Hero Banner Section */}
