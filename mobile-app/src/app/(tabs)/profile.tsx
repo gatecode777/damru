@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   RefreshControl,
@@ -36,8 +35,8 @@ import { PaymentMethodsSection } from "@/components/profile/PaymentMethodsSectio
 export default function ProfileScreen() {
   const { user, setUser, ready } = useApp();
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
-  const [toast, setToast] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [manualRefreshing, setManualRefreshing] = useState(false);
 
   const {
@@ -95,22 +94,17 @@ export default function ProfileScreen() {
     setCopying(true);
     try {
       await Clipboard.setStringAsync(code);
-      setToast(`Code "${code}" copied!`);
-      setTimeout(() => setToast(null), 1000);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 1500);
     } catch {
-      setToast("Could not copy. Please try manually.");
-      setTimeout(() => setToast(null), 2000);
+      // ignore
     } finally {
       setCopying(false);
     }
   };
 
   if (!ready) {
-    return (
-      <View style={styles.centerLoading}>
-        <ActivityIndicator size="large" color={colors.orange} />
-      </View>
-    );
+    return <LoadingSkeleton />;
   }
 
   return (
@@ -133,7 +127,10 @@ export default function ProfileScreen() {
         </ScrollView>
       ) : (
         <View style={{ flex: 1 }}>
-          <ProfileNavigationTabs activeTab={activeTab} onTabPress={setActiveTab} />
+          <ProfileNavigationTabs
+            activeTab={activeTab}
+            onTabPress={(tab) => (tab === "settings" ? router.push("/settings") : setActiveTab(tab))}
+          />
 
           {loading && !refreshing ? (
             <LoadingSkeleton />
@@ -182,7 +179,7 @@ export default function ProfileScreen() {
 
               {activeTab === "rewards" && (
                 <View style={{ flex: 1 }}>
-                  <RewardsSection onToast={(msg) => { setToast(msg); setTimeout(() => setToast(null), 2000); }} />
+                  <RewardsSection onToast={() => {}} />
                 </View>
               )}
 
@@ -205,7 +202,7 @@ export default function ProfileScreen() {
                     <EmptyState title="No addresses saved" message="Add a delivery address to get started." />
                   }
                   ListFooterComponent={
-                    <View style={{ marginTop: 12 }}>
+                    <View style={{ marginTop: 12, marginHorizontal: 16 }}>
                       <Button label="+ Add New Address" onPress={() => router.push("/add-address")} />
                     </View>
                   }
@@ -275,7 +272,7 @@ export default function ProfileScreen() {
                     <EmptyState title="No orders yet" message="Your delicious history will appear here." />
                   }
                   renderItem={({ item: o }) => (
-                    <View style={styles.listItemCard}>
+                    <Pressable style={styles.listItemCard} onPress={() => router.push({ pathname: "/order/[id]", params: { id: o._id } })}>
                       <View style={styles.cardHeader}>
                         <Text style={styles.cardLabel}>
                           #{o.orderNumber || o._id.slice(-6).toUpperCase()}
@@ -291,7 +288,7 @@ export default function ProfileScreen() {
                         </Text>
                         <Text style={styles.cardTotal}>₹{o.total}</Text>
                       </View>
-                    </View>
+                    </Pressable>
                   )}
                 />
               )}
@@ -319,16 +316,25 @@ export default function ProfileScreen() {
                     <EmptyState title="No coupons yet" message="Check back later for exciting offers." />
                   }
                   renderItem={({ item: c }) => (
-                    <View style={styles.listItemCard}>
-                      <View style={styles.cardHeader}>
-                        <View style={styles.codeBadge}>
-                          <Text style={styles.codeText}>{c.code}</Text>
-                        </View>
-                        <Pressable onPress={() => handleCopyCoupon(c.code)} style={styles.copyLink}>
-                          <Text style={styles.copyLinkText}>Copy</Text>
+                    <View style={styles.couponCard}>
+                      <Ionicons name="pricetag" size={20} color={colors.orange} style={styles.couponIcon} />
+                      <Text style={styles.couponName}>{c.code}</Text>
+                      <Text style={styles.couponDetail}>
+                        {c.description || (c.type === "flat" ? `₹${c.value} off on your order` : `${c.value}% off on your order`)}
+                      </Text>
+                      {c.expiryDate ? (
+                        <Text style={styles.couponValidity}>
+                          Valid till: {new Date(c.expiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        </Text>
+                      ) : null}
+                      <View style={styles.couponActions}>
+                        <Pressable style={styles.couponBtn} onPress={() => handleCopyCoupon(c.code)}>
+                          <Text style={styles.couponBtnText}>{copiedCode === c.code ? "Copied!" : "Copy"}</Text>
+                        </Pressable>
+                        <Pressable style={styles.couponBtn} onPress={() => router.push("/menu")}>
+                          <Text style={styles.couponBtnText}>Shop Now</Text>
                         </Pressable>
                       </View>
-                      <Text style={styles.cardSubtext}>{c.description || `${c.value}% OFF`}</Text>
                     </View>
                   )}
                 />
@@ -345,7 +351,7 @@ export default function ProfileScreen() {
                     })
                   }
                 >
-                  <HelpSupportSection showToast={setToast} />
+                  <HelpSupportSection showToast={() => {}} />
                 </ScrollView>
               )}
             </>
@@ -353,11 +359,6 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {toast && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>{toast}</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -435,10 +436,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.ink,
     marginBottom: 6,
+    marginHorizontal: 16,
   },
   listItemCard: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
+    marginHorizontal: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: "#eee3da",
@@ -521,22 +524,53 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.orange,
   },
-  toast: {
-    position: "absolute",
-    bottom: 80,
-    left: 20,
-    right: 20,
-    backgroundColor: "#111111",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    zIndex: 999,
+  couponCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 18,
+    marginHorizontal: 16,
+    padding: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#eee3da",
   },
-  toastText: {
-    color: "#ffffff",
-    fontFamily: "Poppins_500Medium",
+  couponIcon: {
+    marginBottom: 10,
+  },
+  couponName: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 16,
+    color: colors.orange,
+    marginBottom: 6,
+  },
+  couponDetail: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: "#666666",
+    lineHeight: 19,
+    marginBottom: 8,
+  },
+  couponValidity: {
+    fontFamily: "Poppins_400Regular",
     fontSize: 12,
+    color: "#a99c94",
+    marginBottom: 14,
+  },
+  couponActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  couponBtn: {
+    flex: 1,
+    backgroundColor: colors.orange,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  couponBtnText: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 14,
+    color: "#ffffff",
   },
   labelRow: {
     flexDirection: "row",

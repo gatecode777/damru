@@ -1,13 +1,35 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Alert } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { get, del } from "@/lib/api";
 import { colors } from "@/config";
 import type { Address } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { EmptyState } from "@/components/ui";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
+
+function AddressCardSkeleton() {
+  return (
+    <View style={styles.addressCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.labelRow}>
+          <Skeleton width={16} height={16} radius={4} style={styles.labelIcon} />
+          <Skeleton width={70} height={14} />
+        </View>
+        <View style={styles.actionRow}>
+          <Skeleton width={16} height={16} radius={4} />
+          <Skeleton width={16} height={16} radius={4} />
+        </View>
+      </View>
+      <Skeleton width="45%" height={14} style={{ marginBottom: 6 }} />
+      <Skeleton width="55%" height={12.5} style={{ marginBottom: 8 }} />
+      <Skeleton width="90%" height={13} style={{ marginBottom: 4 }} />
+      <Skeleton width="70%" height={13} />
+    </View>
+  );
+}
 
 export default function AddressListScreen() {
   const router = useRouter();
@@ -69,8 +91,10 @@ export default function AddressListScreen() {
       />
 
       {loading && !refreshing ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.orange} />
+        <View style={styles.listContent}>
+          {[1, 2, 3, 4].map((i) => (
+            <AddressCardSkeleton key={i} />
+          ))}
         </View>
       ) : error ? (
         <View style={styles.center}>

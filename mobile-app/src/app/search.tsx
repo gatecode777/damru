@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TextInput,
   Pressable,
   FlatList,
-  ActivityIndicator,
   Keyboard,
   Platform,
 } from "react-native";
@@ -123,7 +122,7 @@ export default function SearchScreen() {
   }, []);
 
   // Filter items matching the query text
-  const getFilteredItems = () => {
+  const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase().trim();
     return allItems.filter((item) => {
@@ -136,10 +135,10 @@ export default function SearchScreen() {
 
       return nameMatch || descMatch || categoryMatch;
     });
-  };
+  }, [searchQuery, allItems, categories]);
 
   // Find matching keyword suggestions (e.g. categories or dish parts)
-  const getKeywordSuggestions = () => {
+  const matchedKeywords = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase().trim();
     const suggestions: string[] = [];
@@ -170,10 +169,7 @@ export default function SearchScreen() {
     });
 
     return suggestions.slice(0, 5);
-  };
-
-  const filteredItems = getFilteredItems();
-  const matchedKeywords = getKeywordSuggestions();
+  }, [searchQuery, categories, allItems]);
 
   const handleSelectKeyword = (keyword: string) => {
     setSearchQuery(keyword);

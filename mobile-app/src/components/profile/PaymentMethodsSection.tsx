@@ -1,11 +1,12 @@
 import React from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "@/config";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export function PaymentMethodsSection() {
   const insets = useSafeAreaInsets();
@@ -25,10 +26,10 @@ export function PaymentMethodsSection() {
 
       {query.isLoading ? (
         <View style={styles.loadingCard} accessibilityLabel="Loading payment methods">
-          <ActivityIndicator color={colors.orange} />
+          <Skeleton width={52} height={32} radius={8} />
           <View style={styles.skeletonLines}>
-            <View style={[styles.skeleton, { width: "58%" }]} />
-            <View style={[styles.skeleton, { width: "38%" }]} />
+            <Skeleton height={12} width="58%" />
+            <Skeleton height={12} width="38%" />
           </View>
         </View>
       ) : query.isError ? (

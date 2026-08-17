@@ -1,11 +1,23 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from "react-native";
 import { Stack } from "expo-router";
 import { colors } from "@/config";
 import { EmptyState } from "@/components/ui";
 import { getAchievements } from "@/services/rewardsApi";
 import type { Achievement } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
+import { Skeleton } from "@/components/ui/Skeleton";
+
+function AchievementCardSkeleton() {
+  return (
+    <View style={styles.card}>
+      <Skeleton width="70%" height={14} style={{ marginBottom: 8 }} />
+      <Skeleton width="50%" height={12} style={{ marginBottom: 8 }} />
+      <Skeleton width="40%" height={12} style={{ marginBottom: 4 }} />
+      <Skeleton height={6} radius={6} />
+    </View>
+  );
+}
 
 export default function RewardsAchievementsScreen() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -37,8 +49,10 @@ export default function RewardsAchievementsScreen() {
       <Stack.Screen options={{ title: "Achievements", headerShown: true }} />
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.orange} />
+        <View style={styles.listContent}>
+          {[1, 2, 3, 4].map((i) => (
+            <AchievementCardSkeleton key={i} />
+          ))}
         </View>
       ) : error && achievements.length === 0 ? (
         <View style={styles.center}>

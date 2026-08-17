@@ -6,6 +6,19 @@ import { EmptyState } from "@/components/ui";
 import { getRewardHistory } from "@/services/rewardsApi";
 import type { RewardTransaction } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
+import { Skeleton } from "@/components/ui/Skeleton";
+
+function TxCardSkeleton() {
+  return (
+    <View style={styles.txCard}>
+      <View style={{ flex: 1 }}>
+        <Skeleton width="60%" height={13} style={{ marginBottom: 6 }} />
+        <Skeleton width={90} height={11} />
+      </View>
+      <Skeleton width={70} height={14} />
+    </View>
+  );
+}
 
 export default function RewardsHistoryScreen() {
   const [transactions, setTransactions] = useState<RewardTransaction[]>([]);
@@ -47,8 +60,10 @@ export default function RewardsHistoryScreen() {
       <Stack.Screen options={{ title: "Reward History", headerShown: true }} />
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.orange} />
+        <View style={styles.listContent}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <TxCardSkeleton key={i} />
+          ))}
         </View>
       ) : error && transactions.length === 0 ? (
         <View style={styles.center}>

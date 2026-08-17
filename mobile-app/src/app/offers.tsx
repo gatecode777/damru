@@ -1,13 +1,28 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Stack } from "expo-router";
 import { get } from "@/lib/api";
 import { colors } from "@/config";
 import type { Coupon } from "@/types";
 import { EmptyState } from "@/components/ui";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
+
+function CouponCardSkeleton() {
+  return (
+    <View style={styles.couponCard}>
+      <View style={styles.couponHeader}>
+        <Skeleton width={90} height={26} radius={8} />
+        <Skeleton width={70} height={26} />
+      </View>
+      <Skeleton width="80%" height={13} style={{ marginBottom: 6 }} />
+      <Skeleton width="60%" height={13} style={{ marginBottom: 14 }} />
+      <Skeleton height={40} radius={8} />
+    </View>
+  );
+}
 
 export default function OffersScreen() {
   const { data, isLoading, isRefetching, error: queryError, refetch } = useQuery({
@@ -22,7 +37,6 @@ export default function OffersScreen() {
   const refreshing = isRefetching;
   const error = queryError instanceof Error ? queryError.message : (queryError ? String(queryError) : null);
 
-  const [toast, setToast] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
 
   const fetchCoupons = (_isRefresh?: boolean) => {
@@ -34,11 +48,8 @@ export default function OffersScreen() {
     setCopying(true);
     try {
       await Clipboard.setStringAsync(code);
-      setToast(`Code "${code}" copied to clipboard!`);
-      setTimeout(() => setToast(null), 1500);
     } catch {
-      setToast("Could not copy. Please try manually.");
-      setTimeout(() => setToast(null), 2000);
+      // ignore
     } finally {
       setCopying(false);
     }
@@ -49,8 +60,10 @@ export default function OffersScreen() {
       <Stack.Screen options={{ title: "Offers & Coupons", headerShown: true }} />
 
       {loading && !refreshing ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.orange} />
+        <View style={styles.listContent}>
+          {[1, 2, 3, 4].map((i) => (
+            <CouponCardSkeleton key={i} />
+          ))}
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -116,11 +129,6 @@ export default function OffersScreen() {
         />
       )}
 
-      {toast && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>{toast}</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -217,21 +225,5 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
     fontSize: 13,
     color: "#ffffff",
-  },
-  toast: {
-    position: "absolute",
-    bottom: 40,
-    left: 20,
-    right: 20,
-    backgroundColor: "#111111",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  toastText: {
-    color: "#ffffff",
-    fontFamily: "Poppins_500Medium",
-    fontSize: 12,
   },
 });

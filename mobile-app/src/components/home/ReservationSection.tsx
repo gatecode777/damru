@@ -9,6 +9,7 @@ import {
   Modal,
   ScrollView,
   Linking,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -74,7 +75,6 @@ export function ReservationSection() {
   const [personsModalVisible, setPersonsModalVisible] = useState(false);
 
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [booked, setBooked] = useState(false);
 
   // Calendar State
@@ -121,8 +121,7 @@ export function ReservationSection() {
   }));
 
   const showToast = (msg: string, type: "success" | "error") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 1000);
+    Alert.alert(type === "success" ? "Success" : "Error", msg);
   };
 
   const handleBooking = async () => {
@@ -505,19 +504,6 @@ export function ReservationSection() {
         </View>
       </Modal>
 
-      {/* ── Custom Toast ── */}
-      {toast && (
-        <View
-          style={[
-            styles.toastContainer,
-            toast.type === "success" ? styles.toastSuccess : styles.toastError,
-          ]}
-        >
-          <Text style={styles.toastText}>
-            {toast.type === "success" ? "✓ " : "⚠ "}{toast.msg}
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -833,35 +819,5 @@ const styles = StyleSheet.create({
   selectorItemSelectedText: {
     fontFamily: "Poppins_600SemiBold",
     color: "#ffffff",
-  },
-  toastContainer: {
-    position: "absolute",
-    bottom: 40,
-    left: 20,
-    right: 20,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 6,
-    zIndex: 999,
-  },
-  toastSuccess: {
-    backgroundColor: "#e8f5e9",
-    borderWidth: 1,
-    borderColor: "#a5d6a7",
-  },
-  toastError: {
-    backgroundColor: "#ffebee",
-    borderWidth: 1,
-    borderColor: "#ef9a9a",
-  },
-  toastText: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 13,
-    color: colors.ink,
-    textAlign: "center",
   },
 });

@@ -9,6 +9,7 @@ import { queryKeys } from "@/lib/queryClient";
 import { getActiveRewardCampaigns, getRewardsDashboard, getUpcomingRewards, updateOccasionDetails } from "@/services/rewardsApi";
 import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import { EmptyState } from "@/components/ui";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { RewardsDashboard, RewardsUpcoming } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
 
@@ -131,7 +132,20 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
   const upcoming = upcomingQuery.data as RewardsUpcoming | undefined;
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={colors.orange} /></View>;
+    return (
+      <View style={styles.scrollContent}>
+        <View style={styles.walletGrid}>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.walletStat}>
+              <Skeleton width="60%" height={11} style={{ marginBottom: 8 }} />
+              <Skeleton width="45%" height={20} />
+            </View>
+          ))}
+        </View>
+        <Skeleton height={80} radius={16} style={{ marginTop: 14 }} />
+        <Skeleton height={100} radius={16} style={{ marginTop: 14 }} />
+      </View>
+    );
   }
 
   if (error || !dashboard) {
@@ -312,7 +326,10 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
       {/* Upcoming */}
       <Text style={styles.sectionTitle}>Upcoming Rewards</Text>
       {upcomingQuery.isLoading ? (
-        <ActivityIndicator color={colors.orange} style={{ marginVertical: 16 }} />
+        <View style={{ gap: 8, marginVertical: 4 }}>
+          <Skeleton height={54} radius={14} />
+          <Skeleton height={54} radius={14} />
+        </View>
       ) : upcomingQuery.error ? (
         <View style={styles.sectionError}>
           <Text style={styles.errorText}>{getApiErrorMessage(upcomingQuery.error, "Unable to load upcoming rewards.")}</Text>

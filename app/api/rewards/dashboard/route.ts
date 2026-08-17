@@ -147,9 +147,9 @@ export async function GET(req: NextRequest) {
       }));
 
     return NextResponse.json({
-      damruBalance: u.damruBalance,
-      damruTotalEarned: u.damruTotalEarned,
-      damruTotalRedeemed: u.damruTotalRedeemed,
+      damruBalance: u.damruBalance ?? 0,
+      damruTotalEarned: u.damruTotalEarned ?? 0,
+      damruTotalRedeemed: u.damruTotalRedeemed ?? 0,
       rewardDebt: u.rewardDebt || 0,
       loyaltyLevel: u.loyaltyLevel,
       nextLevel,

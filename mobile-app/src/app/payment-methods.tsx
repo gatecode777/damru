@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { colors } from "@/config";
 import { get, getApiErrorMessage } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
 import { useApp } from "@/providers/AppProvider";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { Address } from "@/types";
 
 const SECURE_METHODS = [
@@ -99,7 +100,10 @@ export default function PaymentMethodsScreen() {
         <Text style={styles.panelHint}>Use an address from your Address Book for checkout.</Text>
 
         {addressesQuery.isLoading ? (
-          <View style={styles.addressLoading}><ActivityIndicator color={colors.orange} /></View>
+          <View style={styles.addressLoading}>
+            <Skeleton width="70%" height={14} style={{ marginBottom: 8 }} />
+            <Skeleton width="45%" height={12} />
+          </View>
         ) : addressesQuery.isError ? (
           <View style={styles.addressError}>
             <Text style={styles.errorText}>{getApiErrorMessage(addressesQuery.error, "Unable to load addresses.")}</Text>
@@ -151,7 +155,7 @@ const styles = StyleSheet.create({
   methodItem: { width: "48%", minHeight: 58, borderRadius: 13, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.cream, borderWidth: 1, borderColor: colors.line },
   methodIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(229,121,34,0.09)", alignItems: "center", justifyContent: "center" },
   methodLabel: { flex: 1, fontFamily: "Poppins_500Medium", fontSize: 11.5, lineHeight: 16, color: colors.ink },
-  addressLoading: { height: 76, alignItems: "center", justifyContent: "center" },
+  addressLoading: { minHeight: 76, justifyContent: "center", paddingHorizontal: 4 },
   addressError: { minHeight: 70, marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: "#fff4f3", alignItems: "center", justifyContent: "center" },
   errorText: { fontFamily: "Poppins_400Regular", fontSize: 12, color: colors.danger, textAlign: "center" },
   retryText: { marginTop: 7, fontFamily: "Poppins_600SemiBold", fontSize: 12, color: colors.orange },

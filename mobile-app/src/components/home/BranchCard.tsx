@@ -21,9 +21,9 @@ export function BranchCard({ branch, index }: BranchCardProps) {
 
   // Fallback static images
   const staticImgs = [
-    require('@/assets/images/OB1.png'),
-    require('@/assets/images/OB2.png'),
-    require('@/assets/images/OB3.png'),
+    require('@/assets/images/OB1.webp'),
+    require('@/assets/images/OB2.webp'),
+    require('@/assets/images/OB3.webp'),
   ];
   
   const imageSource = branch.cardImage

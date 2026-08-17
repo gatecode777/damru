@@ -32,7 +32,16 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-video"
+      "expo-video",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#3d0f16",
+          "image": "./assets/images/splash-mark.png",
+          "imageWidth": 140,
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

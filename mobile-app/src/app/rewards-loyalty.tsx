@@ -1,11 +1,34 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack } from "expo-router";
 import { colors } from "@/config";
 import { getLoyalty } from "@/services/rewardsApi";
 import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import type { LoyaltyResponse } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
+import { Skeleton } from "@/components/ui/Skeleton";
+
+function LoyaltySkeleton() {
+  return (
+    <View style={styles.content}>
+      <View style={styles.hero}>
+        <Skeleton width="60%" height={22} style={{ marginBottom: 8 }} />
+        <Skeleton width="40%" height={12} style={{ marginBottom: 16 }} />
+        <Skeleton height={8} radius={8} />
+      </View>
+      <Skeleton width={120} height={16} style={{ marginTop: 22, marginBottom: 10 }} />
+      <Skeleton width="70%" height={13} style={{ marginBottom: 7 }} />
+      <Skeleton width="55%" height={13} style={{ marginBottom: 7 }} />
+      <Skeleton width={110} height={16} style={{ marginTop: 22, marginBottom: 10 }} />
+      {[1, 2, 3].map((i) => (
+        <View key={i} style={styles.tier}>
+          <Skeleton width="45%" height={15} style={{ marginBottom: 6 }} />
+          <Skeleton width="35%" height={12} />
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export default function RewardsLoyaltyScreen() {
   const [data, setData] = useState<LoyaltyResponse | null>(null); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [error, setError] = useState("");
@@ -25,7 +48,7 @@ export default function RewardsLoyaltyScreen() {
   }, []);
   useEffect(() => { void load(); }, [load]);
   return <View style={styles.container}><Stack.Screen options={{ title: "Loyalty Tiers", headerShown: true }} />
-    {loading ? <View style={styles.center}><ActivityIndicator size="large" color={colors.orange} /></View> : error && !data ? <View style={styles.center}><Text style={styles.error}>{error}</Text><Pressable style={styles.retry} onPress={() => load()}><Text style={styles.retryText}>Retry</Text></Pressable></View> :
+    {loading ? <LoyaltySkeleton /> : error && !data ? <View style={styles.center}><Text style={styles.error}>{error}</Text><Pressable style={styles.retry} onPress={() => load()}><Text style={styles.retryText}>Retry</Text></Pressable></View> :
       <ScrollView contentContainerStyle={styles.content} refreshControl={React.createElement(RefreshControl as any, { refreshing, onRefresh: () => load(true), colors: [colors.orange] })}>
         {data?.currentTier ? <><View style={styles.hero}><Text style={styles.title}>{data.currentTier.badgeIcon || "★"} {data.currentTier.name} Member</Text><Text style={styles.sub}>{data.qualification?.currentValue.toLocaleString("en-IN")} {data.qualification?.type.replace(/_/g, " ").toLowerCase()}</Text><View style={styles.track}><View style={[styles.fill, { width: `${data.progress.percentage}%` }]} /></View><Text style={styles.sub}>{data.nextTier ? `${data.progress.remainingValue.toLocaleString("en-IN")} remaining to ${data.nextTier.name}` : "Highest tier reached"}</Text></View>
           <Text style={styles.heading}>Your Benefits</Text>{data.benefits.length ? data.benefits.map(b => <Text key={b} style={styles.benefit}>✓ {b}</Text>) : <Text style={styles.sub}>No benefits configured.</Text>}

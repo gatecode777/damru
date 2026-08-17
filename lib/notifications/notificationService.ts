@@ -167,3 +167,12 @@ export async function markAllRead(userId: string | mongoose.Types.ObjectId): Pro
   );
   return result.modifiedCount;
 }
+
+/** Ownership-scoped — the filter includes userId so a foreign notification id simply matches nothing. Covers both single and bulk delete. */
+export async function deleteNotifications(userId: string | mongoose.Types.ObjectId, notificationIds: string[]): Promise<number> {
+  await connectDB();
+  const validIds = notificationIds.filter((id) => mongoose.isValidObjectId(id));
+  if (validIds.length === 0) return 0;
+  const result = await Notification.deleteMany({ _id: { $in: validIds }, userId });
+  return result.deletedCount ?? 0;
+}

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl, Share } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Share } from "react-native";
 import { Stack } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { colors } from "@/config";
@@ -8,6 +8,7 @@ import { getReferrals } from "@/services/rewardsApi";
 import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import type { ReferralHistoryEntry, ReferralsResponse } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const STATUS_LABEL: Record<string, string> = {
   REGISTERED: "Registered",
@@ -65,8 +66,29 @@ export default function RewardsReferralsScreen() {
       <Stack.Screen options={{ title: "Invite & Earn", headerShown: true }} />
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.orange} />
+        <View style={styles.listContent}>
+          <View style={styles.headerBlock}>
+            <Skeleton width={90} height={12} style={{ marginBottom: 6 }} />
+            <Skeleton width={160} height={40} radius={10} style={{ marginBottom: 12 }} />
+            <View style={styles.actionRow}>
+              <Skeleton height={38} radius={10} />
+              <Skeleton height={38} radius={10} />
+              <Skeleton height={38} radius={10} />
+            </View>
+            <View style={styles.summaryRow}>
+              <Skeleton height={60} radius={14} />
+              <Skeleton height={60} radius={14} />
+              <Skeleton height={60} radius={14} />
+            </View>
+          </View>
+          {[1, 2, 3].map((i) => (
+            <View key={i} style={styles.card}>
+              <View style={{ flex: 1 }}>
+                <Skeleton width="45%" height={13} style={{ marginBottom: 6 }} />
+                <Skeleton width="35%" height={11} />
+              </View>
+            </View>
+          ))}
         </View>
       ) : error && !data ? (
         <View style={styles.center}>

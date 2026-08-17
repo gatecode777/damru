@@ -12,6 +12,7 @@ import { trackRewardEvent } from "@/lib/rewards/rewardAnalytics";
 import type { RewardTransaction, RewardCoupon, RewardsUpcoming, AchievementsResponse, MissionsResponse, ReferralsResponse } from "@/lib/rewards/rewardTypes";
 import ActiveCampaignOffers from "@/components/rewards/ActiveCampaignOffers";
 import { useToast } from "@/components/website/Toast";
+import ConfirmDialog from "@/components/website/ConfirmDialog";
 import { getSafeUserMessage, getUserErrorMessage, getUserResponseError } from "@/lib/getUserErrorMessage";
 
 interface UserInfo { id?: string; name: string; email: string; phone: string; city: string; avatar: string; createdAt?: string }
@@ -462,7 +463,7 @@ function MyProfileContent() {
   const actionToast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { dashboard: rewardsDashboard } = useRewards();
+  const { dashboard: rewardsDashboard, loading: rewardsLoading, error: rewardsError, refresh: refreshRewards } = useRewards();
   const [section,setSection]  = useState<Section>("overview");
   const [user,setUser]        = useState<UserInfo|null>(null);
   const [loading,setLoading]  = useState(true);
@@ -520,6 +521,13 @@ function MyProfileContent() {
   const [notifLoading,setNotifLoading]     = useState(false);
   const [notifPrefs,setNotifPrefs]         = useState<{orderUpdates:boolean;rewardUpdates:boolean;promotionalPush:boolean;promotionalEmail:boolean;promotionalInApp:boolean}|null>(null);
   const [notifPrefsSaving,setNotifPrefsSaving] = useState(false);
+  const [notifSelectMode,setNotifSelectMode] = useState(false);
+  const [selectedNotifIds,setSelectedNotifIds] = useState<Set<string>>(new Set());
+  const [confirmDialog,setConfirmDialog] = useState<{title:string;description:string;onConfirm:()=>void}|null>(null);
+
+  function askConfirm(title:string,description:string,onConfirm:()=>void){
+    setConfirmDialog({title,description,onConfirm});
+  }
 
   function showToast(msg:string, type?:"success"|"error"|"info"){
     const resolved = type ?? (/fail|unable|invalid|required|match|fill|wrong|error|please (select|enter)/i.test(msg) ? "error" : "success");
@@ -614,6 +622,39 @@ function MyProfileContent() {
     const r=await fetch("/api/notifications/read-all",{method:"PATCH"});
     if(r.ok)actionToast.success("Notifications updated","All notifications were marked as read.",{id:"notifications-read-all"});
     else actionToast.error("Notifications not updated",getUserResponseError(r),{id:"notifications-read-all"});
+  }
+
+  function toggleNotifSelect(id:string){
+    setSelectedNotifIds(prev=>{
+      const next=new Set(prev);
+      if(next.has(id))next.delete(id);else next.add(id);
+      return next;
+    });
+  }
+
+  function exitNotifSelectMode(){setNotifSelectMode(false);setSelectedNotifIds(new Set());}
+
+  async function deleteNotifs(ids:string[]){
+    const previous=notifItems;
+    setNotifItems(prev=>prev.filter(n=>!ids.includes(n._id)));
+    exitNotifSelectMode();
+    const r=await fetch("/api/notifications/bulk-delete",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({ids})});
+    if(r.ok){
+      actionToast.success(ids.length>1?"Notifications deleted":"Notification deleted",undefined,{id:"notifications-delete"});
+    }else{
+      setNotifItems(previous);
+      actionToast.error("Notification(s) not deleted",getUserResponseError(r),{id:"notifications-delete"});
+    }
+  }
+
+  function handleDeleteSingleNotif(id:string){
+    askConfirm("Delete notification","Are you sure you want to delete this notification?",()=>deleteNotifs([id]));
+  }
+
+  function handleDeleteSelectedNotifs(){
+    const ids=[...selectedNotifIds];
+    if(ids.length===0)return;
+    askConfirm("Delete notifications",`Delete ${ids.length} selected notification${ids.length>1?"s":""}?`,()=>deleteNotifs(ids));
   }
 
   async function saveNotifPref(key:string,value:boolean){
@@ -804,11 +845,12 @@ function MyProfileContent() {
     await loadAddresses();setShowAddrModal(false);showToast(editingAddr?"Address updated!":"Address added!");
   }
 
-  async function handleDeleteAddress(id:string){
-    if(!confirm("Delete this address?"))return;
-    const r=await fetch("/api/address",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
-    const d=await r.json();if(!r.ok){showToast(getUserResponseError(r,d,"Unable to delete address."),"error");return;}
-    await loadAddresses();showToast("Address deleted!");
+  function handleDeleteAddress(id:string){
+    askConfirm("Delete address","Are you sure you want to delete this address?",async()=>{
+      const r=await fetch("/api/address",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+      const d=await r.json();if(!r.ok){showToast(getUserResponseError(r,d,"Unable to delete address."),"error");return;}
+      await loadAddresses();showToast("Address deleted!");
+    });
   }
 
   function copyCoupon(code:string){
@@ -919,8 +961,15 @@ function MyProfileContent() {
             <p className="profile__page-subtitle">Your Damru wallet, coupons, and upcoming rewards</p>
             <ActiveCampaignOffers />
 
-            {!rewardsDashboard ? (
+            {rewardsLoading ? (
               <div className="profile__card"><p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading your wallet…</p></div>
+            ) : rewardsError ? (
+              <div className="profile__card">
+                <p style={{fontFamily:"Poppins,sans-serif",color:"#b91c1c",fontSize:13,margin:"0 0 10px"}}>{rewardsError}</p>
+                <button onClick={()=>refreshRewards()} style={{fontFamily:"Poppins,sans-serif",fontSize:13,fontWeight:600,color:"#e67e22",background:"none",border:"1px solid #e67e22",borderRadius:8,padding:"6px 14px",cursor:"pointer"}}>Retry</button>
+              </div>
+            ) : !rewardsDashboard ? (
+              <div className="profile__card"><p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Sign in to view your Damru wallet.</p></div>
             ) : (
               <div className="profile__card">
                 <div className="rewards__wallet-grid">
@@ -1185,11 +1234,11 @@ function MyProfileContent() {
                     <div className="profile__coupon-detail">{c.description||(c.type==="flat"?`₹${c.value} off`:`${c.value}% off${c.maxDiscount?` (max ₹${c.maxDiscount})`:""}`)} {c.minOrderValue>0?`· Min ₹${c.minOrderValue}`:""}</div>
                     {c.expiryDate&&<div className="profile__coupon-validity">Valid till: {fmtDate(c.expiryDate)}</div>}
                   </div>
-                  <div style={{display:"flex",gap:6}}>
-                    <button className="profile__btn-reorder" style={{fontSize:12,padding:"6px 12px",whiteSpace:"nowrap"}} onClick={()=>copyRewardCoupon(c.code)}>
+                  <div className="profile__coupon-actions">
+                    <button className="profile__coupon-btn" onClick={()=>copyRewardCoupon(c.code)}>
                       {copiedCode===c.code?"Copied!":"Copy"}
                     </button>
-                    <Link href="/menu" className="profile__btn-reorder" style={{fontSize:12,padding:"6px 12px",whiteSpace:"nowrap",textDecoration:"none"}} onClick={()=>trackRewardEvent("coupon_used")}>
+                    <Link href="/menu" className="profile__coupon-btn" onClick={()=>trackRewardEvent("coupon_used")}>
                       Shop Now
                     </Link>
                   </div>
@@ -1236,6 +1285,7 @@ function MyProfileContent() {
                     : (
                       <div style={{marginTop:6}}>
                         <input type="date" value={dobInput} max={todayISO()} onChange={e=>{setDobInput(e.target.value);setDobError("");}}
+                          className="rewards__occasion-input"
                           style={{border:"1px solid #eee",borderRadius:8,padding:"7px 10px",fontFamily:"Poppins,sans-serif",fontSize:13}}/>
                         <p className="rewards__occasion-warning">After saving this date, future changes require support approval.</p>
                         {dobError&&<p style={{color:"#dc2626",fontSize:12,fontFamily:"Poppins,sans-serif",margin:"6px 0 0"}}>{dobError}</p>}
@@ -1254,6 +1304,7 @@ function MyProfileContent() {
                     : (
                       <div style={{marginTop:6}}>
                         <input type="date" value={annivInput} max={todayISO()} onChange={e=>{setAnnivInput(e.target.value);setAnnivError("");}}
+                          className="rewards__occasion-input"
                           style={{border:"1px solid #eee",borderRadius:8,padding:"7px 10px",fontFamily:"Poppins,sans-serif",fontSize:13}}/>
                         <p className="rewards__occasion-warning">After saving this date, future changes require support approval.</p>
                         {annivError&&<p style={{color:"#dc2626",fontSize:12,fontFamily:"Poppins,sans-serif",margin:"6px 0 0"}}>{annivError}</p>}
@@ -1274,9 +1325,17 @@ function MyProfileContent() {
             <h1 className="profile__page-title">Notifications</h1>
             <p className="profile__page-subtitle">Order, payment, reward, and offer updates</p>
 
-            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
-              {notifItems.some(n=>!n.isRead) && (
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:10}}>
+              {notifSelectMode && selectedNotifIds.size>0 && (
+                <button className="profile__btn-reorder" style={{background:"#c92d2d"}} onClick={handleDeleteSelectedNotifs}>Delete ({selectedNotifIds.size})</button>
+              )}
+              {!notifSelectMode && notifItems.some(n=>!n.isRead) && (
                 <button className="profile__btn-reorder" onClick={markAllNotifsRead}>Mark All Read</button>
+              )}
+              {notifItems.length>0 && (
+                <button className="profile__btn-reorder" style={{background:"transparent",color:"#e07b39",border:"1px solid #e07b39"}} onClick={()=>notifSelectMode?exitNotifSelectMode():setNotifSelectMode(true)}>
+                  {notifSelectMode?"Cancel":"Select"}
+                </button>
               )}
             </div>
 
@@ -1286,17 +1345,34 @@ function MyProfileContent() {
               ):notifItems.length===0?(
                 <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>No notifications yet.</p>
               ):(<>
-                {notifItems.map(n=>(
-                  <div key={n._id} className="rewards__tx-row" style={{cursor:"pointer",background:n.isRead?"transparent":"#fff7ed",borderRadius:8,padding:"10px 8px"}}
-                    onClick={()=>{ if(!n.isRead)markNotifRead(n._id); if(n.action?.route)router.push(n.action.route); }}>
-                    <div>
+                {notifItems.map(n=>{
+                  const selected=selectedNotifIds.has(n._id);
+                  return (
+                  <div key={n._id} className="rewards__tx-row" style={{cursor:"pointer",background:selected?"#fdeee3":n.isRead?"transparent":"#fff7ed",borderRadius:8,padding:"10px 8px"}}
+                    onClick={()=>{ if(notifSelectMode){toggleNotifSelect(n._id);return;} if(!n.isRead)markNotifRead(n._id); if(n.action?.route)router.push(n.action.route); }}>
+                    {notifSelectMode && (
+                      <span style={{width:18,height:18,borderRadius:"50%",border:`1.5px solid ${selected?"#e67e22":"#cbbfb5"}`,background:selected?"#e67e22":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        {selected && <i className="fa-solid fa-check" style={{fontSize:10,color:"#fff"}}></i>}
+                      </span>
+                    )}
+                    <div style={{flex:1}}>
                       <p className="rewards__tx-desc">{n.title}</p>
                       <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#888",margin:"2px 0"}}>{n.message}</p>
                       <p className="rewards__tx-date">{fmtDateTime(n.createdAt)}</p>
                     </div>
-                    {!n.isRead && <span style={{width:8,height:8,borderRadius:"50%",background:"#e67e22",flexShrink:0}} />}
+                    {!notifSelectMode && !n.isRead && <span style={{width:8,height:8,borderRadius:"50%",background:"#e67e22",flexShrink:0}} />}
+                    {!notifSelectMode && (
+                      <button
+                        onClick={e=>{e.stopPropagation();handleDeleteSingleNotif(n._id);}}
+                        title="Delete notification"
+                        style={{background:"none",border:"none",cursor:"pointer",color:"#aaa",padding:4,flexShrink:0}}
+                      >
+                        <i className="fa-regular fa-trash-can"></i>
+                      </button>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
                 {notifPages>1&&(
                   <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:14}}>
                     <button className="profile__btn-reorder" disabled={notifPage<=1} onClick={()=>loadNotifications(notifPage-1)}>Prev</button>
@@ -1567,9 +1643,12 @@ function MyProfileContent() {
                     <div className="profile__coupon-detail">{c.description||(c.type==="flat"?`₹${c.value} off`:`${c.value}% off${c.maxDiscount?` (max ₹${c.maxDiscount})`:""}`)} {c.minOrderValue>0?`· Min ₹${c.minOrderValue}`:""}</div>
                     {c.expiryDate&&<div className="profile__coupon-validity">Valid till: {fmtDate(c.expiryDate)}</div>}
                   </div>
-                  <button className="profile__btn-reorder" style={{fontSize:12,padding:"6px 12px",whiteSpace:"nowrap"}} onClick={()=>copyCoupon(c.code)}>
-                    {copiedCode===c.code?"Copied!":"Copy Code"}
-                  </button>
+                  <div className="profile__coupon-actions">
+                    <button className="profile__coupon-btn" onClick={()=>copyCoupon(c.code)}>
+                      {copiedCode===c.code?"Copied!":"Copy"}
+                    </button>
+                    <Link href="/menu" className="profile__coupon-btn">Shop Now</Link>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1604,7 +1683,7 @@ function MyProfileContent() {
               <div className="profile__settings-group-title"><i className="fa-regular fa-user-xmark"></i> Delete Account</div>
               <div className="profile__delete-row">
                 <span className="profile__delete-info">Permanently delete your account and all associated data.</span>
-                <button className="profile__delete-btn" onClick={()=>{if(confirm("Are you sure? This cannot be undone."))actionToast.warning("Account deletion unavailable","Please contact support to request account deletion.");}}>Delete Account</button>
+                <button className="profile__delete-btn" onClick={()=>askConfirm("Delete account","Are you sure? This cannot be undone.",()=>actionToast.warning("Account deletion unavailable","Please contact support to request account deletion."))}>Delete Account</button>
               </div>
             </div>
           </section>
@@ -1733,6 +1812,15 @@ function MyProfileContent() {
           </div>
         </div>
       )}
+
+      {/* GLOBAL DELETE CONFIRMATION — shared by addresses, notifications, and account deletion */}
+      <ConfirmDialog
+        open={!!confirmDialog}
+        title={confirmDialog?.title ?? ""}
+        description={confirmDialog?.description ?? ""}
+        onCancel={()=>setConfirmDialog(null)}
+        onConfirm={()=>{ confirmDialog?.onConfirm(); setConfirmDialog(null); }}
+      />
 
     </div>
   );

@@ -8,7 +8,6 @@ import {
   ScrollView,
   Image as RNImage,
   Alert,
-  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -16,6 +15,7 @@ import { colors, assetUrl, API_URL } from "@/config";
 import { get, post } from "@/lib/api";
 import { Button, Field } from "@/components/ui";
 import { AnimatedIcon } from "../ui/AnimatedIcon";
+import { Skeleton } from "../ui/Skeleton";
 import type { Complaint } from "@/types";
 
 const FAQ_DATA = [
@@ -485,7 +485,14 @@ export function HelpSupportSection({ showToast }: HelpSupportSectionProps) {
         {activeTab === "mycomplaints" && (
           <View style={{ gap: 12 }}>
             {complaintsLoading ? (
-              <ActivityIndicator size="small" color={colors.orange} style={{ margin: 20 }} />
+              <View style={{ gap: 10 }}>
+                {[1, 2].map((i) => (
+                  <View key={i} style={{ padding: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.line, backgroundColor: "#fff" }}>
+                    <Skeleton width="70%" height={14} style={{ marginBottom: 8 }} />
+                    <Skeleton width="45%" height={12} />
+                  </View>
+                ))}
+              </View>
             ) : complaints.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="alert-circle-outline" size={32} color="#a99c94" />

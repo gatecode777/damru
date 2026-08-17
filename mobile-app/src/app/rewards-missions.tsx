@@ -1,11 +1,23 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from "react-native";
 import { Stack } from "expo-router";
 import { colors } from "@/config";
 import { EmptyState } from "@/components/ui";
 import { getMissions } from "@/services/rewardsApi";
 import type { Mission } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
+import { Skeleton } from "@/components/ui/Skeleton";
+
+function MissionCardSkeleton() {
+  return (
+    <View style={styles.card}>
+      <Skeleton width="65%" height={14} style={{ marginBottom: 8 }} />
+      <Skeleton width="50%" height={12} style={{ marginBottom: 8 }} />
+      <Skeleton width="40%" height={12} style={{ marginBottom: 4 }} />
+      <Skeleton height={6} radius={6} />
+    </View>
+  );
+}
 
 function formatTimeRemaining(ms: number | null): string | null {
   if (ms === null) return null;
@@ -44,8 +56,10 @@ export default function RewardsMissionsScreen() {
       <Stack.Screen options={{ title: "Missions", headerShown: true }} />
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.orange} />
+        <View style={styles.listContent}>
+          {[1, 2, 3, 4].map((i) => (
+            <MissionCardSkeleton key={i} />
+          ))}
         </View>
       ) : error && missions.length === 0 ? (
         <View style={styles.center}>

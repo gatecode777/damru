@@ -128,6 +128,9 @@ export type Order = {
   createdAt: string;
   tableNumber?: string;
   tableName?: string;
+  cancellationReason?: string;
+  cancelledBy?: "customer" | "admin" | "system";
+  cancelledAt?: string;
 };
 
 export type Coupon = {
