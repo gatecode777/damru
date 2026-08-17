@@ -65,6 +65,8 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
   if (!b) notFound();
 
   const hallCards = [...(b.hallCards || [])].sort((a, x) => a.sortOrder - x.sortOrder);
+  const offerItems = b.offerItems ?? [];
+  const eventTypes = b.eventTypes ?? [];
   const hasBranchImage = Boolean(b.cardImage);
 
   return (
@@ -111,11 +113,11 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
                 )}
               </div>
             )}
-            {b.offerItems?.length > 0 && (
+            {offerItems.length > 0 && (
               <>
                 <h2 className="banqplace__offer-heading reveal">What We Offer</h2>
                 <ul className="banqplace__offer-list reveal">
-                  {b.offerItems.map((item: string, i: number) => (
+                  {offerItems.map((item: string, i: number) => (
                     <li key={i}>{item}</li>
                   ))}
                 </ul>
@@ -143,12 +145,12 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
       </section>
 
       {/* SECTION 3 — EVENT TYPES */}
-      {b.eventTypes?.length > 0 && (
+      {eventTypes.length > 0 && (
         <section className="banqplace__events">
           <div className="banqplace__events-inner">
             <h2 className="banqplace__section-heading reveal">Event Types We Host</h2>
             <div className="banqplace__events-grid">
-              {b.eventTypes.map((ev, i) => (
+              {eventTypes.map((ev, i) => (
                 <div key={i} className="banqplace__event-card" data-delay={String(i * 120)}>
                   <div className="banqplace__event-img-wrap">
                     {ev.image ? (
@@ -170,6 +172,9 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
         const isAlt = i % 2 !== 0;
         const SectionClass = isAlt ? "banqplace__multi" : "banqplace__bday";
         const GridClass = isAlt ? "banqplace__multi-grid" : "banqplace__bday-grid";
+        const features = hall.features ?? [];
+        const perfectFor = hall.perfectFor ?? [];
+        const images = hall.images ?? [];
         return (
           <section key={i} className={SectionClass}>
             <div className={isAlt ? "banqplace__multi-inner" : ""}>
@@ -178,40 +183,40 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
                   <h2 className="banqplace__content-title reveal">{hall.title}</h2>
                   {hall.subtitle && <p className="banqplace__content-subtitle">{hall.subtitle}</p>}
                   {hall.description && <p className="banqplace__content-body reveal">{hall.description}</p>}
-                  {hall.features?.length > 0 && (
+                  {features.length > 0 && (
                     <>
                       <p className="banqplace__features-title">Features &amp; Facilities</p>
                       <ul className="banqplace__bullet-list reveal">
-                        {hall.features.map((f: string, j: number) => (
+                        {features.map((f: string, j: number) => (
                           <li key={j}>{f}</li>
                         ))}
                       </ul>
                     </>
                   )}
-                  {hall.perfectFor?.length > 0 && (
+                  {perfectFor.length > 0 && (
                     <>
                       <p className="banqplace__features-title" style={{ marginTop: "1.25rem" }}>
                         Perfect For
                       </p>
                       <ul className="banqplace__bullet-list reveal">
-                        {hall.perfectFor.map((f: string, j: number) => (
+                        {perfectFor.map((f: string, j: number) => (
                           <li key={j}>{f}</li>
                         ))}
                       </ul>
                     </>
                   )}
                 </div>
-                {hall.images?.length > 0 && (
+                {images.length > 0 && (
                   <div className="banqplace__img-overlap reveal-right">
                     <img
                       className="img-back"
-                      src={`/uploads/branches/${hall.images[0]}`}
+                      src={`/uploads/branches/${images[0]}`}
                       alt={`${hall.title} – view 1`}
                     />
-                    {hall.images[1] && (
+                    {images[1] && (
                       <img
                         className="img-front"
-                        src={`/uploads/branches/${hall.images[1]}`}
+                        src={`/uploads/branches/${images[1]}`}
                         alt={`${hall.title} – view 2`}
                       />
                     )}
