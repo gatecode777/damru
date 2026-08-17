@@ -53,6 +53,7 @@ CouponSchema.virtual("isValid").get(function () {
 
 CouponSchema.index({ isActive: 1 });
 CouponSchema.index({ expiryDate: 1 });
+CouponSchema.index({ isActive: 1, userId: 1, startDate: 1, expiryDate: 1, createdAt: -1 });
 
 const Coupon: Model<ICoupon> =
   mongoose.models.Coupon || mongoose.model<ICoupon>("Coupon", CouponSchema);

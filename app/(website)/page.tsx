@@ -65,8 +65,6 @@ export const metadata: Metadata = {
 // newly published blog or a newly added branch would never appear without a full redeploy.
 // A 5-minute ISR revalidation window keeps the same static-speed serving while letting
 // content go stale for at most 5 minutes instead of indefinitely.
-export const revalidate = 300;
-
 export default async function HomePage() {
   // ── Fetch Shakes menu items ──────────────────────────────────
   let shakeItems: { _id: string; name: string; description: string; image: string; basePrice: number }[] = [];
@@ -344,7 +342,7 @@ export default async function HomePage() {
               { _id: "f1", name: "Damru By Namo (Mansarovar, Jaipur)", slug: "", description: "Our Mansarovar branch offers a perfect blend of great food and a spacious banquet hall, ideal for birthdays, family gatherings, and small celebrations.", cardImage: "", cardAlt: "", contact: "+91 XXXXX XXXXX", timing: "11:00 AM – 11:00 PM" },
               { _id: "f2", name: "Damru By Namo (Gandhipath, Vaishali, Jaipur)", slug: "", description: "Located in Vaishali Nagar, this branch is perfect for weddings, corporate events, and grand celebrations with modern facilities and expert catering.", cardImage: "", cardAlt: "", contact: "+91 XXXXX XXXXX", timing: "11:00 AM – 11:00 PM" },
               { _id: "f3", name: "Damru By Namo (Coaching Hub, Pratap Nagar, Jaipur)", slug: "", description: "Our Pratap Nagar branch offers a lively dining experience along with banquet services, making it ideal for student parties, birthdays, and casual events.", cardImage: "", cardAlt: "", contact: "+91 XXXXX XXXXX", timing: "11:00 AM – 11:00 PM" },
-            ]).map((b, i) => {
+            ]).slice(0, 3).map((b, i) => {
               const cls = ["reveal-3d-left", "reveal-3d-center", "reveal-3d-right"][i] ?? "reveal-3d-left";
               const staticImgs = ["/assets/images/OB1.png", "/assets/images/OB2.png", "/assets/images/OB3.png"];
               const imgSrc = b.cardImage ? `/uploads/branches/${b.cardImage}` : (staticImgs[i] ?? staticImgs[0]);
@@ -369,6 +367,12 @@ export default async function HomePage() {
                 </div>
               );
             })}
+          </div>
+          <div className="branches-view-all-wrap">
+            <Link href="/branches" className="branches-view-all">
+              View All Branches
+              <span aria-hidden="true">→</span>
+            </Link>
           </div>
         </div>
       </section>

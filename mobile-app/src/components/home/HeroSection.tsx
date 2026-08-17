@@ -4,6 +4,8 @@ import { Image } from '../ui/Image';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  cancelAnimation,
+  withRepeat,
   withTiming,
   Easing,
   type SharedValue,
@@ -26,6 +28,17 @@ export const HeroSection: React.FC = () => {
 
   // Wheel rotation angle matching website main.js: selectedIndex * -90deg
   const rotation = useSharedValue(0);
+  const plateRotation = useSharedValue(0);
+
+  useEffect(() => {
+    plateRotation.value = 0;
+    plateRotation.value = withRepeat(
+      withTiming(-1, { duration: 24000, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(plateRotation);
+  }, [plateRotation]);
 
   useEffect(() => {
     rotation.value = withTiming(selectedIndex * -90, {
@@ -75,6 +88,7 @@ export const HeroSection: React.FC = () => {
                 plateSource={plateSource}
                 itemAngleDeg={itemAngleDeg}
                 rotation={rotation}
+                plateRotation={plateRotation}
                 isActive={selectedIndex === index}
               />
             );
@@ -89,11 +103,13 @@ function PlateItem({
   plateSource,
   itemAngleDeg,
   rotation,
+  plateRotation,
   isActive,
 }: {
   plateSource: any;
   itemAngleDeg: number;
   rotation: SharedValue<number>;
+  plateRotation: SharedValue<number>;
   isActive: boolean;
 }) {
   // Counter-rotate plate so food remains right-side up
@@ -112,6 +128,10 @@ function PlateItem({
       }),
     };
   });
+
+  const spinningPlateStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${plateRotation.value * 360}deg` }],
+  }));
 
   // Calculate rim positions
   const angleRad = (itemAngleDeg * Math.PI) / 180;
@@ -132,11 +152,13 @@ function PlateItem({
         animatedPlateStyle,
       ]}
     >
-      <Image
-        source={plateSource}
-        style={styles.bowlImage}
-        contentFit="contain"
-      />
+      <Animated.View style={[styles.spinningPlate, spinningPlateStyle]}>
+        <Image
+          source={plateSource}
+          style={styles.bowlImage}
+          contentFit="contain"
+        />
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -193,6 +215,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bowlImage: {
+    width: '100%',
+    height: '100%',
+  },
+  spinningPlate: {
     width: '100%',
     height: '100%',
   },

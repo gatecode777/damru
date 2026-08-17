@@ -130,6 +130,7 @@ const FALLBACK_ITEMS: MenuItem[] = [
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/queryClient";
+import { PremiumRefreshControl } from "../../components/ui/PremiumRefreshControl";
 
 export default function MenuScreen() {
   const insets = useSafeAreaInsets();
@@ -142,7 +143,7 @@ export default function MenuScreen() {
     cartRef.current = cart;
   }, [cart]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, isRefetching, refetch } = useQuery({
     queryKey: queryKeys.menu.list(),
     queryFn: () => publicGet<{ categories: Category[]; items: MenuItem[] }>("/api/menu"),
     staleTime: 5 * 60 * 1000, // 5 minutes stale
@@ -254,6 +255,7 @@ export default function MenuScreen() {
           data={loading ? [] : filteredProducts}
           keyExtractor={(item) => item._id}
           renderItem={renderProductItem}
+          refreshControl={<PremiumRefreshControl refreshing={isRefetching} onRefresh={refetch} />}
           ListHeaderComponent={
             <>
               <MenuHeroSection />

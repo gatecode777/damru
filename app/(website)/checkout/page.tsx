@@ -268,7 +268,7 @@ export default function CheckoutPage() {
       } catch (error) {
         if ((error as { name?: string }).name !== "AbortError") { setQuote(null); setQuoteError("Unable to calculate order total. Please try again."); }
       } finally { if (!controller.signal.aborted) setQuoteLoading(false); }
-    }, 250);
+    }, 100);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [items, selectedAddr, couponCode, requestedDamru, isDineIn, tableInfo]);
 
@@ -593,7 +593,7 @@ export default function CheckoutPage() {
           <div className="shipping-option">
             <div className="shipping-left">
               <div className="radio-circle" style={{ borderColor: "#e66a00", background: "#e66a00", boxShadow: "inset 0 0 0 4px #fff" }}></div>
-              <b>{quoteLoading ? "Calculating…" : fmtINR(quote ? shipping : 0)}</b>
+              <b>{quote ? fmtINR(shipping) : quoteLoading ? "Calculating…" : fmtINR(0)}</b>
               <span style={{ color: "#666", fontSize: 13 }}>Regular shipment</span>
             </div>
           </div>
@@ -662,7 +662,7 @@ export default function CheckoutPage() {
                 {(quote?.damruDiscount || 0) > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, color: "#16a34a" }}><span>Damru</span><b>− {fmtINR(quote!.damruDiscount)}</b></div>}
                 <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #eee", paddingTop: 10 }}>
                   <span style={{ fontWeight: 700 }}>Total</span>
-                  <b style={{ fontSize: 18, color: "#e67e22" }}>{quoteLoading ? "Calculating…" : quote ? fmtINR(grandTotal) : fmtINR(0)}</b>
+                  <b style={{ fontSize: 18, color: "#e67e22" }}>{quote ? fmtINR(grandTotal) : quoteLoading ? "Calculating…" : fmtINR(0)}</b>
                 </div>
                 {quoteError && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{quoteError}</p>}
               </div>

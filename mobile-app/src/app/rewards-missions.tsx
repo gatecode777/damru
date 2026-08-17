@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
 import { Stack } from "expo-router";
 import { colors } from "@/config";
 import { EmptyState } from "@/components/ui";
@@ -7,6 +7,7 @@ import { getMissions } from "@/services/rewardsApi";
 import type { Mission } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 function MissionCardSkeleton() {
   return (
@@ -74,7 +75,7 @@ export default function RewardsMissionsScreen() {
           keyExtractor={(item, idx) => `${item.id}-${idx}`}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            React.createElement(RefreshControl as any, {
+            React.createElement(PremiumRefreshControl, {
               refreshing,
               onRefresh: () => load("refresh"),
               colors: [colors.orange],

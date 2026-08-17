@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { flushSync } from "react-dom";
 
 const COMPLETE_DELAY_MS = 260;
 const SAFETY_TIMEOUT_MS = 20000;
 const SHELL_PROGRESS = 65;
+const ROUTE_PROGRESS_LIMIT = SHELL_PROGRESS - 5;
 
 export default function TopNavigationProgress() {
   const pathname = usePathname();
@@ -16,26 +18,33 @@ export default function TopNavigationProgress() {
   const runIdRef = useRef(0);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trickleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resourceCleanupRef = useRef<(() => void) | null>(null);
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState<"route" | "resources" | "complete">("route");
 
   const clearRun = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+    if (trickleTimerRef.current) clearInterval(trickleTimerRef.current);
     resourceCleanupRef.current?.();
     hideTimerRef.current = null;
     safetyTimerRef.current = null;
+    trickleTimerRef.current = null;
     resourceCleanupRef.current = null;
   }, []);
 
   const finish = useCallback(() => {
     if (!activeRef.current) return;
     if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+    if (trickleTimerRef.current) clearInterval(trickleTimerRef.current);
     resourceCleanupRef.current?.();
     safetyTimerRef.current = null;
+    trickleTimerRef.current = null;
     resourceCleanupRef.current = null;
     setProgress(100);
+    setPhase("complete");
     hideTimerRef.current = setTimeout(() => {
       activeRef.current = false;
       setVisible(false);
@@ -49,8 +58,19 @@ export default function TopNavigationProgress() {
     clearRun();
     activeRef.current = true;
     runIdRef.current += 1;
-    setVisible(true);
-    setProgress(5);
+    flushSync(() => {
+      setVisible(true);
+      setProgress(5);
+      setPhase("route");
+    });
+
+    trickleTimerRef.current = setInterval(() => {
+      setProgress((current) => {
+        if (current >= ROUTE_PROGRESS_LIMIT) return current;
+        const step = Math.max(0.7, (ROUTE_PROGRESS_LIMIT - current) * 0.09);
+        return Math.min(ROUTE_PROGRESS_LIMIT, current + step);
+      });
+    }, 180);
 
     safetyTimerRef.current = setTimeout(finish, SAFETY_TIMEOUT_MS);
   }, [clearRun, finish]);
@@ -59,6 +79,9 @@ export default function TopNavigationProgress() {
     if (!activeRef.current) return;
     const runId = runIdRef.current;
     resourceCleanupRef.current?.();
+    if (trickleTimerRef.current) clearInterval(trickleTimerRef.current);
+    trickleTimerRef.current = null;
+    setPhase("resources");
     setProgress((current) => Math.max(current, SHELL_PROGRESS));
 
     // Wait for the committed route to paint before collecting its resources.
@@ -149,12 +172,12 @@ export default function TopNavigationProgress() {
       measurePageResources();
     }
 
-    document.addEventListener("click", handleDocumentClick);
+    document.addEventListener("click", handleDocumentClick, true);
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("damru:route-loading-start", handleFallbackStart);
     window.addEventListener("damru:route-loading-end", handleFallbackEnd);
     return () => {
-      document.removeEventListener("click", handleDocumentClick);
+      document.removeEventListener("click", handleDocumentClick, true);
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("damru:route-loading-start", handleFallbackStart);
       window.removeEventListener("damru:route-loading-end", handleFallbackEnd);
@@ -162,17 +185,19 @@ export default function TopNavigationProgress() {
     };
   }, [clearRun, measurePageResources, start]);
 
+  const phaseLabel = phase === "complete" ? "Ready" : phase === "resources" ? "Preparing page" : "Loading page";
+
   return (
     <div
       className={`top-navigation-progress${visible ? " top-navigation-progress--visible" : ""}`}
       role="progressbar"
-      aria-label="Loading page"
+      aria-label={phaseLabel}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(progress)}
     >
       <span className="top-navigation-progress__bar" style={{ width: `${progress}%` }} />
-      <span className="top-navigation-progress__value">{Math.round(progress)}%</span>
+      <span className="top-navigation-progress__value">{phaseLabel} · {Math.round(progress)}%</span>
     </div>
   );
 }

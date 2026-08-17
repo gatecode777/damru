@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { BranchesClient } from "./BranchesClient";
+import { BranchesClient, type BranchListItem } from "./BranchesClient";
 import { connectDB } from "@/lib/mongodb";
 import Branch from "@/models/Branch";
+import "@/styles/website/branches-page.css";
 
 export const metadata: Metadata = {
   title: "Our Branches | Damru By Namo",
@@ -30,11 +31,11 @@ const STATIC_FALLBACK = [
 ];
 
 export default async function BranchesListPage() {
-  let branches: any[] = [];
+  let branches: BranchListItem[] = [];
   try {
     await connectDB();
     const raw = await Branch.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
-    branches = JSON.parse(JSON.stringify(raw));
+    branches = JSON.parse(JSON.stringify(raw)) as BranchListItem[];
   } catch { /* fallback */ }
 
   const items = branches.length > 0 ? branches : STATIC_FALLBACK;

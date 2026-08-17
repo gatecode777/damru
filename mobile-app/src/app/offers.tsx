@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Stack } from "expo-router";
 import { get } from "@/lib/api";
@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 function CouponCardSkeleton() {
   return (
@@ -80,7 +81,7 @@ export default function OffersScreen() {
           maxToRenderPerBatch={10}
           windowSize={5}
           refreshControl={
-            React.createElement(RefreshControl as any, {
+            React.createElement(PremiumRefreshControl, {
               refreshing: refreshing,
               onRefresh: () => fetchCoupons(true),
               colors: [colors.orange],

@@ -36,11 +36,16 @@ function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; f
   const { ready } = useApp();
   const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(false);
   const [startupTimeoutElapsed, setStartupTimeoutElapsed] = useState(false);
+  const [splashExiting, setSplashExiting] = useState(false);
+  const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
-    const minimumTimer = setTimeout(() => setMinimumSplashElapsed(true), 1200);
-    const timeoutTimer = setTimeout(() => setStartupTimeoutElapsed(true), 4000);
+    let mounted = true;
+    // Keep the branded splash perceptible even when a warm launch initializes instantly.
+    const minimumTimer = setTimeout(() => { if (mounted) setMinimumSplashElapsed(true); }, 3000);
+    const timeoutTimer = setTimeout(() => { if (mounted) setStartupTimeoutElapsed(true); }, 5000);
     return () => {
+      mounted = false;
       clearTimeout(minimumTimer);
       clearTimeout(timeoutTimer);
     };
@@ -60,18 +65,29 @@ function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; f
   // BrandSplash (animated) the moment fonts are ready — BrandSplash has
   // already been mounted underneath, so there's no gap between the two.
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (fontsLoaded || fontError || startupTimeoutElapsed) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, startupTimeoutElapsed]);
 
   const startupReady = ((fontsLoaded || Boolean(fontError)) && ready) || startupTimeoutElapsed;
 
-  if (!minimumSplashElapsed || !startupReady) {
+  useEffect(() => {
+    if (minimumSplashElapsed && startupReady && splashVisible) setSplashExiting(true);
+  }, [minimumSplashElapsed, splashVisible, startupReady]);
+
+  useEffect(() => {
+    if (!splashExiting) return;
+    let mounted = true;
+    const exitTimer = setTimeout(() => { if (mounted) setSplashVisible(false); }, 300);
+    return () => { mounted = false; clearTimeout(exitTimer); };
+  }, [splashExiting]);
+
+  if (splashVisible) {
     return (
       <>
-        <StatusBar barStyle="light-content" backgroundColor="#3d0f16" />
-        <BrandSplash fontsLoaded={fontsLoaded || Boolean(fontError)} />
+        <StatusBar hidden />
+        <BrandSplash fontsLoaded={fontsLoaded || Boolean(fontError)} exiting={splashExiting} />
       </>
     );
   }

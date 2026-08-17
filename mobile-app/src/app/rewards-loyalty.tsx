@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack } from "expo-router";
 import { colors } from "@/config";
 import { getLoyalty } from "@/services/rewardsApi";
@@ -7,6 +7,7 @@ import { trackRewardEvent } from "@/lib/rewardsAnalytics";
 import type { LoyaltyResponse } from "@/types/rewards";
 import { getApiErrorMessage } from "@/lib/api";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 
 function LoyaltySkeleton() {
   return (
@@ -49,7 +50,7 @@ export default function RewardsLoyaltyScreen() {
   useEffect(() => { void load(); }, [load]);
   return <View style={styles.container}><Stack.Screen options={{ title: "Loyalty Tiers", headerShown: true }} />
     {loading ? <LoyaltySkeleton /> : error && !data ? <View style={styles.center}><Text style={styles.error}>{error}</Text><Pressable style={styles.retry} onPress={() => load()}><Text style={styles.retryText}>Retry</Text></Pressable></View> :
-      <ScrollView contentContainerStyle={styles.content} refreshControl={React.createElement(RefreshControl as any, { refreshing, onRefresh: () => load(true), colors: [colors.orange] })}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={React.createElement(PremiumRefreshControl, { refreshing, onRefresh: () => load(true) })}>
         {data?.currentTier ? <><View style={styles.hero}><Text style={styles.title}>{data.currentTier.badgeIcon || "★"} {data.currentTier.name} Member</Text><Text style={styles.sub}>{data.qualification?.currentValue.toLocaleString("en-IN")} {data.qualification?.type.replace(/_/g, " ").toLowerCase()}</Text><View style={styles.track}><View style={[styles.fill, { width: `${data.progress.percentage}%` }]} /></View><Text style={styles.sub}>{data.nextTier ? `${data.progress.remainingValue.toLocaleString("en-IN")} remaining to ${data.nextTier.name}` : "Highest tier reached"}</Text></View>
           <Text style={styles.heading}>Your Benefits</Text>{data.benefits.length ? data.benefits.map(b => <Text key={b} style={styles.benefit}>✓ {b}</Text>) : <Text style={styles.sub}>No benefits configured.</Text>}
           <Text style={styles.heading}>Tier Ladder</Text>{data.tiers.map(t => <View key={t.id} style={[styles.tier, t.id === data.currentTier?.id && styles.active]}><Text style={styles.tierName}>{t.badgeIcon || "★"} {t.name}</Text><Text style={styles.sub}>From {t.minimumValue.toLocaleString("en-IN")} · {t.damruMultiplier}x</Text></View>)}</> : <Text style={styles.sub}>Loyalty tiers are not configured yet.</Text>}

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, Alert } from "react-native";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { get } from "@/lib/api";
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
 import { CancelOrderSheet } from "@/components/orders/CancelOrderSheet";
+import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
 import { useCancelOrder } from "@/hooks/useCancelOrder";
 import { CANCELLABLE_STATUSES, PAYMENT_STATUS_DISPLAY, getStatusColor, getStatusBg } from "@/constants/orderStatus";
 
@@ -97,7 +98,7 @@ export default function OrdersScreen() {
           maxToRenderPerBatch={5}
           windowSize={5}
           refreshControl={
-            React.createElement(RefreshControl as any, {
+            React.createElement(PremiumRefreshControl, {
               refreshing: refreshing,
               onRefresh: () => fetchOrders(true),
               colors: [colors.orange],

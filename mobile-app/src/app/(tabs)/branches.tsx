@@ -18,6 +18,8 @@ import { LocalAssets, getWebImageUri } from "../../constants/assets";
 import { useHomepageBranches } from "../../hooks/useHomepageBranches";
 import { colors } from "../../config";
 import type { Branch } from "../../types";
+import { PremiumRefreshControl } from "../../components/ui/PremiumRefreshControl";
+import { useGlobalRefresh } from "../../hooks/useGlobalRefresh";
 
 const STATIC_FALLBACK: Branch[] = [
   {
@@ -55,6 +57,7 @@ const STATIC_FALLBACK: Branch[] = [
 export default function BranchesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const refresh = useGlobalRefresh();
   // Shares the same react-query cache/staleTime as the Home tab's branches
   // section instead of firing its own independent fetch every time this
   // screen mounts.
@@ -181,6 +184,7 @@ export default function BranchesScreen() {
           ) : null
         }
         showsVerticalScrollIndicator={false}
+        refreshControl={<PremiumRefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} />}
       />
     </View>
   );

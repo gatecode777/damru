@@ -36,9 +36,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#3d0f16",
-          "image": "./assets/images/splash-mark.png",
-          "imageWidth": 140,
+          "backgroundColor": "#fffaf5",
+          "image": "./assets/images/damru-brand-logo.png",
+          "imageWidth": 300,
           "resizeMode": "contain"
         }
       ]

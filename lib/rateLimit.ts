@@ -20,6 +20,7 @@ export const RATE_LIMITS = {
   adminAdjust:    { limit: 30, windowSeconds: 600 },  // per admin
   couponValidate: { limit: 30, windowSeconds: 600 },  // per IP
   search:         { limit: 60, windowSeconds: 600 },  // per IP
+  banquetBooking: { limit: 5,  windowSeconds: 600 },  // per IP — public enquiry form
   razorpayOrder:  { limit: 20, windowSeconds: 600 },  // per user — order creation/reuse
   razorpayVerify: { limit: 20, windowSeconds: 600 },  // per user
   adminRefund:    { limit: 20, windowSeconds: 600 },  // per admin

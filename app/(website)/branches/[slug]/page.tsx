@@ -5,12 +5,43 @@ import { connectDB } from "@/lib/mongodb";
 import Branch from "@/models/Branch";
 import BanquetBookingForm from "./BanquetBookingForm";
 import BranchDetailAnimate from "@/components/website/BranchDetailAnimate";
+import "@/styles/website/banquetdetail.css";
+import "@/styles/website/branch-detail-page.css";
+
+interface BranchEventType { label: string; image?: string }
+interface BranchHallCard {
+  title: string;
+  subtitle?: string;
+  description?: string;
+  features?: string[];
+  perfectFor?: string[];
+  images?: string[];
+  sortOrder: number;
+}
+interface BranchPageData {
+  name: string;
+  slug: string;
+  description?: string;
+  contact?: string;
+  timing?: string;
+  address?: string;
+  bannerImage?: string;
+  bannerAlt?: string;
+  cardImage?: string;
+  cardAlt?: string;
+  offerItems?: string[];
+  whyChoose?: string;
+  eventTypes?: BranchEventType[];
+  hallCards?: BranchHallCard[];
+  ctaTitle?: string;
+  ctaSubtitle?: string;
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
     await connectDB();
-    const b = await Branch.findOne({ slug, isActive: true }).select("name description").lean() as any;
+    const b = await Branch.findOne({ slug, isActive: true }).select("name description").lean() as unknown as Pick<BranchPageData, "name" | "description"> | null;
     if (!b) return { title: "Branch Not Found" };
     return { title: `${b.name} | Damru By Namo`, description: b.description };
   } catch { return { title: "Branch | Damru By Namo" }; }
@@ -20,36 +51,40 @@ export async function generateStaticParams() {
   try {
     await connectDB();
     const branches = await Branch.find({ isActive: true }).select("slug").lean();
-    return (branches as any[]).map((b: any) => ({ slug: b.slug }));
+    return (branches as unknown as Array<Pick<BranchPageData, "slug">>).map((b) => ({ slug: b.slug }));
   } catch { return []; }
 }
 
 export default async function BranchDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  let b: any = null;
+  let b: BranchPageData | null = null;
   try {
     await connectDB();
-    b = JSON.parse(JSON.stringify(await Branch.findOne({ slug, isActive: true }).lean()));
+    b = JSON.parse(JSON.stringify(await Branch.findOne({ slug, isActive: true }).lean())) as BranchPageData | null;
   } catch { notFound(); }
   if (!b) notFound();
 
-  const hallCards = [...(b.hallCards || [])].sort((a: any, x: any) => a.sortOrder - x.sortOrder);
+  const hallCards = [...(b.hallCards || [])].sort((a, x) => a.sortOrder - x.sortOrder);
+  const hasBranchImage = Boolean(b.cardImage);
 
   return (
-    <>
+    <div className="branch-detail-page">
       {/* SECTION 1 — HERO BANNER */}
       <section className="banqplace__hero">
-        {b.bannerImage ? (
-          <img className="banqplace__hero-img" src={`/uploads/branches/${b.bannerImage}`} alt={b.bannerAlt || b.name} />
-        ) : (
-          <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#2d3621,#4a5c2a)" }} />
-        )}
+        <Image
+          className="banqplace__hero-img"
+          src="/assets/images/banquethero.jpg"
+          alt="Damru restaurant dining table and chairs"
+          fill
+          priority
+          sizes="100vw"
+        />
         <div className="banqplace__hero-overlay" />
       </section>
 
       {/* SECTION 2 — BRANCH INTRO */}
       <section className="banqplace__intro">
-        <div className="banqplace__intro-grid">
+        <div className={`banqplace__intro-grid${hasBranchImage ? "" : " banqplace__intro-grid--text-only"}`}>
           <div className="banqplace__intro-left">
             <h1 className="banqplace__branch-title reveal">{b.name}</h1>
             <div className="banqplace__divider" />
@@ -66,6 +101,12 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
                   <div className="banqplace__meta-row">
                     <strong>Timing:</strong>
                     <span>{b.timing}</span>
+                  </div>
+                )}
+                {b.address && (
+                  <div className="banqplace__meta-row banqplace__meta-row--address">
+                    <strong>Address:</strong>
+                    <span>{b.address}</span>
                   </div>
                 )}
               </div>
@@ -107,7 +148,7 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
           <div className="banqplace__events-inner">
             <h2 className="banqplace__section-heading reveal">Event Types We Host</h2>
             <div className="banqplace__events-grid">
-              {b.eventTypes.map((ev: any, i: number) => (
+              {b.eventTypes.map((ev, i) => (
                 <div key={i} className="banqplace__event-card" data-delay={String(i * 120)}>
                   <div className="banqplace__event-img-wrap">
                     {ev.image ? (
@@ -125,7 +166,7 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
       )}
 
       {/* SECTIONS 4+ — HALL CARDS (alternating bg) */}
-      {hallCards.map((hall: any, i: number) => {
+      {hallCards.map((hall, i) => {
         const isAlt = i % 2 !== 0;
         const SectionClass = isAlt ? "banqplace__multi" : "banqplace__bday";
         const GridClass = isAlt ? "banqplace__multi-grid" : "banqplace__bday-grid";
@@ -190,6 +231,6 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ s
         ctaSubtitle={b.ctaSubtitle}
       />
       <BranchDetailAnimate />
-    </>
+    </div>
   );
 }
