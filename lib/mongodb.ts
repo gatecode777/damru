@@ -38,27 +38,6 @@ if (!global._mongooseCache) {
 
 const cache = global._mongooseCache;
 
-if (!cache.promise) {
-  console.log("🔄 MongoDB: starting connection...");
-  cache.promise = mongoose
-    .connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 15000,
-      socketTimeoutMS: 45000,
-      tls: true,
-      tlsAllowInvalidCertificates: false,
-    })
-    .then((m) => {
-      cache.conn = m;
-      console.log("✅ MongoDB connected");
-      return m;
-    })
-    .catch((err) => {
-      console.error("❌ MongoDB connection error:", err);
-      cache.promise = null; // allow retry
-      throw err;
-    });
-}
-
 export async function connectDB() {
   // If already connected, return immediately — no await needed
   if (cache.conn && mongoose.connection.readyState === 1) return cache.conn;

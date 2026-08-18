@@ -47,14 +47,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   } catch { return { title: "Branch | Damru By Namo" }; }
 }
 
-export async function generateStaticParams() {
-  try {
-    await connectDB();
-    const branches = await Branch.find({ isActive: true }).select("slug").lean();
-    return (branches as unknown as Array<Pick<BranchPageData, "slug">>).map((b) => ({ slug: b.slug }));
-  } catch { return []; }
-}
-
 export default async function BranchDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   let b: BranchPageData | null = null;

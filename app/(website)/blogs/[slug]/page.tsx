@@ -55,14 +55,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   } catch { return { title: "Blog | Damru By Namo" }; }
 }
 
-export async function generateStaticParams() {
-  try {
-    await connectDB();
-    const blogs = await Blog.find({ status: "published" }).select("slug").lean();
-    return (blogs as { slug: string }[]).map(b => ({ slug: b.slug }));
-  } catch { return []; }
-}
-
 function formatDate(d?: string) {
   if (!d) return "";
   return new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
