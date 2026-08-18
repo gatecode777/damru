@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/website/menu.css";
-import { connectDB } from "@/lib/mongodb";
-import CategoryModel from "@/models/Category";
-import MenuItemModel from "@/models/MenuItem";
+import { getPublicMenu } from "@/lib/menuData";
 import ReservationForm from "../ReservationForm";
 import MenuClient from "./MenuClient";
 import { verifyTableToken } from "@/lib/tableAuth";
@@ -61,31 +59,11 @@ export default async function MenuPage({
   let tableDetails: (Awaited<ReturnType<typeof verifyTableToken>> & { token: string }) | null = null;
   let isTableTokenInvalid = false;
 
-  type LeanCategory = { _id: unknown; name: string; slug?: string; description?: string; sortOrder: number };
-  type LeanMenuItem = {
-    _id: unknown; name: string; description?: string; image?: string; basePrice: number;
-    variantType: string; variants: { label: string; price: number }[]; isVeg?: boolean;
-    category: unknown; sortOrder: number;
-  };
-
   const [verified, menuData] = await Promise.all([
     tableToken ? verifyTableToken(tableToken) : Promise.resolve(null),
-    (async () => {
-      await connectDB();
-      const [rawCats, rawItems] = await Promise.all([
-        CategoryModel.find({ isActive: true })
-          .select("name slug description sortOrder")
-          .sort({ sortOrder: 1 })
-          .lean<LeanCategory[]>(),
-        MenuItemModel.find({ isActive: true })
-          .select("name description image basePrice variantType variants isVeg category sortOrder")
-          .sort({ sortOrder: 1 })
-          .lean<LeanMenuItem[]>(),
-      ]);
-      return { rawCats, rawItems };
-    })().catch(err => {
+    getPublicMenu().catch(err => {
       console.error("Menu page DB error:", err);
-      return { rawCats: [] as LeanCategory[], rawItems: [] as LeanMenuItem[] };
+      return { categories: [], items: [] };
     }),
   ]);
 
@@ -94,15 +72,15 @@ export default async function MenuPage({
     else isTableTokenInvalid = true;
   }
 
-  categories = menuData.rawCats.map(c => ({
-    _id: String(c._id),
+  categories = menuData.categories.map(c => ({
+    _id: c._id,
     name: c.name,
     slug: c.slug || "",
     description: c.description || "",
     sortOrder: c.sortOrder,
   }));
-  items = menuData.rawItems.map(i => ({
-    _id: String(i._id),
+  items = menuData.items.map(i => ({
+    _id: i._id,
     name: i.name,
     description: i.description || "",
     image: i.image,
@@ -110,7 +88,7 @@ export default async function MenuPage({
     variantType: i.variantType,
     variants: i.variants || [],
     isVeg: i.isVeg !== false,
-    category: String(i.category),
+    category: i.category,
     sortOrder: i.sortOrder,
   }));
 

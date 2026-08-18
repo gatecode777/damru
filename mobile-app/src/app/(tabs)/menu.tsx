@@ -16,6 +16,7 @@ import { MenuProductCard } from "../../components/menu/MenuProductCard";
 import { MenuReservationSection } from "../../components/menu/MenuReservationSection";
 import { MenuProductSkeleton } from "../../components/menu/MenuProductSkeleton";
 import { publicGet } from "../../lib/api";
+import { readMenuCache, writeMenuCache, type MenuPayload } from "../../lib/menuCache";
 import { colors } from "../../config";
 import { useApp } from "../../providers/AppProvider";
 import type { MenuItem } from "../../types";
@@ -128,7 +129,7 @@ const FALLBACK_ITEMS: MenuItem[] = [
 ];
 
 import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "../../lib/queryClient";
+import { queryClient, queryKeys } from "../../lib/queryClient";
 import { PremiumRefreshControl } from "../../components/ui/PremiumRefreshControl";
 
 const StableHomeHeader = React.memo(HomeHeader);
@@ -149,8 +150,20 @@ export default function MenuScreen() {
 
   const { data, isLoading, isError, isRefetching, refetch } = useQuery({
     queryKey: queryKeys.menu.list(),
-    queryFn: () => publicGet<{ categories: Category[]; items: MenuItem[] }>("/api/menu"),
-    staleTime: 5 * 60 * 1000, // 5 minutes stale
+    queryFn: async () => {
+      const cached = await readMenuCache();
+      if (cached) {
+        void publicGet<MenuPayload>("/api/menu").then(async (fresh) => {
+          await writeMenuCache(fresh);
+          queryClient.setQueryData(queryKeys.menu.list(), fresh);
+        }).catch(() => undefined);
+        return cached;
+      }
+      const fresh = await publicGet<MenuPayload>("/api/menu");
+      await writeMenuCache(fresh);
+      return fresh;
+    },
+    staleTime: 30 * 60 * 1000,
   });
 
   const loading = isLoading;
