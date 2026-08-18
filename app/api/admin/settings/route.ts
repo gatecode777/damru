@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkApiPerm } from "@/lib/checkApiPerm";
 import { connectDB } from "@/lib/mongodb";
 import SiteSettings from "@/models/SiteSettings";
+import { revalidateTag } from "next/cache";
 
 // GET — load settings (creates default doc if none exists)
 export async function GET() {
@@ -36,6 +37,7 @@ export async function PATCH(req: NextRequest) {
       { $set: body },
       { new: true, upsert: true }
     ).lean();
+    revalidateTag("site-settings", { expire: 0 });
     return NextResponse.json({ success: true, settings: JSON.parse(JSON.stringify(updated)) });
   } catch (err) {
     console.error("PATCH settings error:", err);

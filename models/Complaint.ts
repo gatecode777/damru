@@ -34,6 +34,7 @@ const ComplaintSchema = new Schema<IComplaint>(
 ComplaintSchema.index({ userId: 1 });
 ComplaintSchema.index({ status: 1 });
 ComplaintSchema.index({ createdAt: -1 });
+ComplaintSchema.index({ userId: 1, createdAt: -1 });
 
 const Complaint: Model<IComplaint> =
   mongoose.models.Complaint ||

@@ -14,6 +14,7 @@ import ActiveCampaignOffers from "@/components/rewards/ActiveCampaignOffers";
 import { useToast } from "@/components/website/Toast";
 import ConfirmDialog from "@/components/website/ConfirmDialog";
 import { getSafeUserMessage, getUserErrorMessage, getUserResponseError } from "@/lib/getUserErrorMessage";
+import { readProfileSessionUser, writeProfileSessionUser } from "@/lib/profileSessionCache";
 
 interface UserInfo { id?: string; name: string; email: string; phone: string; city: string; avatar: string; createdAt?: string }
 interface Address { _id: string; label: string; fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string; isDefault: boolean }
@@ -464,7 +465,10 @@ function MyProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { dashboard: rewardsDashboard, loading: rewardsLoading, error: rewardsError, refresh: refreshRewards } = useRewards();
-  const [section,setSection]  = useState<Section>("overview");
+  const [section,setSection]  = useState<Section>(() => {
+    const tab = searchParams.get("tab");
+    return tab === "rewards" || tab === "notifications" ? tab : "overview";
+  });
   const [user,setUser]        = useState<UserInfo|null>(null);
   const [loading,setLoading]  = useState(true);
   const [addresses,setAddresses]     = useState<Address[]>([]);
@@ -537,21 +541,36 @@ function MyProfileContent() {
   }
 
   useEffect(()=>{
+    let active=true;
+    const cached=readProfileSessionUser();
+    if(cached){
+      const cachedUser:UserInfo={...cached,phone:cached.phone||"",city:cached.city||"",avatar:cached.avatar||""};
+      Promise.resolve().then(()=>{
+        if(!active)return;
+        setUser(cachedUser);
+        setEditForm({name:cachedUser.name,phone:cachedUser.phone,city:cachedUser.city});
+        setAvatarPreview(cachedUser.avatar?`/uploads/avatars/${cachedUser.avatar}`:"");
+        setLoading(false);
+      });
+    }
     fetch("/api/user/me").then(r=>r.json()).then(d=>{
-      if(!d.user){router.push("/");return;}
+      if(!active)return;
+      if(!d.user){writeProfileSessionUser(null);router.push("/");return;}
+      writeProfileSessionUser(d.user);
       setUser(d.user);
       setEditForm({name:d.user.name,phone:d.user.phone||"",city:d.user.city||""});
       setAvatarPreview(d.user.avatar?`/uploads/avatars/${d.user.avatar}`:"");
-    }).catch(()=>router.push("/")).finally(()=>setLoading(false));
-  },[]);
+    }).catch(()=>{if(active&&!cached)router.push("/");}).finally(()=>{if(active)setLoading(false);});
+    return()=>{active=false;};
+  },[router]);
 
   async function loadAddresses(){
     const r=await fetch("/api/address");const d=await r.json();setAddresses(d.addresses||[]);
   }
-  useEffect(()=>{loadAddresses();},[]);
+  useEffect(()=>{if(section==="overview"||section==="address")Promise.resolve().then(loadAddresses);},[section]);
 
-  // Load orders and coupons on mount so overview always shows them
-  useEffect(()=>{loadOrders();loadCoupons();},[]);
+  // Overview data is unrelated to a direct Rewards/Notifications deep-link.
+  useEffect(()=>{if(section==="overview")Promise.all([loadOrders(),loadCoupons()]);},[section]);
 
   async function loadOrders(){
     if(ordersLoaded)return;
@@ -734,14 +753,16 @@ function MyProfileContent() {
     trackRewardEvent("rewards_viewed");
     if(rewardsLoaded)return;
     setRewardsLoaded(true);
-    await Promise.all([
-      loadRewardsHistoryPage(1),
-      rewardApi.getCoupons().then(d=>{setRewardsCoupons(d.coupons||[]);setRewardsCouponsLoaded(true);}),
-      loadRewardsUpcoming(),
-      loadAchievements(),
-      loadMissions(),
-      loadReferrals(),
-    ]);
+    // Keep the wallet interactive immediately and avoid six competing database
+    // requests. Lower sections hydrate progressively in their visual order.
+    await loadMissions();
+    await loadAchievements();
+    await loadReferrals();
+    await loadRewardsUpcoming();
+    const couponData=await rewardApi.getCoupons();
+    setRewardsCoupons(couponData.coupons||[]);
+    setRewardsCouponsLoaded(true);
+    await loadRewardsHistoryPage(1);
   }
 
   async function handleSaveDob(){
@@ -809,6 +830,7 @@ function MyProfileContent() {
       const d=await r.json();
       if(!r.ok||d.error){showToast(getUserResponseError(r,d,"Unable to update profile."),"error");return;}
       setUser(prev=>prev?{...prev,...d.user}:prev);
+      if(user)writeProfileSessionUser({...user,...d.user});
       setAvatarPreview(avatarFilename?`/uploads/avatars/${avatarFilename}`:"");
       if (typeof window !== "undefined" && d.user) {
         window.dispatchEvent(new CustomEvent("user-profile-updated", { detail: d.user }));

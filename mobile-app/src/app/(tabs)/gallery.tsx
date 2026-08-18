@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   FlatList,
@@ -16,26 +16,48 @@ import { router } from "expo-router";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { EmptyState, ScreenTitle } from "@/components/ui";
 import { assetUrl, colors } from "@/config";
-import { get } from "@/lib/api";
+import { publicGet } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
 import type { GalleryItem, GalleryTab } from "@/types";
 import { PremiumRefreshControl } from "@/components/ui/PremiumRefreshControl";
+import { readGalleryCache, writeGalleryCache, type GalleryPayload } from "@/lib/galleryCache";
 
 const PAGE_SIZE = 10;
-const FALLBACK_BANNER = "https://ik.imagekit.io/zp0tch54w/DAMRU/All%20menu%20page.webp";
+const FALLBACK_BANNER = "https://ik.imagekit.io/zp0tch54w/DAMRU/All%20menu%20page.webp?tr=w-1000,q-75,fo-auto";
+
+function optimizedGalleryUrl(url: string | null | undefined, transformation: string): string | undefined {
+  if (!url) return undefined;
+  return `${url}${url.includes("?") ? "&" : "?"}tr=${transformation}`;
+}
 
 export default function GalleryScreen() {
   const [activeKey, setActiveKey] = useState("all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [cachedData, setCachedData] = useState<GalleryPayload>();
+
+  useEffect(() => {
+    let mounted = true;
+    void readGalleryCache().then((payload) => {
+      if (mounted && payload) setCachedData(payload);
+    });
+    return () => { mounted = false; };
+  }, []);
 
   // Cached via react-query so re-focusing the Gallery tab doesn't re-download
   // the whole collection every time.
   const { data, isLoading: loading, isRefetching, refetch } = useQuery({
     queryKey: queryKeys.gallery.list(),
-    queryFn: () => get<{ tabs: GalleryTab[] }>("/api/gallery"),
-    staleTime: 5 * 60 * 1000,
+    queryFn: () => publicGet<{ tabs: GalleryTab[] }>("/api/gallery"),
+    staleTime: 30 * 60 * 1000,
   });
-  const tabs = data?.tabs ?? [];
+
+  useEffect(() => {
+    if (data) void writeGalleryCache(data);
+  }, [data]);
+
+  const galleryData = data ?? cachedData;
+  const showInitialLoader = loading && !galleryData;
+  const tabs = galleryData?.tabs ?? [];
 
   // Compute virtual "all" tab containing all items deduplicated & sorted by sortOrder
   const allTab: GalleryTab = useMemo(() => {
@@ -109,7 +131,10 @@ export default function GalleryScreen() {
   // Banner image URI
   const bannerUri = useMemo(() => {
     if (activeTab?.bannerImage) {
-      return assetUrl("gallery", activeTab.bannerImage) ?? FALLBACK_BANNER;
+      return optimizedGalleryUrl(
+        assetUrl("gallery", activeTab.bannerImage),
+        "w-1000,q-75,fo-auto"
+      ) ?? FALLBACK_BANNER;
     }
     return FALLBACK_BANNER;
   }, [activeTab]);
@@ -119,7 +144,7 @@ export default function GalleryScreen() {
       <HomeHeader />
 
       <FlatList
-        data={loading ? [{ _id: "s1" }, { _id: "s2" }] as any[] : visibleItems}
+        data={showInitialLoader ? [{ _id: "s1" }, { _id: "s2" }] as any[] : visibleItems}
         keyExtractor={(item, idx) => item._id ?? `gallery-item-${idx}`}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -128,7 +153,7 @@ export default function GalleryScreen() {
           <View style={styles.headerComponent}>
             {/* Hero Banner Section */}
             <View style={styles.heroWrapper}>
-              {loading ? (
+              {showInitialLoader ? (
                 <View style={[styles.heroBannerImg, { backgroundColor: '#f0ece6' }]} />
               ) : (
                 <Image
@@ -136,6 +161,9 @@ export default function GalleryScreen() {
                   style={styles.heroBannerImg}
                   contentFit="cover"
                   contentPosition="left center"
+                  cachePolicy="memory-disk"
+                  priority="high"
+                  transition={150}
                 />
               )}
             </View>
@@ -154,7 +182,7 @@ export default function GalleryScreen() {
                       key={tab.tabKey}
                       onPress={() => handleSwitchTab(tab.tabKey)}
                       style={styles.filterTabPressable}
-                      disabled={loading}
+                      disabled={showInitialLoader}
                     >
                       <Text
                         style={[
@@ -173,7 +201,7 @@ export default function GalleryScreen() {
           </View>
         }
         ListEmptyComponent={
-          !loading ? (
+          !showInitialLoader ? (
             <EmptyState
               title="No images in this category"
               message="Check back soon for new gallery additions."
@@ -181,14 +209,17 @@ export default function GalleryScreen() {
           ) : null
         }
         renderItem={({ item }) => {
-          if (loading) {
+          if (showInitialLoader) {
             return (
               <View style={[styles.cardContainer, { backgroundColor: '#f0ece6' }]} />
             );
           }
 
           const isTopAligned = item.overlayClass === "top-aligned";
-          const imageUrl = assetUrl("gallery", item.image);
+          const imageUrl = optimizedGalleryUrl(
+            assetUrl("gallery", item.image),
+            "w-900,h-560,q-75,fo-auto"
+          );
 
           return (
             <Pressable
@@ -199,6 +230,8 @@ export default function GalleryScreen() {
                   source={{ uri: imageUrl }}
                   style={styles.cardImg}
                   contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={150}
                 />
 
                 <LinearGradient

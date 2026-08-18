@@ -31,6 +31,8 @@ export const MenuProductCard = React.memo(function MenuProductCard({
             source={{ uri: assetUrl("menu-items", item.image) + "?tr=w-160,h-160,fo-auto" }}
             style={styles.image}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={100}
           />
         ) : (
           <View style={[styles.image, styles.placeholderImg]} />

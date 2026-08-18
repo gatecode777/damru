@@ -3,6 +3,10 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { queryKeys } from "@/lib/queryClient";
+import { publicGet } from "@/lib/api";
+import type { GalleryTab } from "@/types";
+import { writeGalleryCache } from "@/lib/galleryCache";
 import {
   useFonts,
   PlayfairDisplay_800ExtraBold,
@@ -82,6 +86,22 @@ function RootLayoutContent({ fontsLoaded, fontError }: { fontsLoaded: boolean; f
     const exitTimer = setTimeout(() => { if (mounted) setSplashVisible(false); }, 300);
     return () => { mounted = false; clearTimeout(exitTimer); };
   }, [splashExiting]);
+
+  useEffect(() => {
+    if (splashVisible) return;
+    const prefetchTimer = setTimeout(() => {
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.gallery.list(),
+        queryFn: async () => {
+          const payload = await publicGet<{ tabs: GalleryTab[] }>("/api/gallery");
+          await writeGalleryCache(payload);
+          return payload;
+        },
+        staleTime: 30 * 60 * 1000,
+      });
+    }, 750);
+    return () => clearTimeout(prefetchTimer);
+  }, [splashVisible]);
 
   if (splashVisible) {
     return (

@@ -38,6 +38,7 @@ const ReservationSchema = new Schema<IReservation>(
 ReservationSchema.index({ userId: 1 });
 ReservationSchema.index({ date: 1 });
 ReservationSchema.index({ status: 1 });
+ReservationSchema.index({ userId: 1, createdAt: -1 });
 
 const Reservation: Model<IReservation> =
   mongoose.models.Reservation ||

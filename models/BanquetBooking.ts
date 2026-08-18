@@ -41,6 +41,9 @@ const BanquetBookingSchema = new Schema<IBanquetBooking>(
   { timestamps: true }
 );
 
+BanquetBookingSchema.index({ branchSlug: 1, createdAt: -1 });
+BanquetBookingSchema.index({ status: 1, createdAt: -1 });
+
 const BanquetBooking: Model<IBanquetBooking> =
   mongoose.models.BanquetBooking ||
   mongoose.model<IBanquetBooking>("BanquetBooking", BanquetBookingSchema);

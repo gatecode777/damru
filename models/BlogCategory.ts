@@ -21,6 +21,8 @@ const BlogCategorySchema = new Schema<IBlogCategory>(
   { timestamps: true }
 );
 
+BlogCategorySchema.index({ isActive: 1, sortOrder: 1 });
+
 const BlogCategory: Model<IBlogCategory> =
   mongoose.models.BlogCategory ||
   mongoose.model<IBlogCategory>("BlogCategory", BlogCategorySchema);

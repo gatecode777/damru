@@ -65,9 +65,9 @@ export default function GalleryClient({ initialTabs }: GalleryClientProps) {
       {/* Hero banner — changes per active tab */}
       <div className="gallery-hero">
         {activeTab?.bannerImage ? (
-          <img id="hero-main-img" src={`/uploads/gallery/${activeTab.bannerImage}`} alt={activeTab.bannerAlt || activeTab.label} />
+          <img id="hero-main-img" src={`/uploads/gallery/${activeTab.bannerImage}`} alt={activeTab.bannerAlt || activeTab.label} fetchPriority="high" decoding="async" />
         ) : (
-          <img id="hero-main-img" src="https://ik.imagekit.io/zp0tch54w/DAMRU/All%20menu%20page.webp" alt="Gallery Banner" />
+          <img id="hero-main-img" src="https://ik.imagekit.io/zp0tch54w/DAMRU/All%20menu%20page.webp" alt="Gallery Banner" fetchPriority="high" decoding="async" />
         )}
       </div>
 
@@ -98,7 +98,7 @@ export default function GalleryClient({ initialTabs }: GalleryClientProps) {
                 className={`gallery-item ${item.type === "wide" ? "item-wide" : "item-narrow"}`}
                 data-category={activeKey}
               >
-                <img src={`/uploads/gallery/${item.image}`} alt={item.alt || item.title} />
+                <img src={`/uploads/gallery/${item.image}`} alt={item.alt || item.title} loading="lazy" decoding="async" />
                 <div className={`item-overlay${item.overlayClass ? ` ${item.overlayClass}` : ""}`}>
                   <div className="item-content">
                     <h3>{item.title}</h3>
