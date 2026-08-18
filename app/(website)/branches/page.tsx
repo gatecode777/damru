@@ -3,6 +3,7 @@ import { BranchesClient, type BranchListItem } from "./BranchesClient";
 import { connectDB } from "@/lib/mongodb";
 import Branch from "@/models/Branch";
 import "@/styles/website/branches-page.css";
+import { unstable_cache } from "next/cache";
 
 export const metadata: Metadata = {
   title: "Our Branches | Damru By Namo",
@@ -30,12 +31,18 @@ const STATIC_FALLBACK = [
   },
 ];
 
+const getBranches = unstable_cache(async () => {
+  await connectDB();
+  const rows = await Branch.find({ isActive: true })
+    .select("name slug description contact timing cardImage cardAlt sortOrder")
+    .sort({ sortOrder: 1 }).lean();
+  return JSON.parse(JSON.stringify(rows)) as BranchListItem[];
+}, ["website-branches"], { revalidate: 300, tags: ["public-content"] });
+
 export default async function BranchesListPage() {
   let branches: BranchListItem[] = [];
   try {
-    await connectDB();
-    const raw = await Branch.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
-    branches = JSON.parse(JSON.stringify(raw)) as BranchListItem[];
+    branches = await getBranches();
   } catch { /* fallback */ }
 
   const items = branches.length > 0 ? branches : STATIC_FALLBACK;

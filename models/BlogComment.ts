@@ -28,6 +28,8 @@ const BlogCommentSchema = new Schema<IBlogComment>(
   { timestamps: true }
 );
 
+BlogCommentSchema.index({ blogSlug: 1, approved: 1, createdAt: 1 });
+
 const BlogComment: Model<IBlogComment> =
   mongoose.models.BlogComment ||
   mongoose.model<IBlogComment>("BlogComment", BlogCommentSchema);

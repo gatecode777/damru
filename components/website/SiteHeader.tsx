@@ -9,6 +9,7 @@ import { useCart } from "@/lib/CartContext";
 import { useRewards } from "@/lib/rewards/RewardsProvider";
 import { useToast } from "@/components/website/Toast";
 import { getUserResponseError } from "@/lib/getUserErrorMessage";
+import { writeProfileSessionUser } from "@/lib/profileSessionCache";
 
 type AuthScreen = "login" | "register" | "forgot" | "otp" | "reset";
 interface UserInfo { id: string; name: string; email: string; avatar?: string }
@@ -206,6 +207,7 @@ export default function Header() {
       .then(r => r.json())
       .then(d => {
         setUser(d.user || null);
+        writeProfileSessionUser(d.user || null);
         if (!d.user) {
           const ref = new URLSearchParams(window.location.search).get("ref");
           if (ref) {
@@ -233,6 +235,7 @@ export default function Header() {
       const customEvent = e as CustomEvent<any>;
       if (customEvent.detail) {
         setUser(customEvent.detail);
+        writeProfileSessionUser(customEvent.detail);
       }
     };
 
@@ -413,6 +416,7 @@ export default function Header() {
     setBusy(false);
     if (d.error) { const message=getUserResponseError({status:d._status},d,"Please check your email and password.");setErr(message);toast.error("Login failed",message,{id:"auth-login"});return; }
     setUser(d.user);
+    writeProfileSessionUser(d.user);
     setIsAuthOpen(false);
     toast.success("Welcome back", "You have signed in successfully.", { id: "auth-login" });
     if (typeof window !== "undefined") {
@@ -432,6 +436,7 @@ export default function Header() {
     setBusy(false);
     if (d.error) { const message=getUserResponseError({status:d._status},d,"Unable to create your account.");setErr(message);toast.error("Registration failed",message,{id:"auth-register"});return; }
     setUser(d.user);
+    writeProfileSessionUser(d.user);
     setIsAuthOpen(false);
     toast.success("Registration successful", "Your Damru account is ready.", { id: "auth-register" });
     if (typeof window !== "undefined") {
@@ -484,6 +489,7 @@ export default function Header() {
     const response = await fetch("/api/user/logout", { method: "POST" });
     if (!response.ok) { toast.error("Unable to sign out", getUserResponseError(response)); return; }
     setUser(null);
+    writeProfileSessionUser(null);
     window.dispatchEvent(new CustomEvent("auth-state-changed", { detail: null }));
     toast.success("Signed out successfully", undefined, { id: "auth-logout" });
     router.push("/");

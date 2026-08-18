@@ -8,6 +8,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Accept",
 };
+const PUBLIC_CACHE = "public, s-maxage=300, stale-while-revalidate=86400";
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS });
@@ -61,13 +62,13 @@ export async function GET() {
         })),
         items,
       },
-      { headers: CORS }
+      { headers: { ...CORS, "Cache-Control": PUBLIC_CACHE } }
     );
   } catch (error) {
     console.error("[/api/menu] Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch menu data" },
-      { status: 500, headers: CORS }
+      { status: 500, headers: { ...CORS, "Cache-Control": "no-store" } }
     );
   }
 }

@@ -349,7 +349,7 @@ export default async function HomePage() {
               return (
                 <div key={b._id} className={`branch-card-3d ${cls}`}>
                   <div className="branch-img-wrapper">
-                    <img src={imgSrc} alt={b.cardAlt || b.name} />
+                    <img src={imgSrc} alt={b.cardAlt || b.name} loading="lazy" decoding="async" />
                   </div>
                   <div className="branch-info">
                     <h3>{b.name}</h3>
@@ -395,7 +395,7 @@ export default async function HomePage() {
             ].map((d) => (
               <div key={d.name} className="menu-card bounce-reveal">
                 <div className="food-img-wrapper">
-                  <img src={`/assets/images/${d.img}.png`} alt={d.name} />
+                  <img src={`/assets/images/${d.img}.png`} alt={d.name} loading="lazy" decoding="async" />
                 </div>
                 <div className="card-content">
                   <div className="bottom-row">
@@ -469,7 +469,7 @@ export default async function HomePage() {
               return (
                 <div key={b._id} className={`blog-card ${cls}`}>
                   <div className="blog-img-wrapper">
-                    <img src={imgSrc} alt={b.title} />
+                    <img src={imgSrc} alt={b.title} loading="lazy" decoding="async" />
                     {b.category && <span className="special-tag">{b.category}</span>}
                   </div>
                   <div className="blog-info">
@@ -496,7 +496,7 @@ export default async function HomePage() {
         </div>
         <div className="container cook-flex">
           <div className="chef-side">
-            <img src="/assets/images/Excelentcook.png" alt="Excellent Cook" className="chef-static-img" />
+            <img src="/assets/images/Excelentcook.png" alt="Excellent Cook" className="chef-static-img" loading="lazy" decoding="async" />
           </div>
           <div className="cook-content">
             <span className="cook-eyebrow">Crafted with care</span>
@@ -547,7 +547,7 @@ export default async function HomePage() {
               { img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=800", label: "Soups" },
             ].map((g) => (
               <div key={g.label} className="lens-card lens-reveal">
-                <img src={g.img} alt={g.label} className="lens-img" />
+                <img src={g.img} alt={g.label} className="lens-img" loading="lazy" decoding="async" />
                 <div className="lens-vignette" />
                 <div className="lens-content">
                   <h3 className="lens-title">{g.label}</h3>

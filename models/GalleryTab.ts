@@ -50,7 +50,7 @@ const GalleryTabSchema = new Schema<IGalleryTab>(
   { timestamps: true }
 );
 
-GalleryTabSchema.index({ sortOrder: 1 });
+GalleryTabSchema.index({ isActive: 1, sortOrder: 1 });
 
 const GalleryTab: Model<IGalleryTab> =
   mongoose.models.GalleryTab ||

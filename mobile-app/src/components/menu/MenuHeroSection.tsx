@@ -12,7 +12,7 @@ import { StaticAssets } from "../../constants/assets";
 
 const { width: SW } = Dimensions.get("window");
 
-export function MenuHeroSection() {
+export const MenuHeroSection = React.memo(function MenuHeroSection() {
 
   return (
     <View style={styles.heroContainer}>
@@ -21,6 +21,7 @@ export function MenuHeroSection() {
         source={StaticAssets.soupMenuHero}
         style={styles.bgImage}
         contentFit="cover"
+        cachePolicy="memory-disk"
       />
 
       {/* 2. Warm Translucent Gradient Overlay */}
@@ -44,7 +45,7 @@ export function MenuHeroSection() {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   heroContainer: {

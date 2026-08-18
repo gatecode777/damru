@@ -63,16 +63,22 @@ const DEFAULTS: AppSettings = {
 };
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 
-// cache() deduplicates calls within a single request/render pass
-// so multiple server components calling getSettings() only hit DB once
-export const getSettings = cache(async (): Promise<AppSettings> => {
+const getPersistedSettings = unstable_cache(async (): Promise<AppSettings> => {
   try {
     await connectDB();
-    const doc = await SiteSettings.findOne().lean() as any;
+    const doc = await SiteSettings.findOne().lean() as unknown as Partial<AppSettings> | null;
     if (!doc) return DEFAULTS;
-    return { ...DEFAULTS, ...doc };
+    // Only return the plain settings contract. Mongoose metadata is unnecessary
+    // in the layout and is not guaranteed to be cache-serializable.
+    return Object.fromEntries(
+      (Object.keys(DEFAULTS) as (keyof AppSettings)[]).map((key) => [key, doc[key] ?? DEFAULTS[key]])
+    ) as AppSettings;
   } catch {
     return DEFAULTS;
   }
-});
+}, ["site-settings"], { revalidate: 300, tags: ["site-settings"] });
+
+// React cache also deduplicates callers inside the same render pass.
+export const getSettings = cache(getPersistedSettings);

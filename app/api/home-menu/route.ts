@@ -8,6 +8,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Accept",
 };
+const PUBLIC_CACHE = "public, s-maxage=300, stale-while-revalidate=86400";
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -29,10 +30,10 @@ export async function GET() {
     const shakesCat = await CategoryModel.findOne({
       name: /shakes?/i,
       isActive: true,
-    }).lean() as any;
+    }).select("name").lean() as any;
 
     if (!shakesCat) {
-      return NextResponse.json({ items: [], category: null }, { headers: CORS });
+      return NextResponse.json({ items: [], category: null }, { headers: { ...CORS, "Cache-Control": PUBLIC_CACHE } });
     }
 
     const raw = await MenuItemModel.find({
@@ -41,6 +42,7 @@ export async function GET() {
     })
       .sort({ sortOrder: 1 })
       .limit(4)
+      .select("name slug description image basePrice isVeg isFeatured tags variantType")
       .lean() as any[];
 
     const items = raw.map((i) => ({
@@ -58,13 +60,13 @@ export async function GET() {
 
     return NextResponse.json(
       { items, category: { _id: String(shakesCat._id), name: shakesCat.name } },
-      { headers: CORS }
+      { headers: { ...CORS, "Cache-Control": PUBLIC_CACHE } }
     );
   } catch (error) {
     console.error("[/api/home-menu] Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch menu items" },
-      { status: 500, headers: CORS }
+      { status: 500, headers: { ...CORS, "Cache-Control": "no-store" } }
     );
   }
 }

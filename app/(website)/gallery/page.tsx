@@ -3,6 +3,7 @@ import "@/styles/website/gallery.css";
 import { connectDB } from "@/lib/mongodb";
 import GalleryTab from "@/models/GalleryTab";
 import GalleryClient from "./GalleryClient";
+import { unstable_cache } from "next/cache";
 
 export const metadata: Metadata = {
   title: "Gallery | Damru By Namo",
@@ -10,13 +11,16 @@ export const metadata: Metadata = {
   keywords: ["gallery damru", "banquet hall images jaipur", "damru by namo photos", "wedding venue jaipur pictures"],
 };
 
-export default async function GalleryPage() {
+const getGalleryTabs = unstable_cache(async () => {
   await connectDB();
   const tabs = await GalleryTab.find({ isActive: true, tabKey: { $ne: "all" } })
-    .sort({ sortOrder: 1 })
-    .lean();
+    .select("tabKey label bannerImage bannerAlt sortOrder items")
+    .sort({ sortOrder: 1 }).lean();
+  return JSON.parse(JSON.stringify(tabs));
+}, ["website-gallery-tabs"], { revalidate: 300, tags: ["public-content"] });
 
-  const serializedTabs = JSON.parse(JSON.stringify(tabs));
+export default async function GalleryPage() {
+  const serializedTabs = await getGalleryTabs();
 
   return <GalleryClient initialTabs={serializedTabs} />;
 }

@@ -7,6 +7,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Accept",
 };
+const PUBLIC_CACHE = "public, s-maxage=300, stale-while-revalidate=86400";
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS });
@@ -44,9 +45,9 @@ export async function GET() {
       category:    b.category?.name ?? "",
     }));
 
-    return NextResponse.json({ blogs }, { headers: CORS });
+    return NextResponse.json({ blogs }, { headers: { ...CORS, "Cache-Control": PUBLIC_CACHE } });
   } catch (err) {
     console.error("[/api/homepage-blogs] Error:", err);
-    return NextResponse.json({ blogs: [] }, { status: 500, headers: CORS });
+    return NextResponse.json({ blogs: [] }, { status: 500, headers: { ...CORS, "Cache-Control": "no-store" } });
   }
 }

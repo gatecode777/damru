@@ -216,7 +216,6 @@ export default function ReservationsClient({ reservations: initial, perms }: { r
   const [expandedId,   setExpandedId]   = useState<string | null>(null);
   const [deletingId,   setDeletingId]   = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
-  const [deleteReason, setDeleteReason] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [declineIds, setDeclineIds] = useState<string[]>([]);
@@ -303,14 +302,11 @@ export default function ReservationsClient({ reservations: initial, perms }: { r
   async function handleDelete() {
     if (!can("delete")) return;
     if (!pendingDelete) return;
-    if (deleteReason.trim().length < 5) return;
     const { id } = pendingDelete;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/reservations/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: deleteReason.trim() }),
       });
       if (!res.ok) {
         toast.error("Reservation not deleted", await getAdminResponseError(res, "Unable to delete reservation."));
@@ -323,7 +319,6 @@ export default function ReservationsClient({ reservations: initial, perms }: { r
         return next;
       });
       setPendingDelete(null);
-      setDeleteReason("");
       if (expandedId === id) setExpandedId(null);
       router.refresh();
       toast.success("Reservation deleted");
@@ -485,7 +480,7 @@ export default function ReservationsClient({ reservations: initial, perms }: { r
                               </span>
                             )}
                             {can("delete") && (
-                              <button onClick={() => { setPendingDelete({ id: r._id, name: r.userName }); setDeleteReason(""); }} disabled={deletingId === r._id}
+                              <button onClick={() => setPendingDelete({ id: r._id, name: r.userName })} disabled={deletingId === r._id}
                                 className="reservation-delete-button" aria-label={`Delete reservation for ${r.userName}`}>
                                 {deletingId === r._id
                                   ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />
@@ -519,38 +514,18 @@ export default function ReservationsClient({ reservations: initial, perms }: { r
         open={Boolean(pendingDelete)}
         title="Delete reservation?"
         description={pendingDelete
-          ? `The reservation for ${pendingDelete.name} will be permanently removed. Tell the customer why it was removed.`
+          ? `The reservation for ${pendingDelete.name} will be permanently removed. This action cannot be undone.`
           : ""}
         cancelLabel="Keep reservation"
         confirmLabel="Delete reservation"
         busy={Boolean(pendingDelete && deletingId === pendingDelete.id)}
-        confirmDisabled={deleteReason.trim().length < 5}
         onCancel={() => {
           if (!deletingId) {
             setPendingDelete(null);
-            setDeleteReason("");
           }
         }}
         onConfirm={() => void handleDelete()}
-      >
-        <div className="reservation-delete-message">
-          <label className="decline-dialog__label" htmlFor="delete-reservation-reason">Message to customer</label>
-          <textarea
-            id="delete-reservation-reason"
-            className="decline-dialog__textarea"
-            value={deleteReason}
-            onChange={(event) => setDeleteReason(event.target.value.slice(0, 500))}
-            placeholder="Example: This was a duplicate request, so we removed it from your reservations."
-            rows={4}
-            maxLength={500}
-            disabled={Boolean(deletingId)}
-          />
-          <div className="decline-dialog__help">
-            <span>{deleteReason.trim().length < 5 ? "Enter at least 5 characters to continue." : "The customer will receive this message."}</span>
-            <span>{deleteReason.length}/500</span>
-          </div>
-        </div>
-      </ConfirmDialog>
+      />
       <DeclineReservationDialog
         key={declineIds.join(",")}
         open={declineIds.length > 0}

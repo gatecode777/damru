@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Platform,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -132,6 +131,8 @@ import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/queryClient";
 import { PremiumRefreshControl } from "../../components/ui/PremiumRefreshControl";
 
+const StableHomeHeader = React.memo(HomeHeader);
+
 export default function MenuScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -139,6 +140,9 @@ export default function MenuScreen() {
 
   const cartRef = useRef(cart);
   const isNavigatingRef = useRef(false);
+  const flatListRef = useRef<FlatList<MenuItem>>(null);
+  const scrollOffsetRef = useRef(0);
+  const pendingOffsetRestoreRef = useRef<number | null>(null);
   useEffect(() => {
     cartRef.current = cart;
   }, [cart]);
@@ -156,7 +160,6 @@ export default function MenuScreen() {
   const allItems = data?.items || FALLBACK_ITEMS;
 
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const flatListRef = useRef<FlatList<MenuItem>>(null);
 
   useEffect(() => {
     if (categories.length > 0) {
@@ -172,8 +175,20 @@ export default function MenuScreen() {
   };
 
   const handleCategorySelect = useCallback((id: string) => {
-    setSelectedCategory(id);
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setSelectedCategory((current) => {
+      if (current === id) return current;
+      pendingOffsetRestoreRef.current = scrollOffsetRef.current;
+      return id;
+    });
+  }, []);
+
+  const preserveOffsetAfterCategoryChange = useCallback(() => {
+    const offset = pendingOffsetRestoreRef.current;
+    if (offset === null) return;
+    pendingOffsetRestoreRef.current = null;
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToOffset({ offset, animated: false });
+    });
   }, []);
 
   // Filter products based on selected category
@@ -238,7 +253,7 @@ export default function MenuScreen() {
   return (
     <View style={styles.page}>
       <Stack.Screen options={{ headerShown: false }} />
-      <HomeHeader />
+      <StableHomeHeader />
 
       {error ? (
         <View style={styles.errorContainer}>
@@ -306,10 +321,17 @@ export default function MenuScreen() {
             { paddingBottom: insets.bottom + 85 },
           ]}
           showsVerticalScrollIndicator={false}
+          onScroll={(event) => {
+            scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
+          onContentSizeChange={preserveOffsetAfterCategoryChange}
           initialNumToRender={6}
           maxToRenderPerBatch={8}
           windowSize={5}
-          removeClippedSubviews={Platform.OS === 'android'}
+          // Android clipping briefly detaches the hero and visible cells whenever
+          // category data changes, which looks like a full-screen refresh.
+          removeClippedSubviews={false}
         />
       )}
     </View>

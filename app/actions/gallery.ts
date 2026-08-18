@@ -1,9 +1,15 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { connectDB } from "@/lib/mongodb";
 import GalleryTab from "@/models/GalleryTab";
 import { getAdminPerms } from "@/lib/adminPermissions";
+
+function invalidateGallery() {
+  revalidateTag("gallery", { expire: 0 });
+  revalidatePath("/admin/gallery");
+  revalidatePath("/gallery");
+}
 
 // ── Upsert a tab (create or update basic info + banner) ──────
 export async function upsertGalleryTab(formData: FormData) {
@@ -41,8 +47,7 @@ export async function upsertGalleryTab(formData: FormData) {
     return { error: err instanceof Error ? err.message : "Failed to save tab." };
   }
 
-  revalidatePath("/admin/gallery");
-  revalidatePath("/gallery");
+  invalidateGallery();
   return { success: true };
 }
 
@@ -63,8 +68,7 @@ export async function deleteGalleryTab(id: string) {
   await connectDB();
   try {
     await GalleryTab.findByIdAndDelete(id);
-    revalidatePath("/admin/gallery");
-    revalidatePath("/gallery");
+    invalidateGallery();
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Failed to delete." };
   }
@@ -79,8 +83,7 @@ export async function toggleGalleryTabActive(id: string, current: boolean) {
   
   await connectDB();
   await GalleryTab.findByIdAndUpdate(id, { isActive: !current });
-  revalidatePath("/admin/gallery");
-  revalidatePath("/gallery");
+  invalidateGallery();
   return { success: true };
 }
 
@@ -110,8 +113,7 @@ export async function addGalleryItem(tabId: string, formData: FormData) {
     return { error: err instanceof Error ? err.message : "Failed to add item." };
   }
 
-  revalidatePath("/admin/gallery");
-  revalidatePath("/gallery");
+  invalidateGallery();
   return { success: true };
 }
 
@@ -156,8 +158,7 @@ export async function updateGalleryItem(
     return { error: err instanceof Error ? err.message : "Failed to update item." };
   }
 
-  revalidatePath("/admin/gallery");
-  revalidatePath("/gallery");
+  invalidateGallery();
   return { success: true };
 }
 
@@ -172,8 +173,7 @@ export async function deleteGalleryItem(tabId: string, itemId: string) {
     await GalleryTab.findByIdAndUpdate(tabId, {
       $pull: { items: { _id: itemId } },
     });
-    revalidatePath("/admin/gallery");
-    revalidatePath("/gallery");
+    invalidateGallery();
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Failed to delete item." };
   }
