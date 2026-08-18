@@ -7,8 +7,10 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json();
 }
 
-export function getDashboard() {
-  return getJson<RewardsDashboard & { error?: string }>("/api/rewards/dashboard");
+export function getDashboard(options?: { compact?: boolean }) {
+  return getJson<RewardsDashboard & { error?: string }>(
+    `/api/rewards/dashboard${options?.compact ? "?view=wallet" : ""}`
+  );
 }
 
 export function getHistory(page = 1, limit = 20) {

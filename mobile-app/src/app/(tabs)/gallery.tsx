@@ -119,8 +119,11 @@ export default function GalleryScreen() {
 
   // Switch filter tab & reset pagination
   const handleSwitchTab = (key: string) => {
-    setActiveKey(key);
-    setVisibleCount(PAGE_SIZE);
+    if (key === activeKey) return;
+    React.startTransition(() => {
+      setActiveKey(key);
+      setVisibleCount(PAGE_SIZE);
+    });
   };
 
   // Load more handler
@@ -159,11 +162,11 @@ export default function GalleryScreen() {
                 <Image
                   source={{ uri: bannerUri }}
                   style={styles.heroBannerImg}
-                  contentFit="cover"
-                  contentPosition="left center"
+                  contentFit="contain"
+                  contentPosition="center"
                   cachePolicy="memory-disk"
                   priority="high"
-                  transition={150}
+                  transition={0}
                 />
               )}
             </View>
@@ -297,7 +300,7 @@ const styles = StyleSheet.create({
   /* Hero Section */
   heroWrapper: {
     width: "100%",
-    aspectRatio: 1.7,
+    aspectRatio: 2,
     position: "relative",
     backgroundColor: "#FAF7F2",
   },
