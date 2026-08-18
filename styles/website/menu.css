@@ -31,18 +31,26 @@
 .herosoup-content {
     position: relative;
     z-index: 2;
+    width: min(760px, calc(100% - 40px));
+    margin-inline: auto;
+    padding: 24px;
+    text-align: center;
 }
 
 .herosoup-content h1 {
     font-size: 6rem;
     font-family: 'Serif', Georgia;
     margin-bottom: 10px;
+    text-align: center;
+    text-wrap: balance;
 
 }
 
 .herosoup-content p {
     font-size: 28px;
     margin-bottom: 30px;
+    text-align: center;
+    text-wrap: balance;
 }
 
 /* Button Styling */
@@ -877,6 +885,7 @@ body {
 @media (max-width: 768px) {
     .menusoup-hero {
         background-attachment: scroll;
+        background-position: center center;
     }
 }
 
@@ -893,8 +902,14 @@ body {
 
 @media (max-width: 768px) {
     .menusoup-hero {
-        min-height: 500px;
-        height: auto;
+        min-height: 330px;
+        height: 52vh;
+        margin-top: 0;
+    }
+
+    .herosoup-content {
+        width: calc(100% - 32px);
+        padding: 20px 16px;
     }
 
     .herosoup-content h1 {

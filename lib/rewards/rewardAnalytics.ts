@@ -1,5 +1,6 @@
 export type RewardAnalyticsEvent =
   | "rewards_viewed"
+  | "reward_history_viewed"
   | "coupon_copied"
   | "coupon_used"
   | "damru_redeemed"

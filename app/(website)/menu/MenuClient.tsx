@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import MenuItemCard from "./MenuItemCard";
 import { useCart } from "@/lib/CartContext";
 import Link from "next/link";
@@ -50,33 +50,16 @@ export default function MenuClient({
 
   const [activeCategory, setActiveCategory] = useState<ICategory | null>(getInitialActive);
 
-  // Sync state if URL query param changes (e.g. from browser back/forward navigation)
-  useEffect(() => {
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const slug = params.get("category");
-      if (slug) {
-        const found = categories.find(c => c.slug === slug);
-        if (found) setActiveCategory(found);
-      } else if (categories.length > 0) {
-        setActiveCategory(categories[0]);
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [categories]);
-
   const handleCategoryClick = (cat: ICategory) => {
+    if (cat._id === activeCategory?._id) return;
     setActiveCategory(cat);
-    // Update the URL without reloading the page or fetching from the server
-    window.history.pushState(null, "", `/menu?category=${cat.slug}`);
   };
 
   // Filter items for the active category
-  const filteredItems = activeCategory
-    ? items.filter(item => item.category === activeCategory._id)
-    : [];
+  const filteredItems = useMemo(
+    () => activeCategory ? items.filter(item => item.category === activeCategory._id) : [],
+    [activeCategory, items]
+  );
 
   return (
     <>
@@ -90,6 +73,7 @@ export default function MenuClient({
           ) : (
             categories.map(cat => (
               <button
+                type="button"
                 key={cat._id}
                 onClick={() => handleCategoryClick(cat)}
                 className={`filter-btn${activeCategory?._id === cat._id ? " active" : ""}`}

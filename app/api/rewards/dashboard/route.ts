@@ -37,6 +37,70 @@ export async function GET(req: NextRequest) {
     const now = new Date();
     const ACTIVE_REFERRAL_STATUSES = ["REGISTERED", "PENDING_QUALIFICATION", "QUALIFIED"];
 
+    // The website renders detailed missions, achievements, referrals, coupons and
+    // history from their dedicated endpoints. Avoid blocking its wallet card on
+    // those unrelated queries.
+    if (req.nextUrl.searchParams.get("view") === "wallet") {
+      const [compactUser, config, streakConfig] = await Promise.all([
+        User.findById(sessionUser.id)
+          .select("damruBalance damruTotalEarned damruTotalRedeemed rewardDebt loyaltyLevel currentStreak longestStreak lastEligibleActivityDate")
+          .lean(),
+        getDamruConfig(),
+        getDailyStreakConfig(),
+      ]);
+
+      if (!compactUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      const u = compactUser as any;
+      const [loyalty, expirySummary] = await Promise.all([
+        getLoyaltySummary(sessionUser.id, u.damruTotalEarned || 0),
+        getExpiringSummary(sessionUser.id, config),
+      ]);
+      const currentIdx = LEVEL_ORDER.indexOf(u.loyaltyLevel);
+      const nextLevel = currentIdx < LEVEL_ORDER.length - 1 ? LEVEL_ORDER[currentIdx + 1] : null;
+      const nextThreshold = nextLevel ? (config.loyaltyThresholds as any)[nextLevel] : null;
+      const damruToNextLevel = nextThreshold !== null ? Math.max(0, nextThreshold - u.damruTotalEarned) : 0;
+      const projection = projectNextStreak(
+        u.currentStreak || 0,
+        u.lastEligibleActivityDate || null,
+        now,
+        { allowStreakRecovery: streakConfig.allowStreakRecovery, gracePeriodDays: streakConfig.gracePeriodDays }
+      );
+      const nextStreak = projection.alreadyClaimedToday ? projection.newStreak + 1 : projection.newStreak;
+      const { rewardDay: nextRewardDay } = rewardDayForStreak(nextStreak, streakConfig.dayRewards, streakConfig.cycleBehavior);
+
+      return NextResponse.json({
+        damruBalance: u.damruBalance ?? 0,
+        damruTotalEarned: u.damruTotalEarned ?? 0,
+        damruTotalRedeemed: u.damruTotalRedeemed ?? 0,
+        rewardDebt: u.rewardDebt || 0,
+        loyaltyLevel: u.loyaltyLevel,
+        nextLevel,
+        damruToNextLevel,
+        activeCoupons: [],
+        recentTransactions: [],
+        streak: {
+          isActive: streakConfig.isActive,
+          currentStreak: u.currentStreak || 0,
+          longestStreak: u.longestStreak || 0,
+          claimedToday: projection.alreadyClaimedToday,
+          nextRewardDay,
+          nextRewardAmount: amountForDay(streakConfig.dayRewards, nextRewardDay),
+          cycleLength: streakConfig.dayRewards.length,
+          days: streakConfig.dayRewards,
+        },
+        achievementSummary: { unlocked: 0, total: 0, recentlyUnlocked: [] },
+        missionSummary: { active: 0, completed: 0, featured: [] },
+        referralSummary: { successful: 0, pending: 0, totalDamruEarned: 0, referralCode: "" },
+        loyalty: {
+          currentTier: loyalty.currentTier,
+          nextTier: loyalty.nextTier,
+          progressPercentage: loyalty.progress.percentage,
+          remainingValue: loyalty.progress.remainingValue,
+        },
+        expiry: expirySummary,
+      });
+    }
+
     // Every value below is independently readable — none depends on another's result — so
     // they're fetched as one batch instead of ~15 sequential round trips. (Trade-off: on the
     // rare stale-cookie-for-a-deleted-user edge case, this now runs every query before the

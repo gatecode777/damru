@@ -498,8 +498,6 @@ function MyProfileContent() {
 
   // ── Damru Rewards ─────────────────────────────────────────
   const [rewardsHistory,setRewardsHistory]           = useState<RewardTransaction[]>([]);
-  const [rewardsHistoryPage,setRewardsHistoryPage]   = useState(1);
-  const [rewardsHistoryPages,setRewardsHistoryPages] = useState(1);
   const [rewardsHistoryLoading,setRewardsHistoryLoading] = useState(false);
   const [rewardsCoupons,setRewardsCoupons]           = useState<RewardCoupon[]>([]);
   const [rewardsCouponsLoaded,setRewardsCouponsLoaded]=useState(false);
@@ -602,11 +600,9 @@ function MyProfileContent() {
   async function loadRewardsHistoryPage(page:number){
     setRewardsHistoryLoading(true);
     try{
-      const d=await rewardApi.getHistory(page);
+      const d=await rewardApi.getHistory(page,3);
       if(!("error" in d && d.error)){
         setRewardsHistory(d.transactions||[]);
-        setRewardsHistoryPage(d.page||1);
-        setRewardsHistoryPages(d.totalPages||1);
       }
     }finally{setRewardsHistoryLoading(false);}
   }
@@ -1276,7 +1272,7 @@ function MyProfileContent() {
               ) : rewardsHistory.length===0 ? (
                 <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>No Damru activity yet.</p>
               ) : (<>
-                {rewardsHistory.map(tx=>(
+                {rewardsHistory.slice(0,3).map(tx=>(
                   <div key={tx._id} className="rewards__tx-row">
                     <div>
                       <p className="rewards__tx-desc">{tx.description||tx.category}</p>
@@ -1286,13 +1282,9 @@ function MyProfileContent() {
                     <span className={`rewards__tx-amount rewards__tx-amount--${tx.type}`}>{tx.type==="credit"?"+":"−"}{tx.amount} Damru</span>
                   </div>
                 ))}
-                {rewardsHistoryPages>1&&(
-                  <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:14}}>
-                    <button className="profile__btn-reorder" disabled={rewardsHistoryPage<=1} onClick={()=>loadRewardsHistoryPage(rewardsHistoryPage-1)}>Prev</button>
-                    <span style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#888",alignSelf:"center"}}>Page {rewardsHistoryPage} of {rewardsHistoryPages}</span>
-                    <button className="profile__btn-reorder" disabled={rewardsHistoryPage>=rewardsHistoryPages} onClick={()=>loadRewardsHistoryPage(rewardsHistoryPage+1)}>Next</button>
-                  </div>
-                )}
+                <div style={{display:"flex",justifyContent:"center",marginTop:16}}>
+                  <Link href="/my-profile/rewards-history" className="profile__update-btn" style={{textDecoration:"none"}} onClick={()=>trackRewardEvent("reward_history_viewed")}>View More</Link>
+                </div>
               </>)}
             </div>
 

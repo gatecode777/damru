@@ -258,7 +258,7 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Missions</Text>
         <Pressable onPress={() => { trackRewardEvent("missions_viewed"); router.push("/rewards-missions" as any); }}>
-          <Text style={styles.viewAllText}>View All</Text>
+          <Text style={styles.viewAllText}>View More</Text>
         </Pressable>
       </View>
       {dashboard.missionSummary && (dashboard.missionSummary.active > 0 || dashboard.missionSummary.completed > 0) ? (
@@ -360,7 +360,7 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
       </View>
       {dashboard.recentTransactions.length === 0 ? (
         <Text style={styles.emptyInline}>No Damru activity yet.</Text>
-      ) : dashboard.recentTransactions.map(tx => (
+      ) : dashboard.recentTransactions.slice(0, 3).map(tx => (
         <View key={tx._id} style={styles.txRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.txDesc}>{tx.description || tx.category}</Text>

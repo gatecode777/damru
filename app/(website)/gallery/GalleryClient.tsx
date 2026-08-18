@@ -51,6 +51,7 @@ export default function GalleryClient({ initialTabs }: GalleryClientProps) {
 
   // Reset visible count whenever active tab changes
   function switchTab(key: string) {
+    if (key === activeKey) return;
     setActiveKey(key);
     setVisibleCount(PAGE_SIZE);
   }
@@ -76,6 +77,7 @@ export default function GalleryClient({ initialTabs }: GalleryClientProps) {
         <div className="gallery-tabs">
           {tabs.map(tab => (
             <button
+              type="button"
               key={tab.tabKey}
               className={`tab-link${activeKey === tab.tabKey ? " active" : ""}`}
               onClick={() => switchTab(tab.tabKey)}

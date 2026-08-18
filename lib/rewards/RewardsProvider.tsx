@@ -28,7 +28,7 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
-      const data = await rewardApi.getDashboard();
+      const data = await rewardApi.getDashboard({ compact: true });
       if ("error" in data && data.error) {
         setDashboard(null);
         setError(data.error);

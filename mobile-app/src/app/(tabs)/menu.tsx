@@ -188,12 +188,12 @@ export default function MenuScreen() {
   };
 
   const handleCategorySelect = useCallback((id: string) => {
-    setSelectedCategory((current) => {
-      if (current === id) return current;
-      pendingOffsetRestoreRef.current = scrollOffsetRef.current;
-      return id;
+    if (id === selectedCategory) return;
+    pendingOffsetRestoreRef.current = scrollOffsetRef.current;
+    React.startTransition(() => {
+      setSelectedCategory(id);
     });
-  }, []);
+  }, [selectedCategory]);
 
   const preserveOffsetAfterCategoryChange = useCallback(() => {
     const offset = pendingOffsetRestoreRef.current;

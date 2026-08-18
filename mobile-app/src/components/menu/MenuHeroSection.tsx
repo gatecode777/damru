@@ -3,14 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { StaticAssets } from "../../constants/assets";
-
-const { width: SW } = Dimensions.get("window");
 
 export const MenuHeroSection = React.memo(function MenuHeroSection() {
 
@@ -21,18 +18,19 @@ export const MenuHeroSection = React.memo(function MenuHeroSection() {
         source={StaticAssets.soupMenuHero}
         style={styles.bgImage}
         contentFit="cover"
+        contentPosition="center"
         cachePolicy="memory-disk"
       />
 
       {/* 2. Warm Translucent Gradient Overlay */}
       <LinearGradient
         colors={[
-          "rgba(255, 255, 255, 1.0)",
-          "rgba(254, 236, 221, 0.75)",
-          "rgba(187, 103, 35, 0.40)",
-          "rgba(224, 104, 6, 0.30)",
+          "rgba(44, 24, 11, 0.34)",
+          "rgba(44, 24, 11, 0.48)",
+          "rgba(44, 24, 11, 0.44)",
+          "rgba(44, 24, 11, 0.32)",
         ]}
-        locations={[0, 0.19, 0.44, 1.0]}
+        locations={[0, 0.35, 0.65, 1.0]}
         style={styles.absoluteFill}
       />
 
@@ -49,8 +47,8 @@ export const MenuHeroSection = React.memo(function MenuHeroSection() {
 
 const styles = StyleSheet.create({
   heroContainer: {
-    width: SW,
-    height: 380,
+    width: "100%",
+    height: 330,
     position: "relative",
     overflow: "hidden",
     alignItems: "center",
@@ -78,17 +76,18 @@ const styles = StyleSheet.create({
     position: "relative",
     zIndex: 2,
     alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
     paddingHorizontal: 20,
-    marginTop: 20,
   },
   heading: {
     fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 38,
-    lineHeight: 44,
+    fontSize: 36,
+    lineHeight: 43,
     color: "#ffffff",
     textAlign: "center",
     marginBottom: 12,
-    textShadowColor: "rgba(0, 0, 0, 0.18)",
+    textShadowColor: "rgba(0, 0, 0, 0.45)",
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 8,
   },
@@ -99,7 +98,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     textAlign: "center",
     marginBottom: 28,
-    textShadowColor: "rgba(0, 0, 0, 0.15)",
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
   },

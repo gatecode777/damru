@@ -119,6 +119,16 @@
 .rewards__tx-amount--credit { color: #16a34a; }
 .rewards__tx-amount--debit { color: #dc2626; }
 
+.reward-history-page { min-height: 75vh; padding: 70px 20px; background: #fffaf6; }
+.reward-history-page__inner { width: min(860px, 100%); margin: 0 auto; }
+.reward-history-page__back { display: inline-block; margin-bottom: 24px; color: #e67e22; font: 600 14px Poppins,sans-serif; text-decoration: none; }
+.reward-history-page__heading h1 { margin: 0; font: 700 clamp(28px,4vw,42px) "Playfair Display",serif; color: #191919; }
+.reward-history-page__heading p { margin: 7px 0 24px; color: #81766e; font: 400 14px Poppins,sans-serif; }
+.reward-history-page__card { padding: 18px 28px; }
+.reward-history-page__state { padding: 30px 10px; text-align: center; color: #888; font: 400 14px Poppins,sans-serif; }
+.reward-history-page__pagination { display: flex; justify-content: center; align-items: center; gap: 14px; padding-top: 20px; font: 500 13px Poppins,sans-serif; color: #777; }
+@media(max-width:600px){.reward-history-page{padding:36px 16px}.reward-history-page__card{padding:8px 16px}.reward-history-page__pagination{gap:8px}.reward-history-page__pagination .profile__btn-reorder{padding:8px 10px}}
+
 .rewards__upcoming-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
