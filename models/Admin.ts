@@ -6,7 +6,6 @@ export interface IPermissionModule {
   edit:   boolean;
   delete: boolean;
 }
-
 export interface IAdminPermissions {
   dashboard:      IPermissionModule;
   users:          IPermissionModule;

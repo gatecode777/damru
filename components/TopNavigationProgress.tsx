@@ -1,14 +1,11 @@
 "use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { flushSync } from "react-dom";
-
 const COMPLETE_DELAY_MS = 260;
 const SAFETY_TIMEOUT_MS = 20000;
 const SHELL_PROGRESS = 65;
 const ROUTE_PROGRESS_LIMIT = SHELL_PROGRESS - 5;
-
 export default function TopNavigationProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -22,8 +19,7 @@ export default function TopNavigationProgress() {
   const resourceCleanupRef = useRef<(() => void) | null>(null);
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState<"route" | "resources" | "complete">("route");
-
+  const [phase, setPhase] = useState<"route" | "resources" | "complete">("route")
   const clearRun = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
@@ -34,7 +30,6 @@ export default function TopNavigationProgress() {
     trickleTimerRef.current = null;
     resourceCleanupRef.current = null;
   }, []);
-
   const finish = useCallback(() => {
     if (!activeRef.current) return;
     if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
@@ -52,7 +47,6 @@ export default function TopNavigationProgress() {
       hideTimerRef.current = null;
     }, COMPLETE_DELAY_MS);
   }, []);
-
   const start = useCallback(() => {
     if (activeRef.current) return;
     clearRun();
@@ -98,11 +92,9 @@ export default function TopNavigationProgress() {
         finish();
         return;
       }
-
       let completed = 0;
       let cancelled = false;
       const cleanups: Array<() => void> = [];
-
       const markComplete = () => {
         if (cancelled || runId !== runIdRef.current) return;
         completed += 1;
@@ -110,7 +102,6 @@ export default function TopNavigationProgress() {
         setProgress((current) => Math.max(current, resourceProgress));
         if (completed >= total) finish();
       };
-
       pendingImages.forEach((image) => {
         const done = () => {
           image.removeEventListener("load", done);
@@ -126,11 +117,9 @@ export default function TopNavigationProgress() {
         // The resource may finish between collection and listener attachment.
         if (image.complete) done();
       });
-
       if (fontsPending) {
         document.fonts.ready.then(markComplete, markComplete);
       }
-
       resourceCleanupRef.current = () => {
         cancelled = true;
         cleanups.forEach((cleanup) => cleanup());
@@ -163,15 +152,12 @@ export default function TopNavigationProgress() {
     function handlePopState() {
       start();
     }
-
     function handleFallbackStart() {
       start();
     }
-
     function handleFallbackEnd() {
       measurePageResources();
     }
-
     document.addEventListener("click", handleDocumentClick, true);
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("damru:route-loading-start", handleFallbackStart);
@@ -186,7 +172,6 @@ export default function TopNavigationProgress() {
   }, [clearRun, measurePageResources, start]);
 
   const phaseLabel = phase === "complete" ? "Ready" : phase === "resources" ? "Preparing page" : "Loading page";
-
   return (
     <div
       className={`top-navigation-progress${visible ? " top-navigation-progress--visible" : ""}`}
@@ -195,8 +180,7 @@ export default function TopNavigationProgress() {
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(progress)}
-    >
-      <span className="top-navigation-progress__bar" style={{ width: `${progress}%` }} />
+    >      <span className="top-navigation-progress__bar" style={{ width: `${progress}%` }} />
       <span className="top-navigation-progress__value">{phaseLabel} · {Math.round(progress)}%</span>
     </div>
   );
