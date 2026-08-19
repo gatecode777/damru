@@ -73,5 +73,6 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
 export const get = <T>(path: string) => api<T>(path);
 export const publicGet = <T>(path: string) => api<T>(path, { credentials: 'omit' });
 export const post = <T>(path: string, body?: unknown) => api<T>(path, { method: 'POST', body });
+export const put = <T>(path: string, body?: unknown) => api<T>(path, { method: 'PUT', body });
 export const patch = <T>(path: string, body?: unknown) => api<T>(path, { method: 'PATCH', body });
 export const del = <T>(path: string, body?: unknown) => api<T>(path, { method: 'DELETE', body });

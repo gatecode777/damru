@@ -600,7 +600,7 @@ function MyProfileContent() {
   async function loadRewardsHistoryPage(page:number){
     setRewardsHistoryLoading(true);
     try{
-      const d=await rewardApi.getHistory(page,3);
+      const d=await rewardApi.getHistory(page,4);
       if(!("error" in d && d.error)){
         setRewardsHistory(d.transactions||[]);
       }
@@ -1271,8 +1271,8 @@ function MyProfileContent() {
                 <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>Loading…</p>
               ) : rewardsHistory.length===0 ? (
                 <p style={{fontFamily:"Poppins,sans-serif",color:"#aaa",fontSize:13}}>No Damru activity yet.</p>
-              ) : (<>
-                {rewardsHistory.slice(0,3).map(tx=>(
+              ) : (
+                rewardsHistory.slice(0,4).map(tx=>(
                   <div key={tx._id} className="rewards__tx-row">
                     <div>
                       <p className="rewards__tx-desc">{tx.description||tx.category}</p>
@@ -1281,11 +1281,8 @@ function MyProfileContent() {
                     </div>
                     <span className={`rewards__tx-amount rewards__tx-amount--${tx.type}`}>{tx.type==="credit"?"+":"−"}{tx.amount} Damru</span>
                   </div>
-                ))}
-                <div style={{display:"flex",justifyContent:"center",marginTop:16}}>
-                  <Link href="/my-profile/rewards-history" className="profile__update-btn" style={{textDecoration:"none"}} onClick={()=>trackRewardEvent("reward_history_viewed")}>View More</Link>
-                </div>
-              </>)}
+                ))
+              )}
             </div>
 
             {/* Occasion Profile */}
@@ -1679,7 +1676,14 @@ function MyProfileContent() {
                 <div className="profile__settings-group-title"><i className="fa-solid fa-lock"></i> Change Password</div>
                 {([["current","Current Password"],["newPw","New Password"],["confirm","Confirm New Password"]] as [keyof typeof pwForm,string][]).map(([key,label])=>(
                   <div key={key} className="profile__input-wrap">
-                    <input type={showPw[key]?"text":"password"} placeholder={label} value={pwForm[key]} onChange={e=>setPwForm(p=>({...p,[key]:e.target.value}))}/>
+                    <input
+                      type={showPw[key]?"text":"password"}
+                      name={`change-password-${key}`}
+                      autoComplete={key==="current"?"off":"new-password"}
+                      placeholder={label}
+                      value={pwForm[key]}
+                      onChange={e=>setPwForm(p=>({...p,[key]:e.target.value}))}
+                    />
                     <i className={`fa-regular ${showPw[key]?"fa-eye-slash":"fa-eye"} profile__eye-icon`} onClick={()=>setShowPw(p=>({...p,[key]:!p[key]}))}></i>
                   </div>
                 ))}

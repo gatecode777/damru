@@ -60,7 +60,7 @@ export default function CheckoutScreen() {
     coupon?: string;
   }>();
 
-  const { user, cart, clearCart } = useApp();
+  const { user, cart, clearCart, flushCartSync } = useApp();
 
   const queryClient = useQueryClient();
 
@@ -97,11 +97,14 @@ export default function CheckoutScreen() {
   const [busy, setBusy] = useState(false);
   const { data: quoteData, isFetching: quoteLoading, error: quoteQueryError } = useQuery({
     queryKey: ["checkout", "quote", selectedAddr, coupon || "", requestedDamru, cart.map(item => `${item.menuItemId}:${item.custom}:${item.qty}`).join("|")],
-    queryFn: () => post<{ totals: { subtotal: number; couponDiscount: number; deliveryFee: number; taxAmount: number; damruDiscount: number; finalAmount: number; taxName: string } }>("/api/checkout/quote", {
-      addressId: selectedAddr,
-      couponCode: coupon || undefined,
-      requestedDamru: Number(requestedDamru || 0),
-    }),
+    queryFn: async () => {
+      await flushCartSync();
+      return post<{ totals: { subtotal: number; couponDiscount: number; deliveryFee: number; taxAmount: number; damruDiscount: number; finalAmount: number; taxName: string } }>("/api/checkout/quote", {
+        addressId: selectedAddr,
+        couponCode: coupon || undefined,
+        requestedDamru: Number(requestedDamru || 0),
+      });
+    },
     enabled: Boolean(user && selectedAddr && cart.length),
     staleTime: 10 * 1000,
     retry: false,
@@ -111,7 +114,7 @@ export default function CheckoutScreen() {
   const discount = quote?.couponDiscount ?? 0;
   const deliveryFee = quote?.deliveryFee ?? 0;
   const tax = quote?.taxAmount ?? 0;
-  const total = quote?.finalAmount ?? 0;
+  const total = quote?.finalAmount;
 
   // UI States
   const [billExpanded, setBillExpanded] = useState(false);
@@ -333,7 +336,7 @@ export default function CheckoutScreen() {
           <View style={styles.payableMainRow}>
             <View>
               <Text style={styles.payableSubLabel}>PAYABLE AMOUNT</Text>
-              <Text style={styles.payablePrice}>₹{total.toFixed(2)}</Text>
+              <Text style={styles.payablePrice}>{total === undefined ? "Calculating…" : `₹${total.toFixed(2)}`}</Text>
             </View>
             <Pressable
               onPress={() => setBillExpanded(!billExpanded)}
@@ -507,7 +510,7 @@ export default function CheckoutScreen() {
           {payMethod === "razorpay" && (
             <View style={styles.paymentSubPanel}>
               <Text style={styles.amountToPayLabel}>AMOUNT TO PAY</Text>
-              <Text style={styles.amountToPayVal}>₹{total.toFixed(2)}</Text>
+              <Text style={styles.amountToPayVal}>{total === undefined ? "Calculating…" : `₹${total.toFixed(2)}`}</Text>
               <Text style={styles.onlineSecurityText}>Payments are securely processed by Razorpay. Damru does not store your card, CVV, or UPI credentials.</Text>
             </View>
           )}
@@ -575,7 +578,7 @@ export default function CheckoutScreen() {
           onPress={placeOrder}
           disabled={busy || quoteLoading || !quote}
           accessibilityRole="button"
-          accessibilityLabel={payMethod === "cod" ? "Place order with cash on delivery" : payMethod === "razorpay" ? `Pay ₹${total.toFixed(2)} securely with Razorpay` : "Select a payment method"}
+          accessibilityLabel={payMethod === "cod" ? "Place order with cash on delivery" : payMethod === "razorpay" && total !== undefined ? `Pay ₹${total.toFixed(2)} securely with Razorpay` : "Select a payment method"}
           style={[
             styles.payBtn,
             (busy || quoteLoading || !quote) && styles.payBtnDisabled,
@@ -587,8 +590,8 @@ export default function CheckoutScreen() {
             <>
               <Text style={styles.payBtnText}>
                 {payMethod === "cod"
-                  ? `Place Order · ₹${total.toFixed(2)}`
-                  : payMethod === "razorpay" ? `Pay ₹${total.toFixed(2)} Securely` : "Select Payment Method"}
+                  ? total === undefined ? "Calculating total…" : `Place Order · ₹${total.toFixed(2)}`
+                  : payMethod === "razorpay" ? total === undefined ? "Calculating total…" : `Pay ₹${total.toFixed(2)} Securely` : "Select Payment Method"}
               </Text>
               <Ionicons name="arrow-forward" size={18} color="#ffffff" />
             </>

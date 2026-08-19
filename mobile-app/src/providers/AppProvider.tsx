@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useRef } from "react";
 import { queryClient } from "@/lib/queryClient";
-import { get, post, ApiRequestError } from "@/lib/api";
+import { get, post, put, ApiRequestError } from "@/lib/api";
 import type { CartItem, MenuItem, User } from "@/types";
 
 type AppContextValue = {
@@ -16,6 +16,7 @@ type AppContextValue = {
   setQuantity: (item: CartItem, qty: number) => Promise<void>;
   clearCart: () => Promise<void>;
   syncCart: () => Promise<void>;
+  flushCartSync: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -34,6 +35,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const isSyncingRef = useRef(false);
   const hasPendingChangesRef = useRef(false);
   const cartRef = useRef<CartItem[]>([]);
+  const runSyncRef = useRef<() => Promise<void>>(async () => undefined);
 
   useEffect(() => {
     cartRef.current = cart;
@@ -150,7 +152,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         hasPendingChangesRef.current = true;
         return;
       }
-      await runSync();
+      // Always call the latest render's sync function. Keeping runSync directly
+      // in this memoized callback captured the initial `user === null` value,
+      // so authenticated cart changes could remain local-only.
+      await runSyncRef.current();
     }, 500);
   }, []);
 
@@ -239,6 +244,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  runSyncRef.current = runSync;
+
+  const flushCartSync = useCallback(async () => {
+    if (!user) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+
+    // If the debounced sync has already started, let it finish before doing a
+    // final pass. The final pass picks up any local changes made mid-request.
+    while (isSyncingRef.current) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 25));
+    }
+
+    const localItems = [...cartRef.current];
+    if (localItems.length === 0) return;
+    const data = await put<{ items: CartItem[] }>("/api/cart", { items: localItems });
+    const serverItems = data.items ?? [];
+    syncedCartRef.current = serverItems;
+    setCart(serverItems);
+  }, [user]);
+
   const addItem = useCallback(async (item: MenuItem) => {
     const cartItem: CartItem = {
       menuItemId: item._id,
@@ -309,10 +338,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const value = useMemo(() => ({
-    user, cart, ready, refreshUser, setUser, addItem, setQuantity, clearCart, syncCart,
+    user, cart, ready, refreshUser, setUser, addItem, setQuantity, clearCart, syncCart, flushCartSync,
     totalItems: cart.reduce((sum, item) => sum + item.qty, 0),
     subtotal: cart.reduce((sum, item) => sum + item.price * item.qty, 0),
-  }), [user, cart, ready, refreshUser, setUser, addItem, setQuantity, clearCart, syncCart]);
+  }), [user, cart, ready, refreshUser, setUser, addItem, setQuantity, clearCart, syncCart, flushCartSync]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

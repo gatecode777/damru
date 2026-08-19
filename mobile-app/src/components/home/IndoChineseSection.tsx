@@ -18,7 +18,6 @@ import {
   IndoChineseProductCard,
   type IndoChineseProduct,
 } from './IndoChineseProductCard';
-
 /* ─────────────────────────────────────────────
    Static product data — mirrors the website exactly.
    Images are local require() bundles; names are the
@@ -96,7 +95,6 @@ function SectionHeader() {
     </View>
   );
 }
-
 /* ─────────────────────────────────────────────
    Main section export
 ───────────────────────────────────────────── */
