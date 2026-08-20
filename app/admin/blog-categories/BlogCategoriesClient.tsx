@@ -9,6 +9,7 @@ import {
 import { deleteBlogCategory, toggleBlogCategoryActive } from "@/app/actions/blog-categories";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
+import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -25,6 +26,7 @@ const PAGE_SIZE = 15;
 export default function BlogCategoriesClient({ categories, perms }: Props) {
   const toast = useToast();
   const router = useRouter();
+  const confirmAction = useAdminConfirm();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.blog_categories?.[action]);
   
   const canEdit = can("edit");
@@ -69,7 +71,7 @@ export default function BlogCategoriesClient({ categories, perms }: Props) {
 
   async function handleBulkDelete() {
     if (!canDelete) return;
-    if (!confirm(`Delete ${selected.size} categor${selected.size > 1 ? "ies" : "y"}? This cannot be undone.`)) return;
+    if (!(await confirmAction({ title: "Delete selected categories?", description: `${selected.size} selected categor${selected.size === 1 ? "y" : "ies"} will be permanently deleted. This action cannot be undone.`, confirmLabel: "Delete categories" }))) return;
     setBulkLoading(true);
     for (const id of selected) await deleteBlogCategory(id);
     setBulkLoading(false); clearSel(); toast.success("Blog categories deleted"); router.refresh();
@@ -85,7 +87,7 @@ export default function BlogCategoriesClient({ categories, perms }: Props) {
 
   async function handleDelete(id: string, name: string) {
     if (!canDelete) return;
-    if (!confirm(`Delete blog category "${name}"?\nBlog posts using this category will show it as plain text.`)) return;
+    if (!(await confirmAction({ title: "Delete blog category?", description: `${name} will be deleted. Posts using it will retain the category as plain text.`, confirmLabel: "Delete category" }))) return;
     await deleteBlogCategory(id); toast.success("Blog category deleted"); router.refresh();
   }
 

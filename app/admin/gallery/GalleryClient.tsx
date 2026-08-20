@@ -11,6 +11,7 @@ import {
   addGalleryItem, updateGalleryItem, deleteGalleryItem,
 } from "@/app/actions/gallery";
 import { useToast } from "@/components/admin/Toast";
+import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -97,6 +98,7 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted, canEdit, canDelete }
   canEdit: boolean; canDelete: boolean;
 }) {
   const toast = useToast();
+  const confirmAction = useAdminConfirm();
   const [expanded,  setExpanded]  = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [deleting,  setDeleting]  = useState(false);
@@ -124,7 +126,7 @@ function ItemRow({ item, tabId, onItemSaved, onItemDeleted, canEdit, canDelete }
 
   async function handleDelete() {
     if (!canDelete) return;
-    if (!confirm(`Delete "${title}"?`)) return;
+    if (!(await confirmAction({ title: "Delete gallery image?", description: `${title || "This image"} will be permanently removed from the gallery.`, confirmLabel: "Delete image" }))) return;
     setDeleting(true);
     await deleteGalleryItem(tabId, item._id);
     onItemDeleted(item._id);
@@ -368,6 +370,7 @@ function AddTabForm({ existingCount, onTabCreated, onClose, canCreate }: {
 export default function GalleryClient({ tabs: initialTabs, perms }: { tabs: GalleryTab[]; perms?: Perms }) {
   const router = useRouter();
   const toast = useToast();
+  const confirmAction = useAdminConfirm();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.gallery?.[action]);
   
   const canView = can("view");
@@ -410,7 +413,7 @@ export default function GalleryClient({ tabs: initialTabs, perms }: { tabs: Gall
   async function handleDeleteTab() {
     if (!canDelete) return;
     if (!tab) return;
-    if (!confirm(`Delete tab "${tab.label}"?\n\nThis will also delete all ${tab.items.length} image(s). This cannot be undone.`)) return;
+    if (!(await confirmAction({ title: "Delete gallery tab?", description: `${tab.label} and all ${tab.items.length} image${tab.items.length === 1 ? "" : "s"} inside it will be permanently deleted.`, confirmLabel: "Delete tab" }))) return;
     setDeletingTab(true);
     await deleteGalleryTab(tab._id);
     setDeletingTab(false);

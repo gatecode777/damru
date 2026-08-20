@@ -10,6 +10,7 @@ import {
 import { deleteMenuItem, toggleMenuItemActive } from "@/app/actions/menu";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
+import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 
 interface Variant  { label: string; price: number }
 interface Category { _id: string; name: string }
@@ -33,6 +34,7 @@ const PAGE_SIZE = 12;
 
 export default function MenuClient({ items, categories, perms }: Props) {
   const toast = useToast();
+  const confirmAction = useAdminConfirm();
   const router = useRouter();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.menu?.[action]);
 
@@ -98,7 +100,7 @@ export default function MenuClient({ items, categories, perms }: Props) {
   // ── Bulk actions ─────────────────────────────────────────────
   async function handleBulkDelete() {
     if (!can("delete")) return;
-    if (!confirm(`Delete ${selected.size} item(s)? Cannot be undone.`)) return;
+    if (!(await confirmAction({ title: "Delete selected menu items?", description: `${selected.size} selected item${selected.size === 1 ? "" : "s"} will be permanently deleted. This action cannot be undone.`, confirmLabel: "Delete items" }))) return;
     setBulkLoading(true);
     for (const id of selected) await deleteMenuItem(id);
     setBulkLoading(false); clearSel(); toast.success("Menu items deleted"); router.refresh();
@@ -114,7 +116,7 @@ export default function MenuClient({ items, categories, perms }: Props) {
   // ── Single actions ───────────────────────────────────────────
   async function handleDelete(id: string, name: string) {
     if (!can("delete")) return;
-    if (!confirm(`Delete "${name}"? Cannot be undone.`)) return;
+    if (!(await confirmAction({ title: "Delete menu item?", description: `${name} will be permanently deleted. This action cannot be undone.`, confirmLabel: "Delete item" }))) return;
     await deleteMenuItem(id); toast.success("Menu item deleted"); router.refresh();
   }
   async function handleToggleActive(id: string, current: boolean) {

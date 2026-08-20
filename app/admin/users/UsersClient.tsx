@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -10,6 +10,7 @@ import {
 import { deleteUser, toggleUserStatus } from "@/app/actions/users";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface User {
   _id: string; name: string; email: string;
@@ -36,7 +37,6 @@ const STATUS_BADGE: Record<string, { cls: string; dot: string }> = {
 export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
   const toast = useToast();
   const router   = useRouter();
-  const [, startTransition] = useTransition();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.users?.[action]);
 
   // ── Filter / search state ──────────────────────────────────────
@@ -49,6 +49,12 @@ export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
   // ── Checkbox / bulk selection ──────────────────────────────────
   const [selected,       setSelected]        = useState<Set<string>>(new Set());
   const [bulkLoading,    setBulkLoading]      = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { kind: "bulk"; ids: string[] }
+    | { kind: "single"; id: string; name: string }
+    | null
+  >(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ── Pagination ─────────────────────────────────────────────────
   const [page, setPage] = useState(1);
@@ -126,15 +132,9 @@ export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
   ].filter(Boolean).length;
 
   // ── Bulk delete ────────────────────────────────────────────────
-  async function handleBulkDelete() {
+  function handleBulkDelete() {
     if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} selected user(s)? This cannot be undone.`)) return;
-    setBulkLoading(true);
-    for (const id of selected) { await deleteUser(id); }
-    setBulkLoading(false);
-    setSelected(new Set());
-    toast.success("Users deleted");
-    router.refresh();
+    setDeleteTarget({ kind: "bulk", ids: [...selected] });
   }
 
   // ── Bulk status ────────────────────────────────────────────────
@@ -150,13 +150,25 @@ export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
   }
 
   // ── Single delete ──────────────────────────────────────────────
-  async function handleDelete(id: string, name: string, avatar?: string) {
-    if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
-    startTransition(async () => {
-      await deleteUser(id);
-      toast.success("User deleted");
+  function handleDelete(id: string, name: string) {
+    setDeleteTarget({ kind: "single", id, name });
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    if (deleteTarget.kind === "bulk") setBulkLoading(true);
+    try {
+      const ids = deleteTarget.kind === "bulk" ? deleteTarget.ids : [deleteTarget.id];
+      for (const id of ids) await deleteUser(id);
+      if (deleteTarget.kind === "bulk") setSelected(new Set());
+      toast.success(deleteTarget.kind === "bulk" ? "Users deleted" : "User deleted");
+      setDeleteTarget(null);
       router.refresh();
-    });
+    } finally {
+      setDeleteLoading(false);
+      setBulkLoading(false);
+    }
   }
 
   // ── Export CSV ─────────────────────────────────────────────────
@@ -435,7 +447,7 @@ export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
                           {can("edit") && <Link href={`/admin/users/edit/${u._id}`} className="btn-edit">Edit</Link>}
                           {can("delete") && <button
                             className="btn-danger"
-                            onClick={() => handleDelete(u._id, u.name, u.avatar)}
+                            onClick={() => handleDelete(u._id, u.name)}
                           >
                             <Trash2 size={12} /> Delete
                           </button>}
@@ -499,6 +511,23 @@ export default function UsersClient({ users, countMap, fromDB, perms }: Props) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={deleteTarget?.kind === "bulk" ? "Delete selected users?" : "Delete user?"}
+        description={
+          deleteTarget?.kind === "bulk"
+            ? `You are about to permanently delete ${deleteTarget.ids.length} selected user${deleteTarget.ids.length === 1 ? "" : "s"}. This action cannot be undone.`
+            : deleteTarget
+              ? `You are about to permanently delete ${deleteTarget.name}. This action cannot be undone.`
+              : ""
+        }
+        confirmLabel={deleteTarget?.kind === "bulk" ? "Delete users" : "Delete user"}
+        busy={deleteLoading}
+        busyLabel="Deleting…"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </>
   );
 }

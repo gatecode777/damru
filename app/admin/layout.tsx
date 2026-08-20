@@ -3,6 +3,7 @@ import AdminSessionProvider from "@/components/admin/AdminSessionProvider";
 import { ToastProvider } from "@/components/admin/Toast";
 import TopNavigationProgress from "@/components/TopNavigationProgress";
 import { Suspense } from "react";
+import { AdminConfirmProvider } from "@/components/admin/ConfirmDialog";
 
 import "@/styles/admin/table.css";
 import "@/styles/admin/category.css";
@@ -58,7 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <AdminSessionProvider>
         <ToastProvider>
-          {children}
+          <AdminConfirmProvider>{children}</AdminConfirmProvider>
         </ToastProvider>
       </AdminSessionProvider>
     </>

@@ -10,6 +10,7 @@ import {
 import { updateOrderStatus, updatePaymentStatus, cancelOrder } from "@/app/actions/orders";
 import { useToast } from "@/components/admin/Toast";
 import { getAdminResponseError } from "@/lib/admin-error";
+import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -66,6 +67,7 @@ function CardHeader({ title, subtitle }: { title: string; subtitle?: string }) {
 }
 
 export default function OrderDetailClient({ order: initialOrder, perms }: { order: any; perms?: Perms }) {
+  const confirmAction = useAdminConfirm();
   const router = useRouter();
   const toast = useToast();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.orders?.[action]);
@@ -128,9 +130,9 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
     });
   }
 
-  function handleCancel() {
+  async function handleCancel() {
     if (!can("delete")) return;
-    if (!confirm(`Cancel order ${order.orderId}? This cannot be undone.`)) return;
+    if (!(await confirmAction({ title: "Cancel order?", description: `Order ${order.orderId} will be cancelled. This action cannot be undone.`, confirmLabel: "Cancel order" }))) return;
     startTransition(async () => {
       await cancelOrder(order._id);
       setOrder((prev: any) => ({ ...prev, status: "cancelled" }));

@@ -43,9 +43,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const syncCart = useCallback(async () => {
     if (!user) return;
-    const data = await get<{ items: CartItem[] }>("/api/cart");
-    const items = data.items ?? [];
+    const [data, rawGuestCart] = await Promise.all([
+      get<{ items: CartItem[] }>("/api/cart"),
+      AsyncStorage.getItem(GUEST_CART),
+    ]);
+    let items = data.items ?? [];
+
+    // Preserve food added before authentication by merging the guest cart
+    // into the account cart before replacing local state after login.
+    if (rawGuestCart) {
+      let guestItems: CartItem[] = [];
+      try {
+        const parsed = JSON.parse(rawGuestCart);
+        if (Array.isArray(parsed)) guestItems = parsed;
+      } catch (error) {
+        if (__DEV__) console.error("Failed to parse guest cart during login:", error);
+      }
+
+      if (guestItems.length > 0) {
+        const merged = items.map((item) => ({ ...item }));
+        for (const guestItem of guestItems) {
+          const match = merged.find(
+            (item) => item.menuItemId === guestItem.menuItemId && item.custom === guestItem.custom,
+          );
+          if (match) match.qty += guestItem.qty;
+          else merged.push(guestItem);
+        }
+        const mergedData = await put<{ items: CartItem[] }>("/api/cart", { items: merged });
+        items = mergedData.items ?? [];
+      }
+      await AsyncStorage.removeItem(GUEST_CART);
+    }
+
     setCart(items);
+    cartRef.current = items;
     syncedCartRef.current = items;
   }, [user]);
 

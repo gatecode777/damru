@@ -3,10 +3,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
 import { connectDB } from "../lib/mongodb";
-import { computePayableAmount, finalizeRazorpayPayment, markRazorpayPaymentFailed } from "../lib/payments/finalizePayment";
+import { computePayableAmount, finalizeRazorpayPayment, markRazorpayPaymentFailed, removePurchasedItemsFromCart } from "../lib/payments/finalizePayment";
 import Order from "../models/Order";
 import DamruTransaction from "../models/DamruTransaction";
 import DamruConfig from "../models/DamruConfig";
+import Cart from "../models/Cart";
 
 async function makeOrder(overrides: Partial<{ total: number; paymentMethod: string; razorpayOrderId: string }> = {}) {
   return Order.create({
@@ -95,6 +96,31 @@ test("finalizeRazorpayPayment marks an order paid exactly once, idempotent on re
     assert.equal(reloaded2?.paidAt?.getTime(), reloaded1?.paidAt?.getTime());
   } finally {
     await Order.deleteOne({ _id: order._id });
+  }
+});
+
+test("successful online payment removes only purchased quantities from the cart", async () => {
+  await connectDB();
+  const userId = new mongoose.Types.ObjectId();
+  const purchasedId = new mongoose.Types.ObjectId();
+  const laterItemId = new mongoose.Types.ObjectId();
+  await Cart.create({
+    userId,
+    items: [
+      { menuItemId: purchasedId, name: "Purchased", variantType: "none", custom: "", price: 100, qty: 3 },
+      { menuItemId: laterItemId, name: "Added later", variantType: "none", custom: "", price: 80, qty: 1 },
+    ],
+  });
+
+  try {
+    await removePurchasedItemsFromCart(userId, [
+      { menuItemId: purchasedId, name: "Purchased", variantType: "none", custom: "", price: 100, qty: 2 },
+    ]);
+    const cart = await Cart.findOne({ userId }).lean();
+    assert.equal(cart?.items.find((item) => String(item.menuItemId) === String(purchasedId))?.qty, 1);
+    assert.equal(cart?.items.find((item) => String(item.menuItemId) === String(laterItemId))?.qty, 1);
+  } finally {
+    await Cart.deleteOne({ userId });
   }
 });
 

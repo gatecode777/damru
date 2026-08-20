@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
+import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 
 interface TableData {
   _id: string;
@@ -32,6 +33,7 @@ interface TablesClientProps {
 export default function TablesClient({ initialTables, perms }: TablesClientProps) {
   const router = useRouter();
   const toast = useToast();
+  const confirmAction = useAdminConfirm();
 
   const canEdit = perms.isSuperAdmin || Boolean(perms.permissions?.tables?.edit);
   const canCreate = perms.isSuperAdmin || Boolean(perms.permissions?.tables?.create);
@@ -186,7 +188,11 @@ export default function TablesClient({ initialTables, perms }: TablesClientProps
 
   // Delete table handler
   const handleDeleteTable = async (id: string, num: string) => {
-    if (!confirm(`Are you sure you want to delete table "${num}"?`)) return;
+    if (!(await confirmAction({
+      title: "Delete table?",
+      description: `Table ${num} and its QR configuration will be permanently deleted. This action cannot be undone.`,
+      confirmLabel: "Delete table",
+    }))) return;
 
     try {
       const res = await fetch(`/api/admin/tables/${id}`, { method: "DELETE" });
@@ -202,7 +208,11 @@ export default function TablesClient({ initialTables, perms }: TablesClientProps
 
   // Regenerate token handler
   const handleRegenerateToken = async (table: TableData) => {
-    if (!confirm(`Regenerate QR code for Table "${table.tableNumber}"? The old QR code link will no longer work.`)) return;
+    if (!(await confirmAction({
+      title: "Regenerate QR code?",
+      description: `The current QR link for Table ${table.tableNumber} will stop working immediately.`,
+      confirmLabel: "Regenerate QR",
+    }))) return;
 
     setLoading(true);
     try {

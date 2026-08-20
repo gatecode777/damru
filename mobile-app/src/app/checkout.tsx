@@ -60,7 +60,7 @@ export default function CheckoutScreen() {
     coupon?: string;
   }>();
 
-  const { user, cart, clearCart, flushCartSync } = useApp();
+  const { user, cart, clearCart, syncCart, flushCartSync } = useApp();
 
   const queryClient = useQueryClient();
 
@@ -71,6 +71,7 @@ export default function CheckoutScreen() {
     staleTime: 30 * 1000,
   });
   const [requestedDamru, setRequestedDamru] = useState("");
+  const [placedOrderTotal, setPlacedOrderTotal] = useState<number | null>(null);
 
   const { data: addressesData } = useQuery({
     queryKey: queryKeys.profile.addresses(),
@@ -99,13 +100,16 @@ export default function CheckoutScreen() {
     queryKey: ["checkout", "quote", selectedAddr, coupon || "", requestedDamru, cart.map(item => `${item.menuItemId}:${item.custom}:${item.qty}`).join("|")],
     queryFn: async () => {
       await flushCartSync();
-      return post<{ totals: { subtotal: number; couponDiscount: number; deliveryFee: number; taxAmount: number; damruDiscount: number; finalAmount: number; taxName: string } }>("/api/checkout/quote", {
+      return post<{
+        totals: { subtotal: number; couponDiscount: number; deliveryFee: number; taxAmount: number; damruDiscount: number; finalAmount: number; taxName: string };
+        paymentAvailability: { razorpay: boolean };
+      }>("/api/checkout/quote", {
         addressId: selectedAddr,
         couponCode: coupon || undefined,
         requestedDamru: Number(requestedDamru || 0),
       });
     },
-    enabled: Boolean(user && selectedAddr && cart.length),
+    enabled: Boolean(user && selectedAddr && cart.length && placedOrderTotal === null),
     staleTime: 10 * 1000,
     retry: false,
   });
@@ -114,7 +118,8 @@ export default function CheckoutScreen() {
   const discount = quote?.couponDiscount ?? 0;
   const deliveryFee = quote?.deliveryFee ?? 0;
   const tax = quote?.taxAmount ?? 0;
-  const total = quote?.finalAmount;
+  const total = placedOrderTotal ?? quote?.finalAmount;
+  const razorpayAvailable = quoteData?.paymentAvailability.razorpay ?? false;
 
   // UI States
   const [billExpanded, setBillExpanded] = useState(false);
@@ -167,6 +172,10 @@ export default function CheckoutScreen() {
       Alert.alert("Login required", "Online payment requires login. Please log in, or choose Cash on Delivery.");
       return;
     }
+    if (payMethod === "razorpay" && !razorpayAvailable) {
+      Alert.alert("Online payment unavailable", "Razorpay is not available right now. Please choose Cash on Delivery.");
+      return;
+    }
     if (!quote || quoteLoading) {
       Alert.alert("Order total unavailable", quoteQueryError instanceof Error ? quoteQueryError.message : "Please wait while we calculate your order total.");
       return;
@@ -185,6 +194,10 @@ export default function CheckoutScreen() {
         notes: notes.trim(),
         requestedDamru: Number(requestedDamru || 0),
       });
+
+      // The backend clears the cart once the order is saved. Keep displaying
+      // the immutable order total while Razorpay opens or a retry is offered.
+      setPlacedOrderTotal(response.order.total);
 
       // Damru redemption is chained after order creation — the backend
       // requires an existing, owned orderId to redeem against. This must run
@@ -205,11 +218,10 @@ export default function CheckoutScreen() {
         }
       }
 
-      await clearCart();
-
       const orderLabel = response.order.orderId;
 
       if (payMethod === "cod") {
+        await clearCart();
         Alert.alert(
           "Order Confirmed! 🎉",
           `Your order #${orderLabel} has been successfully placed.${redeemMessage}`,
@@ -239,6 +251,7 @@ export default function CheckoutScreen() {
       gatewayOrderId = orderData.razorpayOrderId ?? "";
 
       if (orderData.zeroPayable) {
+        await syncCart();
         Alert.alert(
           "Order Confirmed! 🎉",
           `Your order #${orderLabel} has been successfully placed.${redeemMessage}`,
@@ -270,6 +283,7 @@ export default function CheckoutScreen() {
       });
 
       if (verifyResult.success) {
+        await syncCart();
         Alert.alert(
           "Payment Successful! 🎉",
           `Your order #${orderLabel} is confirmed and paid.${redeemMessage}`,
@@ -285,7 +299,13 @@ export default function CheckoutScreen() {
       // RazorpayCheckout.open() rejects on user cancellation or a failed
       // payment attempt — either way, the order is saved and retryable, it
       // is never silently marked paid from this catch block alone.
-      if (e instanceof ApiRequestError) {
+      if (e instanceof ApiRequestError && e.status === 503) {
+        Alert.alert(
+          "Online Payment Unavailable",
+          `${e.message}\n\nOrder #${orderLabel} was saved. View it in Orders and retry after online payments are restored.`,
+          [{ text: "View Orders", onPress: () => router.replace("/(tabs)/profile") }],
+        );
+      } else if (e instanceof ApiRequestError) {
         offerPaymentRetry(internalOrderId, orderLabel, redeemMessage, e.message);
       } else if (e instanceof Error) {
         // Razorpay's own cancellation/failure rejection is a plain object, not
@@ -490,7 +510,13 @@ export default function CheckoutScreen() {
 
         <View style={[styles.sectionCard, payMethod === "razorpay" && styles.selectedPaymentCard]}>
           <Pressable
-            onPress={() => setPayMethod("razorpay")}
+            onPress={() => {
+              if (!razorpayAvailable) {
+                Alert.alert("Online payment unavailable", "Please choose Cash on Delivery for now.");
+                return;
+              }
+              setPayMethod("razorpay");
+            }}
             style={styles.paymentMethodRow}
             accessibilityRole="radio"
             accessibilityState={{ selected: payMethod === "razorpay" }}
@@ -499,7 +525,9 @@ export default function CheckoutScreen() {
             <Ionicons name="shield-checkmark-outline" size={24} color={colors.ink} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.paymentMethodTitle}>Pay Online with Razorpay</Text>
-              <Text style={styles.paymentMethodSubtitle}>UPI · Credit/Debit Cards · Net Banking · Wallets</Text>
+              <Text style={styles.paymentMethodSubtitle}>
+                {razorpayAvailable ? "UPI · Credit/Debit Cards · Net Banking · Wallets" : "Temporarily unavailable — choose Cash on Delivery"}
+              </Text>
             </View>
             {payMethod === "razorpay" ? (
               <Ionicons name="checkmark-circle" size={22} color={colors.orange} />

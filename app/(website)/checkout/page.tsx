@@ -42,7 +42,7 @@ const emptyForm = {
 export default function CheckoutPage() {
   const toast = useToast();
   const router = useRouter();
-  const { items, clearCart, isLoggedIn } = useCart();
+  const { items, clearCart, syncCart, isLoggedIn } = useCart();
   const { dashboard: rewardsDashboard } = useRewards();
   const [requestedDamru, setRequestedDamru] = useState("");
   const [taxLabel, setTaxLabel] = useState("Tax");
@@ -154,6 +154,7 @@ export default function CheckoutPage() {
       // Coupon/Damru covered the order entirely — backend already finalized
       // it as paid; never open a gateway popup for ₹0.
       if (data.zeroPayable) {
+        await syncCart();
         setPlacedOrder(prev => prev && { ...prev, paymentStatus: "paid" });
         toast.success("Order confirmed", "No additional payment was required.", { id: `payment-${internalOrderId}` });
         paymentStartingRef.current = false;
@@ -190,6 +191,7 @@ export default function CheckoutPage() {
             });
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
+              await syncCart();
               setPlacedOrder(prev => prev && { ...prev, paymentStatus: "paid" });
               toast.success("Payment successful", "Your order is now confirmed.", { id: `payment-${internalOrderId}` });
             } else {
@@ -422,9 +424,8 @@ export default function CheckoutPage() {
         }
       }
 
-      await clearCart();
-
       if (payMethod === "cod") {
+        await clearCart();
         toast.success("Order confirmed", `Order #${result.orderId} is confirmed for Cash on Delivery.`, { id: "checkout-order" });
         setPlacedOrder(result);
       } else {
