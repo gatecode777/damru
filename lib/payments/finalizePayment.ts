@@ -1,9 +1,33 @@
 import { connectDB } from "@/lib/mongodb";
 import { getDamruConfig } from "@/lib/getDamruConfig";
-import Order, { IOrder } from "@/models/Order";
+import Order, { IOrder, IOrderItem } from "@/models/Order";
+import Cart from "@/models/Cart";
 import DamruTransaction from "@/models/DamruTransaction";
 import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
 import { notifyOrderEvent } from "@/lib/notifications/orderNotificationService";
+
+export async function removePurchasedItemsFromCart(userId: IOrder["userId"], items: IOrderItem[]): Promise<void> {
+  if (!userId) return;
+  await Cart.bulkWrite([
+    ...items
+      .filter((item) => item.menuItemId)
+      .map((item) => ({
+        updateOne: {
+          filter: {
+            userId,
+            items: { $elemMatch: { menuItemId: item.menuItemId, custom: item.custom } },
+          },
+          update: { $inc: { "items.$.qty": -item.qty } },
+        },
+      })),
+    {
+      updateOne: {
+        filter: { userId },
+        update: { $pull: { items: { qty: { $lte: 0 } } } },
+      },
+    },
+  ], { ordered: true });
+}
 
 /**
  * Returns the backend-authoritative payable amount. New orders persist the
@@ -76,6 +100,10 @@ export async function finalizeRazorpayPayment(input: {
 
   if (order.userId) {
     await Promise.all([
+      // Online carts remain available while payment is pending. Once payment
+      // succeeds, subtract only the quantities captured by this order so items
+      // added later (or in another tab/device) are not accidentally erased.
+      removePurchasedItemsFromCart(order.userId, order.items),
       notifyPaymentEvent({
         userId: order.userId,
         type: "PAYMENT_SUCCESSFUL",

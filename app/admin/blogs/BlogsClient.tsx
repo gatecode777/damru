@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Search, Filter, ChevronDown, X, Check, Trash2, Eye, EyeOff, Download } from "lucide-react";
 import { deleteBlog, toggleBlogStatus } from "@/app/actions/blogs";
 import { useToast } from "@/components/admin/Toast";
+import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 
 interface Perms { role: string; isSuperAdmin: boolean; permissions: Record<string, any>; }
 
@@ -22,6 +23,7 @@ const PAGE_SIZE = 10;
 export default function BlogsClient({ blogs, perms }: { blogs: Blog[]; perms?: Perms }) {
   const toast = useToast();
   const router = useRouter();
+  const confirmAction = useAdminConfirm();
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.blogs?.[action]);
   
   const canEdit = can("edit");
@@ -76,7 +78,7 @@ export default function BlogsClient({ blogs, perms }: { blogs: Blog[]; perms?: P
 
   async function handleDelete(id: string, title: string) {
     if (!canDelete) return;
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    if (!(await confirmAction({ title: "Delete blog post?", description: `${title} will be permanently deleted. This action cannot be undone.`, confirmLabel: "Delete post" }))) return;
     await deleteBlog(id); toast.success("Blog post deleted"); router.refresh();
   }
 
@@ -87,7 +89,7 @@ export default function BlogsClient({ blogs, perms }: { blogs: Blog[]; perms?: P
 
   async function handleBulkDelete() {
     if (!canDelete) return;
-    if (!confirm(`Delete ${selected.size} post(s)?`)) return;
+    if (!(await confirmAction({ title: "Delete selected posts?", description: `${selected.size} selected post${selected.size === 1 ? "" : "s"} will be permanently deleted.`, confirmLabel: "Delete posts" }))) return;
     setBulkLoading(true);
     for (const id of selected) await deleteBlog(id);
     setBulkLoading(false); clearSel(); toast.success("Blog posts deleted"); router.refresh();

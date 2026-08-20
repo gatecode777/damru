@@ -9,6 +9,7 @@ import {
 import { deleteCategory, toggleCategoryActive } from "@/app/actions/categories";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
+import { useAdminConfirm } from "@/components/admin/ConfirmDialog";
 
 interface Category {
   _id: string; name: string; slug: string;
@@ -25,6 +26,7 @@ const PAGE_SIZE = 15;
 export default function CategoriesClient({ categories, perms }: Props) {
   const toast = useToast();
   const router = useRouter();
+  const confirmAction = useAdminConfirm();
   
   const can = (action: string) => perms?.isSuperAdmin || Boolean(perms?.permissions?.categories?.[action]);
 
@@ -73,7 +75,7 @@ export default function CategoriesClient({ categories, perms }: Props) {
   // ── Bulk actions ─────────────────────────────────────────────
   async function handleBulkDelete() {
     if (!can("delete")) return;
-    if (!confirm(`Delete ${selected.size} categor${selected.size > 1 ? "ies" : "y"}? This cannot be undone.`)) return;
+    if (!(await confirmAction({ title: "Delete selected categories?", description: `${selected.size} selected categor${selected.size === 1 ? "y" : "ies"} will be permanently deleted. This action cannot be undone.`, confirmLabel: "Delete categories" }))) return;
     setBulkLoading(true);
     for (const id of selected) await deleteCategory(id);
     setBulkLoading(false); clearSel(); toast.success("Categories deleted"); router.refresh();
@@ -90,7 +92,7 @@ export default function CategoriesClient({ categories, perms }: Props) {
   // ── Single actions ───────────────────────────────────────────
   async function handleDelete(id: string, name: string) {
     if (!can("delete")) return;
-    if (!confirm(`Delete category "${name}"?\nAll menu items in this category will become uncategorised.`)) return;
+    if (!(await confirmAction({ title: "Delete category?", description: `${name} will be deleted and its menu items will become uncategorised.`, confirmLabel: "Delete category" }))) return;
     await deleteCategory(id); toast.success("Category deleted"); router.refresh();
   }
 

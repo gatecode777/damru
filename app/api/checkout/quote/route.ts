@@ -9,6 +9,7 @@ import Cart from "@/models/Cart";
 import Address from "@/models/Address";
 import User from "@/models/User";
 import { resolveOrderItems } from "@/lib/checkout/resolveOrderItems";
+import { isRazorpayConfigured } from "@/lib/payments/razorpay";
 
 export async function POST(req: NextRequest) {
   const user = getUserFromCookie(req);
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest) {
       getCheckoutChargesConfig(),
     ]);
     const items = await resolveOrderItems(user ? cart?.items || [] : Array.isArray(body.items) ? body.items : []);
+    if (items.length === 0) {
+      return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
+    }
     const subtotal = items.reduce((sum, item) => sum + Number(item.price) * Number(item.qty), 0);
     const couponPromise = priceCoupon({ code: body.couponCode, subtotal, userId: user?.id });
 
@@ -93,7 +97,11 @@ export async function POST(req: NextRequest) {
       branchId,
       distanceKm,
     });
-    return NextResponse.json({ totals, couponCode: coupon.code });
+    return NextResponse.json({
+      totals,
+      couponCode: coupon.code,
+      paymentAvailability: { razorpay: isRazorpayConfigured() },
+    });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to calculate checkout totals." }, { status: 400 });
   }

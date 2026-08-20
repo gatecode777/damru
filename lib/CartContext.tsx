@@ -23,6 +23,7 @@ interface CartContextType {
   removeItem:  (item: CartItem) => Promise<void>;
   updateQty:   (item: CartItem, qty: number) => Promise<void>;
   clearCart:   () => Promise<void>;
+  syncCart:    () => Promise<void>;
   totalItems:  number;
   totalPrice:  number;
 }
@@ -184,7 +185,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const totalPrice = items.reduce((sum, i) => sum + i.price * i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, isLoggedIn, loading, addItem, removeItem, updateQty, clearCart, totalItems, totalPrice }}>
+    <CartContext.Provider value={{ items, isLoggedIn, loading, addItem, removeItem, updateQty, clearCart, syncCart: refreshCartState, totalItems, totalPrice }}>
       {children}
     </CartContext.Provider>
   );

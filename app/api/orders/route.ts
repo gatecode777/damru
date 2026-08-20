@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
       isDineIn && tableId && paymentMethod === "cod"
         ? import("@/models/Table").then(({ default: Table }) => Table.findByIdAndUpdate(tableId, { status: "occupied" }))
         : Promise.resolve(),
-      user
+      user && paymentMethod === "cod"
         ? Cart.findOneAndUpdate({ userId: user.id }, { items: [] })
         : Promise.resolve(),
     ]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AlertTriangle, Loader2, X } from "lucide-react";
 
@@ -18,6 +18,60 @@ type ConfirmDialogProps = {
   onConfirm: () => void;
   onCancel: () => void;
 };
+
+type AdminConfirmOptions = {
+  title: string;
+  description: string;
+  confirmLabel?: string;
+};
+
+type PendingConfirmation = AdminConfirmOptions & {
+  resolve: (confirmed: boolean) => void;
+};
+
+const AdminConfirmContext = createContext<
+  ((options: AdminConfirmOptions) => Promise<boolean>) | null
+>(null);
+
+export function AdminConfirmProvider({ children }: { children: ReactNode }) {
+  const [pending, setPending] = useState<PendingConfirmation | null>(null);
+  const pendingRef = useRef<PendingConfirmation | null>(null);
+
+  const confirm = useCallback((options: AdminConfirmOptions) => {
+    return new Promise<boolean>((resolve) => {
+      pendingRef.current?.resolve(false);
+      const next = { ...options, resolve };
+      pendingRef.current = next;
+      setPending(next);
+    });
+  }, []);
+
+  const finish = (confirmed: boolean) => {
+    pendingRef.current?.resolve(confirmed);
+    pendingRef.current = null;
+    setPending(null);
+  };
+
+  return (
+    <AdminConfirmContext.Provider value={confirm}>
+      {children}
+      <ConfirmDialog
+        open={pending !== null}
+        title={pending?.title ?? "Confirm action"}
+        description={pending?.description ?? ""}
+        confirmLabel={pending?.confirmLabel}
+        onConfirm={() => finish(true)}
+        onCancel={() => finish(false)}
+      />
+    </AdminConfirmContext.Provider>
+  );
+}
+
+export function useAdminConfirm() {
+  const confirm = useContext(AdminConfirmContext);
+  if (!confirm) throw new Error("useAdminConfirm must be used inside AdminConfirmProvider");
+  return confirm;
+}
 
 export default function ConfirmDialog({
   open,
