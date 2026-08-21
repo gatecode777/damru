@@ -429,8 +429,6 @@ export default function CheckoutPage() {
         toast.success("Order confirmed", `Order #${result.orderId} is confirmed for Cash on Delivery.`, { id: "checkout-order" });
         setPlacedOrder(result);
       } else {
-        // Damru redemption (if any) has already been recorded above, so the
-        // Razorpay amount computed next already nets it out.
         setPlacedOrder({ ...result, paymentStatus: "pending" });
         await startRazorpayPayment(data.order._id);
       }

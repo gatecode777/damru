@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthInput } from './AuthInput';
-
 interface PasswordInputProps extends Omit<React.ComponentProps<typeof AuthInput>, 'icon' | 'rightElement'> {
   icon?: string;
 }
-
 export function PasswordInput({ icon = 'lock-closed-outline', ...props }: PasswordInputProps) {
   const [hidePassword, setHidePassword] = useState(true);
-
   return (
     <AuthInput
       icon={icon}
@@ -34,7 +31,6 @@ export function PasswordInput({ icon = 'lock-closed-outline', ...props }: Passwo
     />
   );
 }
-
 const styles = StyleSheet.create({
   toggle: {
     padding: 4,

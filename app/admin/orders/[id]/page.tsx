@@ -5,6 +5,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import { getAdminPerms, serializePerms } from "@/lib/adminPermissions";
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
+import PaymentRefund from "@/models/PaymentRefund";
 import OrderDetailClient from "./OrderDetailClient";
 
 export const metadata = { title: "Order Detail" };
@@ -22,9 +23,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   try {
     await connectDB();
-    const raw = await Order.findById(id).lean();
+    const [raw, latestRefund] = await Promise.all([
+      Order.findById(id).lean(),
+      PaymentRefund.findOne({ orderId: id }).sort({ createdAt: -1 }).lean(),
+    ]);
     if (!raw) notFound();
-    order = JSON.parse(JSON.stringify(raw));
+    order = JSON.parse(JSON.stringify({ ...raw, latestRefund }));
   } catch {
     notFound();
   }
@@ -37,7 +41,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       <div className="page-layout">
         <AdminHeader title={`Order ${order.orderId}`} />
         <main className="page-main">
-          <OrderDetailClient order={order} perms={serializedPerms} />
+          <OrderDetailClient key={`${order.updatedAt}-${order.paymentStatus}-${order.refundedAmount}-${order.pendingRefundAmount}`} order={order} perms={serializedPerms} />
         </main>
       </div>
     </>

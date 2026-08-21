@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Loader2, ChevronDown, MapPin, QrCode,
-  ShoppingBag, CreditCard, Package, CheckCircle, Truck, XCircle, Clock, RotateCcw, Undo2,
+  CreditCard, Package, CheckCircle, Truck, XCircle, Clock, RotateCcw, Undo2,
 } from "lucide-react";
 import { updateOrderStatus, updatePaymentStatus, cancelOrder } from "@/app/actions/orders";
 import { useToast } from "@/components/admin/Toast";
@@ -144,8 +144,10 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
   const remainingRefundable = order.paymentAmount != null
     ? Math.max(0, order.paymentAmount - (order.refundedAmount || 0) - (order.pendingRefundAmount || 0))
     : 0;
+  const canRequestRefund = order.paymentStatus === "paid" || order.paymentStatus === "partially_refunded";
 
   function openRefundModal() {
+    if (!canRequestRefund || remainingRefundable <= 0) return;
     if (!refundRequestIdRef.current) {
       refundRequestIdRef.current = (typeof crypto !== "undefined" && crypto.randomUUID)
         ? crypto.randomUUID()
@@ -181,6 +183,16 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
 
       refundRequestIdRef.current = null; // this attempt is done — a fresh refund gets a new id
       setShowRefundModal(false);
+      if (data.payment) {
+        setOrder((prev: any) => ({
+          ...prev,
+          paymentStatus: data.payment.paymentStatus,
+          paymentAmount: data.payment.paymentAmount,
+          refundedAmount: data.payment.refundedAmount,
+          pendingRefundAmount: data.payment.pendingRefundAmount,
+          latestRefund: data.refund,
+        }));
+      }
       notify(data.refund?.status === "processed" ? "Refund processed" : "Refund request submitted");
       router.refresh();
     } catch {
@@ -296,7 +308,7 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
             )}
 
             {/* Refund — only for a Razorpay order with remaining refundable balance */}
-            {can("delete") && order.paymentMethod !== "cod" && remainingRefundable > 0 && (
+            {can("delete") && order.paymentMethod !== "cod" && canRequestRefund && remainingRefundable > 0 && (
               <button onClick={openRefundModal}
                 style={{ background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa", borderRadius: 8, padding: "8px 14px", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                 <Undo2 size={13}/> Refund
@@ -382,6 +394,27 @@ export default function OrderDetailClient({ order: initialOrder, perms }: { orde
 
         {/* Right column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {order.latestRefund && (
+            <Card style={{
+              border: `1px solid ${order.latestRefund.status === "failed" ? "#fecaca" : order.latestRefund.status === "pending" ? "#fde68a" : "#bbf7d0"}`,
+              background: order.latestRefund.status === "failed" ? "#fef2f2" : order.latestRefund.status === "pending" ? "#fffbeb" : "#f0fdf4",
+            }}>
+              <div style={{ padding: "16px 20px" }}>
+                <p style={{ margin: 0, fontFamily: "DM Sans,sans-serif", fontWeight: 800, fontSize: "0.95rem", color: order.latestRefund.status === "failed" ? "#b91c1c" : order.latestRefund.status === "pending" ? "#b45309" : "#15803d" }}>
+                  {order.latestRefund.status === "failed" ? "Refund failed" : order.latestRefund.status === "pending" ? "Refund initiated" : "Refund processed"}
+                </p>
+                <p style={{ margin: "5px 0 0", fontFamily: "DM Sans,sans-serif", fontSize: "0.82rem", color: "#4b5563", lineHeight: 1.55 }}>
+                  ₹{order.latestRefund.amount} refund {order.latestRefund.status === "failed" ? "could not be processed." : order.latestRefund.status === "pending" ? "has been submitted to Razorpay." : "has been processed by Razorpay."}
+                  {order.latestRefund.status !== "failed" && " It should reflect in the customer's original payment method within 5–7 working days."}
+                </p>
+                <p style={{ margin: "7px 0 0", fontFamily: "DM Sans,sans-serif", fontSize: "0.74rem", color: "#6b7280" }}>
+                  Initiated {fmtDate(order.latestRefund.requestedAt || order.latestRefund.createdAt)}
+                  {order.latestRefund.gatewayRefundId ? ` · Refund ID: ${order.latestRefund.gatewayRefundId}` : ""}
+                </p>
+              </div>
+            </Card>
+          )}
 
           {/* Price summary */}
           <Card>

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { logoutAction } from "@/app/actions/auth";
 
 export default function AdminSessionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,10 +16,10 @@ export default function AdminSessionProvider({ children }: { children: React.Rea
       if (logoutStartedRef.current) return;
       logoutStartedRef.current = true;
 
-      // Navigate before awaiting any cleanup. A server action cannot delay the
-      // expired-session UX or leave a sensitive admin screen visible.
-      window.location.replace("/admin/login?reason=session_expired");
-      void logoutAction().catch(() => undefined);
+      // A single server response clears every Auth.js cookie chunk and then
+      // redirects. Going straight to /admin/login can bounce back to the
+      // dashboard while a stale JWT cookie is still present.
+      window.location.replace("/api/admin/session-expired");
     }
 
     window.fetch = async (...args: Parameters<typeof window.fetch>) => {
@@ -33,12 +32,14 @@ export default function AdminSessionProvider({ children }: { children: React.Rea
           : input.url;
       const requestUrl = new URL(rawUrl, window.location.origin);
 
-      if (
-        response.status === 401 &&
-        requestUrl.origin === window.location.origin &&
-        requestUrl.pathname.startsWith("/api/admin/")
-      ) {
-        expireSession();
+      if (response.status === 401 && requestUrl.origin === window.location.origin && requestUrl.pathname.startsWith("/api/admin/")) {
+        let payload: { code?: unknown; error?: unknown } = {};
+        try {
+          payload = await response.clone().json() as { code?: unknown; error?: unknown };
+        } catch { /* non-JSON response is not enough evidence to destroy a session */ }
+        if (payload.code === "SESSION_EXPIRED" || payload.error === "Unauthorized") {
+          expireSession();
+        }
       }
 
       return response;
