@@ -121,17 +121,8 @@ export default function CheckoutScreen() {
   const total = placedOrderTotal ?? quote?.finalAmount;
   const razorpayAvailable = quoteData?.paymentAvailability.razorpay ?? false;
 
-  // UI States
   const [billExpanded, setBillExpanded] = useState(false);
   const [payMethod, setPayMethod] = useState<"razorpay" | "cod" | null>(null);
-  
-  // UPI ID client-side format-check states.
-  // NOTE: This validates only the local-part@provider format.
-  // It does NOT confirm that the UPI account exists or that the bank will
-  // authorise a debit. Final payment validation must occur through the
-  // payment provider (e.g. Razorpay, PhonePe) during payment processing.
-
-  // Address loading handled by useQuery query key caching above.
 
   const updateNewAddr = (key: keyof Address) => (value: string) =>
     setNewAddr((state) => ({ ...state, [key]: value }));
@@ -183,7 +174,6 @@ export default function CheckoutScreen() {
 
     setBusy(true);
     try {
-      // Map "upi" and "card" selection securely to backend order creation
       const response = await post<{
         order: { orderId: string; _id: string; total: number };
         redemption?: { success: boolean; amount?: number; discount?: number; error?: string };
@@ -195,8 +185,6 @@ export default function CheckoutScreen() {
         requestedDamru: Number(requestedDamru || 0),
       });
 
-      // The backend clears the cart once the order is saved. Keep displaying
-      // the immutable order total while Razorpay opens or a retry is offered.
       setPlacedOrderTotal(response.order.total);
 
       // Damru redemption is chained after order creation — the backend

@@ -57,7 +57,6 @@ export default function TopNavigationProgress() {
       setProgress(5);
       setPhase("route");
     });
-
     trickleTimerRef.current = setInterval(() => {
       setProgress((current) => {
         if (current >= ROUTE_PROGRESS_LIMIT) return current;
@@ -65,10 +64,8 @@ export default function TopNavigationProgress() {
         return Math.min(ROUTE_PROGRESS_LIMIT, current + step);
       });
     }, 180);
-
     safetyTimerRef.current = setTimeout(finish, SAFETY_TIMEOUT_MS);
   }, [clearRun, finish]);
-
   const measurePageResources = useCallback(() => {
     if (!activeRef.current) return;
     const runId = runIdRef.current;
@@ -77,17 +74,14 @@ export default function TopNavigationProgress() {
     trickleTimerRef.current = null;
     setPhase("resources");
     setProgress((current) => Math.max(current, SHELL_PROGRESS));
-
     // Wait for the committed route to paint before collecting its resources.
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (!activeRef.current || runId !== runIdRef.current) return;
-
       const pendingImages = Array.from(document.images).filter(
         (image) => image.loading !== "lazy" && !image.complete,
       );
       const fontsPending = "fonts" in document && document.fonts.status !== "loaded";
       const total = pendingImages.length + (fontsPending ? 1 : 0);
-
       if (total === 0) {
         finish();
         return;
@@ -134,7 +128,6 @@ export default function TopNavigationProgress() {
     }
     measurePageResources();
   }, [measurePageResources, routeKey]);
-
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -142,7 +135,6 @@ export default function TopNavigationProgress() {
       if (!(target instanceof Element)) return;
       const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
       if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
-
       const destination = new URL(anchor.href, window.location.href);
       if (destination.origin !== window.location.origin) return;
       if (destination.pathname === window.location.pathname && destination.search === window.location.search) return;

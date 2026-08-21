@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
 import { checkApiPerm } from "@/lib/checkApiPerm";
 import AdminUser from "@/models/Admin";
+import Order from "@/models/Order";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rateLimit";
 import { requestRefund } from "@/lib/payments/refunds";
 import { logAdminAction } from "@/lib/auditLog";
@@ -32,9 +33,20 @@ export async function POST(
 
     await connectDB();
     const session = await auth();
-    const sessionEmail = (session?.user as { email?: string } | undefined)?.email;
-    const admin = await AdminUser.findOne({ email: sessionEmail }).select("_id").lean<{ _id: string }>();
-    if (!admin) return NextResponse.json({ error: "Admin not found." }, { status: 401 });
+    const sessionEmail = session?.user?.email?.trim().toLowerCase();
+    const sessionId = (session?.user as { id?: string } | undefined)?.id?.trim();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized", code: "SESSION_EXPIRED" }, { status: 401 });
+    }
+    const identityFilters: Array<{ _id: string } | { email: string }> = [];
+    if (sessionId) identityFilters.push({ _id: sessionId });
+    if (sessionEmail) identityFilters.push({ email: sessionEmail });
+    const admin = identityFilters.length
+      ? await AdminUser.findOne(identityFilters.length === 1 ? identityFilters[0] : { $or: identityFilters }).select("_id isActive").lean<{ _id: string; isActive?: boolean }>()
+      : null;
+    if (!admin || admin.isActive === false) {
+      return NextResponse.json({ error: "Admin account is unavailable.", code: "ADMIN_ACCOUNT_UNAVAILABLE" }, { status: 403 });
+    }
 
     const rl = await checkRateLimit(`admin-refund:${admin._id}`, RATE_LIMITS.adminRefund);
     if (!rl.allowed) return rateLimitResponse(rl.retryAfterSeconds);
@@ -55,7 +67,11 @@ export async function POST(
       details: { amount: Math.round(amount), reason, refundId: String(result.refund._id), status: result.refund.status, duplicate: Boolean(result.duplicate) },
     });
 
-    return NextResponse.json({ success: true, refund: result.refund });
+    const payment = await Order.findById(id)
+      .select("paymentStatus paymentAmount refundedAmount pendingRefundAmount")
+      .lean();
+
+    return NextResponse.json({ success: true, refund: result.refund, payment });
   } catch (err) {
     console.error("POST admin/orders/[id]/refund error:", err);
     return NextResponse.json({ error: "Unable to process the refund right now." }, { status: 500 });

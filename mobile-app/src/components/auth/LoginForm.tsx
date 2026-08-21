@@ -10,7 +10,6 @@ interface LoginFormProps {
   busy: boolean;
   error?: string;
 }
-
 export function LoginForm({ onSubmit, onSwitchToRegister, onForgotPassword, busy, error }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

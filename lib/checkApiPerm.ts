@@ -8,7 +8,7 @@ type Action = "view" | "create" | "edit" | "delete";
 export async function checkApiPerm(module: string, action: Action = "view"): Promise<NextResponse | null> {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized", code: "SESSION_EXPIRED" }, { status: 401 });
   }
 
   const perms = await getAdminPerms(
@@ -19,7 +19,7 @@ export async function checkApiPerm(module: string, action: Action = "view"): Pro
   // getAdminPerms intentionally returns an empty identity for missing or
   // inactive accounts. Never treat its fallback role as a real moderator.
   if (!perms.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Admin account is unavailable.", code: "ADMIN_ACCOUNT_UNAVAILABLE" }, { status: 403 });
   }
 
   if (!perms.can(module, action)) {
