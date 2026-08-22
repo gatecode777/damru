@@ -23,6 +23,13 @@ export async function GET(req: NextRequest) {
       getOrCreateReferralCode(sessionUser.id),
       getSettings(),
     ]);
+    const requestOrigin = req.nextUrl.origin;
+    const requestHost = req.nextUrl.hostname;
+    const publicOrigin = (requestHost === "localhost" || requestHost === "127.0.0.1"
+      ? process.env.NEXT_PUBLIC_SITE_URL || settings.siteUrl
+      : requestOrigin
+    ).replace(/\/$/, "");
+    const referralLink = `${publicOrigin}/?ref=${encodeURIComponent(referralCode)}`;
 
     const [total, pending, successful, earnedAgg, referrals] = await Promise.all([
       Referral.countDocuments({ referrerUserId: sessionUser.id }),
@@ -63,8 +70,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       referralCode,
       share: {
-        message: `Join Damru By Namo and get Damru rewards! Use my code ${referralCode} when you sign up: ${settings.siteUrl}/?ref=${referralCode}`,
-        link: `${settings.siteUrl}/?ref=${referralCode}`,
+        message: `Join Damru By Namo and get Damru rewards! Use my code ${referralCode} when you sign up: ${referralLink}`,
+        link: referralLink,
       },
       summary: {
         total,

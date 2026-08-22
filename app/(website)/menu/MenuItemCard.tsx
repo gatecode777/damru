@@ -23,7 +23,7 @@ export default function MenuItemCard({
   menuItemId, name, description, image, basePrice,
   variantType, variants, isVeg, reverse = false,
 }: Props) {
-  const { addItem, clearCart, isLoggedIn } = useCart();
+  const { addItem, replaceCart, isLoggedIn } = useCart();
   const toast = useToast();
   const router = useRouter();
 
@@ -34,6 +34,7 @@ export default function MenuItemCard({
   const [selectedVariant, setSelectedVariant] = useState<number>(0);
   const [checkedAddons,   setCheckedAddons]   = useState<boolean[]>(variants.map(() => false));
   const [isOrderNowFlow,  setIsOrderNowFlow]  = useState(false);
+  const [orderPending, setOrderPending] = useState(false);
 
   // Fix double-increment: use separate handlers with stopPropagation
   function handleInc(e: React.MouseEvent) {
@@ -79,15 +80,21 @@ export default function MenuItemCard({
 
   async function handleOrderNow(e: React.MouseEvent) {
     e.stopPropagation();
+    if (orderPending) return;
     if (!isLoggedIn) {
       window.dispatchEvent(new CustomEvent("open-auth-modal"));
       return;
     }
     setIsOrderNowFlow(true);
     if (variantType === "none") {
-      await clearCart();
-      await addItem({ id: `${menuItemId}-plain`, menuItemId, name, custom: "", price: basePrice, image, variantType: "none" }, qty);
-      router.push("/checkout");
+      setOrderPending(true);
+      try {
+        await replaceCart([{ id: `${menuItemId}-plain`, menuItemId, name, custom: "", price: basePrice, image, variantType: "none", qty }]);
+        router.push("/checkout");
+      } catch {
+        setOrderPending(false);
+        toast.error("Order not prepared", "Please try again.", { id: `order-now-${menuItemId}` });
+      }
     } else {
       openModal();
     }
@@ -117,10 +124,16 @@ export default function MenuItemCard({
     }
 
     if (isOrderNowFlow) {
-      await clearCart();
-      await addItem({ id, menuItemId, name, custom, price, image, variantType });
-      closeModal();
-      router.push("/checkout");
+      if (orderPending) return;
+      setOrderPending(true);
+      try {
+        await replaceCart([{ id, menuItemId, name, custom, price, image, variantType }]);
+        closeModal();
+        router.push("/checkout");
+      } catch {
+        setOrderPending(false);
+        toast.error("Order not prepared", "Please try again.", { id: `order-now-${menuItemId}` });
+      }
     } else {
       try { await addItem({ id, menuItemId, name, custom, price, image, variantType }); closeModal(); toast.success("Added to cart", name, { id: `cart-add-${menuItemId}` }); }
       catch { toast.error("Item not added", "Please try again.", { id: `cart-add-${menuItemId}` }); }
@@ -154,7 +167,9 @@ export default function MenuItemCard({
           <p className="menu-desc">{description}</p>
 
           <div className="menu-actions">
-            <button className="btn-order" onClick={handleOrderNow}>Order Now</button>
+            <button className="btn-order" onClick={handleOrderNow} disabled={orderPending}>
+              {orderPending ? "Opening…" : "Order Now"}
+            </button>
 
             {/* qty selector — only meaningful for fixed-price items */}
             {variantType === "none" && (
@@ -224,7 +239,7 @@ export default function MenuItemCard({
                   <span className="total-price">₹{modalTotal}</span>
                   <span className="view-custom-link">{name}</span>
                 </div>
-                <button className="add-cart-btn" onClick={handleModalAdd}>Add Item to Cart</button>
+                <button className="add-cart-btn" onClick={handleModalAdd} disabled={orderPending}>{orderPending ? "Opening…" : "Add Item to Cart"}</button>
               </div>
             </div>
           )}
@@ -261,7 +276,7 @@ export default function MenuItemCard({
                     <span className="total-amount">₹{modalTotal}</span>
                     <span className="view-link">{name}</span>
                   </div>
-                  <button className="add-to-cart-btn" onClick={handleModalAdd}>Add Item to Cart</button>
+                  <button className="add-to-cart-btn" onClick={handleModalAdd} disabled={orderPending}>{orderPending ? "Opening…" : "Add Item to Cart"}</button>
                 </div>
               </div>
             </div>
@@ -299,7 +314,7 @@ export default function MenuItemCard({
                     <span className="total-price">₹{modalTotal}</span>
                     <span className="custom-link">{name}</span>
                   </div>
-                  <button className="add-cart-btn" onClick={handleModalAdd}>Add Item to Cart</button>
+                  <button className="add-cart-btn" onClick={handleModalAdd} disabled={orderPending}>{orderPending ? "Opening…" : "Add Item to Cart"}</button>
                 </div>
               </div>
             </div>
@@ -335,7 +350,7 @@ export default function MenuItemCard({
                     <span className="total-amount">₹{modalTotal}</span>
                     <span className="view-custom-link">{name}</span>
                   </div>
-                  <button className="add-btn" onClick={handleModalAdd}>Add Item to Cart</button>
+                  <button className="add-btn" onClick={handleModalAdd} disabled={orderPending}>{orderPending ? "Opening…" : "Add Item to Cart"}</button>
                 </div>
               </div>
             </div>

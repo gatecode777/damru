@@ -23,6 +23,7 @@ interface CartContextType {
   removeItem:  (item: CartItem) => Promise<void>;
   updateQty:   (item: CartItem, qty: number) => Promise<void>;
   clearCart:   () => Promise<void>;
+  replaceCart: (items: Array<Omit<CartItem, "qty"> & { qty?: number }>) => Promise<void>;
   syncCart:    () => Promise<void>;
   totalItems:  number;
   totalPrice:  number;
@@ -181,11 +182,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
   }, [isLoggedIn]);
 
+  const replaceCart = useCallback(async (nextItems: Array<Omit<CartItem, "qty"> & { qty?: number }>) => {
+    if (!isLoggedIn) throw new Error("Login required to replace the cart.");
+    const response = await fetch("/api/cart", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: nextItems.map(item => ({
+        menuItemId: item.menuItemId,
+        custom: item.custom,
+        qty: item.qty ?? 1,
+      })) }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to prepare your cart.");
+    setItems((data.items || []).map((item: CartItem) => ({
+      ...item,
+      id: `${item.menuItemId}-${item.custom || "plain"}`,
+    })));
+  }, [isLoggedIn]);
+
   const totalItems = items.reduce((sum, i) => sum + i.qty, 0);
   const totalPrice = items.reduce((sum, i) => sum + i.price * i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, isLoggedIn, loading, addItem, removeItem, updateQty, clearCart, syncCart: refreshCartState, totalItems, totalPrice }}>
+    <CartContext.Provider value={{ items, isLoggedIn, loading, addItem, removeItem, updateQty, clearCart, replaceCart, syncCart: refreshCartState, totalItems, totalPrice }}>
       {children}
     </CartContext.Provider>
   );

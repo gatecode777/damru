@@ -1935,9 +1935,11 @@ body {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
-    z-index: 1000;
+    z-index: 100000;
     align-items: center;
     justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
 }
 
 .profile__modal-overlay.open {
@@ -1946,12 +1948,13 @@ body {
 
 .profile__modal {
     background: #fff;
-    /* border-radius: 14px; */
+    border-radius: 14px;
     padding: 30px;
-    height: 600px;
-    overflow: auto;
+    height: auto;
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
     width: 420px;
-    max-width: 95vw;
+    max-width: 100%;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
@@ -2028,9 +2031,11 @@ body {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
-    z-index: 1000;
+    z-index: 100000;
     align-items: center;
     justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
 }
 
 .profile__addr-modal-overlay.open {
@@ -2754,9 +2759,10 @@ MOBILE (up to 767px) - RESPONSIVE ADJUSTMENTS
 
     /* Modals */
     .profile__modal {
-        width: 95%;
+        width: min(100%, 420px);
         padding: 20px;
-        height: 400px;
+        height: auto;
+        max-height: calc(100dvh - 40px);
     }
 
     .profile__pay-delete-box {
