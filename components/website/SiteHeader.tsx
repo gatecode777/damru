@@ -239,7 +239,22 @@ export default function Header() {
       }
     };
 
-    const handleOpenAuthModal = () => {
+    const handleOpenAuthModal = async () => {
+      // Other client components can briefly have stale auth state while their
+      // own session request is still loading. Verify with the backend before
+      // showing a login form to a user who already has a valid session.
+      try {
+        const response = await fetch("/api/user/me");
+        const data = await response.json();
+        if (data.user) {
+          setUser(data.user);
+          writeProfileSessionUser(data.user);
+          setIsAuthOpen(false);
+          return;
+        }
+      } catch {
+        // If session verification fails, the login form is the safe fallback.
+      }
       setActiveScreen("login");
       setIsAuthOpen(true);
     };
@@ -388,7 +403,7 @@ export default function Header() {
     setIsMenuOpen(!isMenuOpen);
   };
   const toggleAuth = () => {
-    setIsAuthOpen(!isAuthOpen);
+    setIsAuthOpen(current => user ? false : !current);
     setErr(""); setOkMsg("");
   };
 
@@ -1034,7 +1049,7 @@ export default function Header() {
       </div>
 
       {/* Auth modal — your original structure, with working handlers */}
-      <div className={`auth-overlay ${isAuthOpen ? "active" : ""}`} id="authOverlay">
+      <div className={`auth-overlay ${isAuthOpen && !user ? "active" : ""}`} id="authOverlay">
         <div className="auth-modal" id="authModal">
           <button className="auth-close" id="authClose" onClick={toggleAuth}>✕</button>
 

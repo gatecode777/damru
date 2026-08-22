@@ -50,6 +50,28 @@ export default function CheckoutPage() {
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState("");
 
+  function handleRequestedDamruChange(value: string) {
+    setRequestedDamru(value);
+
+    // Give immediate feedback from the last server-approved quote. Damru is
+    // applied after tax and delivery, so only the discount and final amount
+    // change here. The quote request below still validates balance/config.
+    const amount = Number(value || 0);
+    const redemption = rewardsDashboard?.redemption;
+    if (!quote || !redemption || !Number.isFinite(amount) || amount < 0) return;
+    if (amount > rewardsDashboard.damruBalance || amount > redemption.maximumPerOrder) return;
+
+    const beforeDamru = quote.finalAmount + quote.damruDiscount;
+    const discount = amount === 0 || amount >= redemption.minimum
+      ? Math.min(beforeDamru, Math.round(amount * redemption.rate))
+      : 0;
+    setQuote(current => current ? {
+      ...current,
+      damruDiscount: discount,
+      finalAmount: Math.max(0, beforeDamru - discount),
+    } : current);
+  }
+
   // ── Dine-in state ─────────────────────────────────────────
   const [isDineIn, setIsDineIn] = useState(false);
   const [tableInfo, setTableInfo] = useState<{ tableId: string; tableNumber: string; tableName?: string; token: string } | null>(null);
@@ -675,7 +697,7 @@ export default function CheckoutPage() {
                     min={0}
                     max={rewardsDashboard.damruBalance}
                     value={requestedDamru}
-                    onChange={e => setRequestedDamru(e.target.value)}
+                    onChange={e => handleRequestedDamruChange(e.target.value)}
                     placeholder="0"
                     style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontFamily: "Poppins,sans-serif", fontSize: 13, boxSizing: "border-box" }}
                   />

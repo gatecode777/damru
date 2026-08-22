@@ -4,6 +4,7 @@ import "@/styles/website/myprofile.css";
 import "@/styles/website/rewards.css";
 import { fmtDate, fmtDateFull, fmtDateTime, todayISO } from "@/lib/formatDate";
 import { useState, useEffect, useRef, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useRewards } from "@/lib/rewards/RewardsProvider";
@@ -495,6 +496,27 @@ function MyProfileContent() {
   const [pwForm,setPwForm]           = useState({current:"",newPw:"",confirm:""});
   const [pwSaving,setPwSaving]       = useState(false);
   const [showPw,setShowPw]           = useState({current:false,newPw:false,confirm:false});
+
+  useEffect(() => {
+    if (!showEditModal && !showAddrModal) return;
+
+    const body = document.body;
+    const root = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - root.clientWidth;
+
+    body.style.overflow = "hidden";
+    root.style.overflow = "hidden";
+    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      root.style.overflow = previousRootOverflow;
+      body.style.paddingRight = previousBodyPaddingRight;
+    };
+  }, [showEditModal, showAddrModal]);
 
   // ── Damru Rewards ─────────────────────────────────────────
   const [rewardsHistory,setRewardsHistory]           = useState<RewardTransaction[]>([]);
@@ -1719,7 +1741,7 @@ function MyProfileContent() {
       </main>
 
       {/* EDIT PROFILE MODAL */}
-      {showEditModal&&(
+      {showEditModal && typeof document !== "undefined" && createPortal(
         <div className="profile__modal-overlay open" onClick={e=>{if(e.target===e.currentTarget)setShowEditModal(false);}}>
           <div className="profile__modal">
             <div className="profile__modal-title">Edit Profile</div>
@@ -1757,11 +1779,12 @@ function MyProfileContent() {
               <button className="profile__modal-save" onClick={handleSaveProfile} disabled={editSaving}>{editSaving?"Saving…":"Save Changes"}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* ADDRESS MODAL */}
-      {showAddrModal&&(
+      {showAddrModal && typeof document !== "undefined" && createPortal(
         <div className="profile__addr-modal-overlay open" onClick={e=>{if(e.target===e.currentTarget)setShowAddrModal(false);}}>
           <div className="profile__modal">
             <div className="profile__modal-title">{editingAddr?"Edit Address":"Add New Address"}</div>
@@ -1828,7 +1851,8 @@ function MyProfileContent() {
               <button className="profile__modal-save" onClick={handleSaveAddress} disabled={addrSaving}>{addrSaving?"Saving…":"Save Address"}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* GLOBAL DELETE CONFIRMATION — shared by addresses, notifications, and account deletion */}

@@ -70,6 +70,11 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         damruBalance: u.damruBalance ?? 0,
+        redemption: {
+          rate: config.redemptionRate,
+          minimum: config.minRedemption,
+          maximumPerOrder: config.maxRedemptionPerOrder,
+        },
         damruTotalEarned: u.damruTotalEarned ?? 0,
         damruTotalRedeemed: u.damruTotalRedeemed ?? 0,
         rewardDebt: u.rewardDebt || 0,
@@ -212,6 +217,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       damruBalance: u.damruBalance ?? 0,
+      redemption: {
+        rate: config.redemptionRate,
+        minimum: config.minRedemption,
+        maximumPerOrder: config.maxRedemptionPerOrder,
+      },
       damruTotalEarned: u.damruTotalEarned ?? 0,
       damruTotalRedeemed: u.damruTotalRedeemed ?? 0,
       rewardDebt: u.rewardDebt || 0,

@@ -164,6 +164,11 @@ export interface ReferralsResponse {
 
 export interface RewardsDashboard {
   damruBalance: number;
+  redemption: {
+    rate: number;
+    minimum: number;
+    maximumPerOrder: number;
+  };
   damruTotalEarned: number;
   damruTotalRedeemed: number;
   rewardDebt: number;
