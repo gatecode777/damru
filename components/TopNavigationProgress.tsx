@@ -120,7 +120,6 @@ export default function TopNavigationProgress() {
       };
     }));
   }, [finish]);
-
   useEffect(() => {
     if (!mounted.current) {
       mounted.current = true;
@@ -140,7 +139,6 @@ export default function TopNavigationProgress() {
       if (destination.pathname === window.location.pathname && destination.search === window.location.search) return;
       if (!event.defaultPrevented) start();
     }
-
     function handlePopState() {
       start();
     }
@@ -162,7 +160,6 @@ export default function TopNavigationProgress() {
       clearRun();
     };
   }, [clearRun, measurePageResources, start]);
-
   const phaseLabel = phase === "complete" ? "Ready" : phase === "resources" ? "Preparing page" : "Loading page";
   return (
     <div
@@ -170,9 +167,7 @@ export default function TopNavigationProgress() {
       role="progressbar"
       aria-label={phaseLabel}
       aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(progress)}
-    >      <span className="top-navigation-progress__bar" style={{ width: `${progress}%` }} />
+      aria-valuemax={100}      aria-valuenow={Math.round(progress)}    >      <span className="top-navigation-progress__bar" style={{ width: `${progress}%` }} />
       <span className="top-navigation-progress__value">{phaseLabel} · {Math.round(progress)}%</span>
     </div>
   );
