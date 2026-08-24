@@ -18,7 +18,6 @@ export interface IAddress extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
 const AddressSchema = new Schema<IAddress>(
   {
     userId:    { type: Schema.Types.ObjectId, ref: "User", required: true },
