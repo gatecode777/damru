@@ -15,16 +15,34 @@ type AuthScreen = "login" | "register" | "forgot" | "otp" | "reset";
 interface UserInfo { id: string; name: string; email: string; avatar?: string }
 
 async function apiPost(path: string, body: object) {
+  let response: Response;
+
   try {
-    const r = await fetch(path, {
+    response = await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const data = await r.json();
-    return { ...data, _status: r.status };
   } catch {
     return { error: "Unable to connect. Check your internet connection.", _status: 0 };
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    return {
+      error: response.ok ? "The server returned an invalid response." : "The server could not complete the request.",
+      _status: response.status,
+    };
+  }
+
+  try {
+    const data = await response.json();
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return { error: "The server returned an invalid response.", _status: response.status };
+    }
+    return { ...data, _status: response.status };
+  } catch {
+    return { error: "The server returned an invalid response.", _status: response.status };
   }
 }
 
@@ -239,6 +257,17 @@ export default function Header() {
       }
     };
 
+    const handleAuthStateChange = (e: Event) => {
+      const nextUser = (e as CustomEvent<UserInfo | null>).detail || null;
+      setUser(nextUser);
+      writeProfileSessionUser(nextUser);
+      if (!nextUser) {
+        setIsAuthOpen(false);
+        setIsMenuOpen(false);
+        setNotifOpen(false);
+      }
+    };
+
     const handleOpenAuthModal = async () => {
       // Other client components can briefly have stale auth state while their
       // own session request is still loading. Verify with the backend before
@@ -260,12 +289,14 @@ export default function Header() {
     };
 
     window.addEventListener("user-profile-updated", handleProfileUpdate);
+    window.addEventListener("auth-state-changed", handleAuthStateChange);
     window.addEventListener("open-auth-modal", handleOpenAuthModal);
 
     return () => {
       window.removeEventListener("storage", checkTableSession);
       window.removeEventListener("dinein-session-updated", checkTableSession);
       window.removeEventListener("user-profile-updated", handleProfileUpdate);
+      window.removeEventListener("auth-state-changed", handleAuthStateChange);
       window.removeEventListener("open-auth-modal", handleOpenAuthModal);
     };
   }, []);

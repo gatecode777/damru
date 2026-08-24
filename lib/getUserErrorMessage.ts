@@ -25,8 +25,11 @@ function safeApiMessage(payload: unknown): string | null {
 
 export function getUserResponseError(response: Pick<Response, "status">, payload?: unknown, fallback = "Something went wrong. Please try again."): string {
   if (response.status === 0) return "Unable to connect. Check your internet connection.";
-  if (response.status === 400 || response.status === 422) return safeApiMessage(payload) || fallback;
-  if (response.status === 409) return safeApiMessage(payload) || STATUS_MESSAGES[409];
+  const apiMessage = safeApiMessage(payload);
+  if (response.status === 400 || response.status === 422) return apiMessage || fallback;
+  if (response.status === 401 || response.status === 403 || response.status === 409) {
+    return apiMessage || STATUS_MESSAGES[response.status];
+  }
   return STATUS_MESSAGES[response.status] || (response.status >= 500 ? STATUS_MESSAGES[500] : fallback);
 }
 

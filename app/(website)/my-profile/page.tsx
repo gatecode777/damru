@@ -472,6 +472,7 @@ function MyProfileContent() {
   });
   const [user,setUser]        = useState<UserInfo|null>(null);
   const [loading,setLoading]  = useState(true);
+  const [logoutSaving,setLogoutSaving] = useState(false);
   const [addresses,setAddresses]     = useState<Address[]>([]);
   const [orders,setOrders]           = useState<Order[]>([]);
   const [ordersLoaded,setOrdersLoaded]=useState(false);
@@ -829,7 +830,24 @@ function MyProfileContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[searchParams]);
 
-  async function handleLogout(){const r=await fetch("/api/user/logout",{method:"POST"});if(!r.ok){actionToast.error("Unable to sign out",getUserResponseError(r));return;}actionToast.success("Signed out successfully");router.push("/");router.refresh();}
+  async function handleLogout(){
+    if(logoutSaving)return;
+    setLogoutSaving(true);
+    try{
+      const r=await fetch("/api/user/logout",{method:"POST"});
+      if(!r.ok){actionToast.error("Unable to sign out",getUserResponseError(r));return;}
+      setUser(null);
+      writeProfileSessionUser(null);
+      window.dispatchEvent(new CustomEvent("auth-state-changed",{detail:null}));
+      actionToast.success("Signed out successfully");
+      router.replace("/");
+      router.refresh();
+    }catch(error){
+      actionToast.error("Unable to sign out",getUserErrorMessage(error));
+    }finally{
+      setLogoutSaving(false);
+    }
+  }
 
   async function handleSaveProfile(){
     if(!editForm.name.trim()){showToast("Name is required.");return;}
@@ -910,7 +928,9 @@ function MyProfileContent() {
             <i className={icon}></i> {label}
           </div>
         ))}
-        <div className="profile__nav-logout" onClick={handleLogout}><i className="fa-regular fa-user"></i> Logout</div>
+        <div className="profile__nav-logout" onClick={handleLogout} role="button" aria-disabled={logoutSaving}>
+          <i className="fa-regular fa-user"></i> {logoutSaving?"Logging out…":"Logout"}
+        </div>
       </aside>
 
       <main className="profile__main">
