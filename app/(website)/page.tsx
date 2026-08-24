@@ -1,6 +1,7 @@
 import ReservationForm from "./ReservationForm";
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { connectDB } from "@/lib/mongodb";
 import CategoryModel from "@/models/Category";
 import MenuItemModel from "@/models/MenuItem";
@@ -9,6 +10,33 @@ import { fmtDate } from "@/lib/formatDate";
 import BranchModel from "@/models/Branch";
 
 type SpecialFeatureIcon = "quality" | "seasonal" | "fruit";
+type LensCategoryIcon = "cloche" | "soup";
+
+function LensFoodIcon({ type }: { type: LensCategoryIcon }) {
+  if (type === "soup") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+        <path d="M10 22h28c0 10-5.7 16-14 16s-14-6-14-16Z" />
+        <path d="M8 22h32M15 39h18M17 15c-3-4 3-5 0-9M24 15c-3-4 3-5 0-9M31 15c-3-4 3-5 0-9" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path d="M9 34h30M12 31c.8-9 5.2-14 12-14s11.2 5 12 14H12ZM24 17v-4" />
+      <path d="M21 12h6M7 35h34" />
+    </svg>
+  );
+}
+
+function LensBotanical() {
+  return (
+    <svg className="lens-botanical" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+      <path d="M111 10C82 29 65 57 56 110M98 22c-20-2-31 8-34 26 19 2 31-7 34-26ZM78 48c-19-1-29 9-30 27 18 1 28-8 30-27ZM61 73c-18 1-26 12-24 29 17-1 25-11 24-29ZM102 43c1 17-7 28-24 32-1-17 7-28 24-32ZM84 70c2 16-6 27-22 32-2-16 6-27 22-32Z" />
+    </svg>
+  );
+}
 
 function SpecialFeatureIllustration({ type }: { type: SpecialFeatureIcon }) {
   if (type === "quality") {
@@ -534,26 +562,44 @@ export default async function HomePage() {
       </section>
 
       {/* ── Taste Through The Lens ── */}
-      <section className="lens-section">
+      <section className="lens-section" id="taste-through-lens" aria-labelledby="lens-title">
         <div className="lens-container">
           <div className="lens-header lens-reveal">
-            <h2>Taste Through <br />The Lens</h2>
+            <div className="lens-chef-ornament" aria-hidden="true">
+              <span />
+              <svg viewBox="0 0 48 48" focusable="false">
+                <path d="M15 23c-4.7 0-8-3.1-8-7.4 0-4.1 3.2-7.5 7.3-7.5 1.3 0 2.6.4 3.7 1.1C19.3 5.8 21.3 4 24 4s4.7 1.8 6 5.2a7.5 7.5 0 0 1 3.7-1.1c4.1 0 7.3 3.4 7.3 7.5 0 4.3-3.3 7.4-8 7.4v12H15V23Z" />
+                <path d="M15 29h18M19 23v7M29 23v7M17 39h14" />
+              </svg>
+              <span />
+            </div>
+            <h2 id="lens-title">Taste <span>Through</span><br />The Lens</h2>
+            <div className="lens-heading-divider" aria-hidden="true"><i>{"\u2724"}</i><span /></div>
             <p>Explore the flavors, colors, and creativity behind every dish we serve.</p>
           </div>
           <div className="lens-grid">
-            {[
-              { img: "/assets/images/dietplan2.jpg", label: "Starters" },
-              { img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800", label: "Mains" },
-              { img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=800", label: "Soups" },
-            ].map((g) => (
-              <div key={g.label} className="lens-card lens-reveal">
-                <img src={g.img} alt={g.label} className="lens-img" loading="lazy" decoding="async" />
-                <div className="lens-vignette" />
-                <div className="lens-content">
-                  <h3 className="lens-title">{g.label}</h3>
-                  {/* <span className="lens-arrow">→</span> */}
+            {([
+              { img: "/assets/images/dietplan2.jpg", label: "Starters", description: "Begin your meal with the perfect start.", icon: "cloche", featured: false, position: "center 58%" },
+              { img: "/assets/images/salad1.jpg", label: "Mains", description: "Hearty, wholesome dishes crafted to perfection.", icon: "cloche", featured: true, position: "center 58%" },
+              { img: "/assets/images/soup1.png", label: "Soups", description: "Warm, comforting bowls for every mood.", icon: "soup", featured: false, position: "center" },
+            ] satisfies { img: string; label: string; description: string; icon: LensCategoryIcon; featured: boolean; position: string }[]).map((category, index) => (
+              <article key={category.label} className={`lens-card lens-reveal${category.featured ? " lens-card--featured" : ""}`} style={{ "--lens-delay": `${index * 110}ms` } as React.CSSProperties}>
+                <div className="lens-icon" aria-hidden="true"><LensFoodIcon type={category.icon} /></div>
+                <LensBotanical />
+                <div className="lens-card-copy">
+                  <h3>{category.label}</h3>
+                  <span className="lens-card-divider" aria-hidden="true"><i /><b /><i /></span>
+                  <p>{category.description}</p>
                 </div>
-              </div>
+                <div className="lens-image-wrap">
+                  <Image src={category.img} alt={`${category.label} from the Damru menu`} fill sizes="(max-width: 767px) calc(100vw - 32px), (max-width: 1199px) calc(50vw - 48px), 430px" style={{ objectPosition: category.position }} />
+                </div>
+                <div className="lens-cta-wrap">
+                  <Link href="/menu" className="lens-cta" aria-label={`Explore ${category.label} on our menu`}>
+                    <span>Explore {category.label}</span><i aria-hidden="true">{"\u2192"}</i>
+                  </Link>
+                </div>
+              </article>
             ))}
           </div>
         </div>

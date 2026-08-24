@@ -13,6 +13,8 @@ body {
 }
 
 .aboutus {
+  --about-content-width: 1400px;
+  --about-side-gutter: clamp(20px, 5vw, 96px);
   width: 100%;
   margin: 0;
   padding: 0;
@@ -53,9 +55,10 @@ body {
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 100%;
+  max-width: var(--about-content-width);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 var(--about-side-gutter);
+  box-sizing: border-box;
   display: flex;
   justify-content: flex-end;
 }
@@ -109,7 +112,7 @@ body {
    STORY SECTION
    ============================================================ */
 .aboutus .story-section {
-  padding: 80px 20px;
+  padding: 80px var(--about-side-gutter);
   background-color: #ffffff;
   width: 100%;
   display: flex;
@@ -120,7 +123,8 @@ body {
 
 .aboutus .story-container {
   width: 100%;
-  max-width: 1200px;
+  max-width: var(--about-content-width);
+  margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 30px;
@@ -166,7 +170,7 @@ body {
    TEAM SECTION
    ============================================================ */
 .aboutus .team-section {
-  padding: 60px 20px;
+  padding: 60px var(--about-side-gutter);
   background-color: #fdf8f4;
   width: 100%;
   overflow: hidden;
@@ -175,7 +179,7 @@ body {
 
 .aboutus .team-container {
   width: 100%;
-  max-width: 1400px;
+  max-width: var(--about-content-width);
   margin: 0 auto;
 }
 
@@ -362,7 +366,7 @@ body {
    PROCESS SECTION
    ============================================================ */
 .aboutus .process-section {
-  padding: 50px 20px;
+  padding: 50px var(--about-side-gutter);
   background-color: #ffffff;
   position: relative;
   width: 100%;
@@ -372,7 +376,7 @@ body {
 
 .aboutus .process-container {
   width: 100%;
-  max-width: 1400px;
+  max-width: var(--about-content-width);
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -451,16 +455,17 @@ body {
 /* ============================================================
    RESERVATION SECTION
    ============================================================ */
-.reservation-section {
+.aboutus .reservation-section {
   background-color: #fff9f4 !important;
-  padding: 30px 20px !important;
+  padding: 30px var(--about-side-gutter) !important;
   display: block !important;
   width: 100% !important;
   box-sizing: border-box;
 }
 
-.reservation-section .res-container {
-  max-width: 1100px;
+.aboutus .reservation-section .res-container {
+  width: 100%;
+  max-width: var(--about-content-width);
   margin: 0 auto;
   text-align: center;
 }
@@ -485,25 +490,91 @@ body {
    ============================================================ */
 
 /* Tablet (768px - 1024px) */
-@media (max-width: 1024px) and (min-width: 768px) {
+@media (max-width: 1024px) and (min-width: 769px) {
+  .aboutus {
+    --about-side-gutter: clamp(32px, 6vw, 64px);
+  }
+
+  .aboutus .hero-section {
+    height: 70vh;
+    min-height: 520px;
+    justify-content: center;
+  }
+
+  .aboutus .hero-container {
+    justify-content: center;
+  }
+
+  .aboutus .who-we-are-card {
+    max-width: 620px;
+    padding: 40px 32px;
+  }
+
   .aboutus .who-we-are-card h1 {
     font-size: 60px;
   }
 
+  .aboutus .story-container {
+    flex-direction: column-reverse;
+    gap: 36px;
+  }
+
+  .aboutus .story-content,
+  .aboutus .story-image,
+  .aboutus .member-image-col,
+  .aboutus .member-text-col,
+  .aboutus .process-img,
+  .aboutus .process-text {
+    width: 100%;
+    flex: none;
+  }
+
+  .aboutus .story-content,
+  .aboutus .member-text-col,
+  .aboutus .process-text {
+    max-width: 760px;
+    margin-inline: auto;
+  }
+
+  .aboutus .story-image img,
+  .aboutus .main-photo,
+  .aboutus .process-img img {
+    width: min(100%, 680px);
+    margin-inline: auto;
+  }
+
   .aboutus .story-content h2 {
     font-size: 45px;
+    text-align: center;
+  }
+
+  .aboutus .story-content p,
+  .aboutus .member-text-col p,
+  .aboutus .process-text p {
+    font-size: 16px;
+    line-height: 1.75;
   }
 
   .aboutus .member-title-box h2 {
     font-size: 40px;
   }
 
-  .aboutus .member-title-box {
-    margin-left: 40px;
+  .aboutus .member-row,
+  .aboutus .member-row.reverse {
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    margin-bottom: 64px;
   }
 
+  .aboutus .member-image-col {
+    max-width: 680px;
+  }
+
+  .aboutus .member-title-box,
   .aboutus .member-title-box.text-right {
-    margin-right: 40px;
+    margin: 0 0 20px;
+    text-align: center;
   }
 
   .aboutus .deco-art {
@@ -518,6 +589,19 @@ body {
   .aboutus .art-chef {
     bottom: -80px;
     left: -60px;
+  }
+
+  .aboutus .process-row,
+  .aboutus .process-row.reverse {
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    margin-bottom: 56px;
+  }
+
+  .aboutus .process-text h3,
+  .aboutus .process-text p {
+    text-align: center;
   }
 
   .reservation-section .res-main-title {
