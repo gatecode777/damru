@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 
 export interface CartItem {
   // For DB-backed cart: menuItemId is the MongoDB _id of the MenuItem
@@ -35,6 +35,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items,      setItems]      = useState<CartItem[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading,    setLoading]    = useState(true);
+  const quantityQueues = useRef(new Map<string, Promise<void>>());
+  const addQueues = useRef(new Map<string, Promise<void>>());
 
   // ── Refresh cart status & login status ──────────────────────
   const refreshCartState = useCallback(async () => {
@@ -106,9 +108,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // ── ADD ITEM ────────────────────────────────────────────────
   const addItem = useCallback(async (newItem: Omit<CartItem, "qty">, qty: number = 1) => {
-    if (isLoggedIn && newItem.menuItemId) {
-      // DB-backed
-      const res = await fetch("/api/cart/item", {
+    setItems(prev => {
+      const exists = prev.find(i => i.id === newItem.id);
+      if (exists) return prev.map(i => i.id === newItem.id ? { ...i, qty: i.qty + qty } : i);
+      return [...prev, { ...newItem, qty }];
+    });
+
+    if (!isLoggedIn || !newItem.menuItemId) return;
+
+    const previousRequest = addQueues.current.get(newItem.id) || Promise.resolve();
+    const request = previousRequest.catch(() => undefined).then(async () => {
+      const response = await fetch("/api/cart/item", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -119,25 +129,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           qty,
         }),
       });
-      if (!res.ok) throw new Error("Unable to add this item to your cart.");
+      if (!response.ok) throw new Error("Unable to add this item to your cart.");
+    });
+    addQueues.current.set(newItem.id, request);
 
-      const data = await res.json();
-      const mapped: CartItem[] = (data.items || []).map((i: {
-        menuItemId: string; name: string; custom: string;
-        price: number; qty: number; image?: string; variantType: string;
-      }) => ({
-        id: `${i.menuItemId}-${i.custom || "plain"}`,
-        menuItemId: i.menuItemId, name: i.name, custom: i.custom,
-        price: i.price, qty: i.qty, image: i.image, variantType: i.variantType,
-      }));
-      setItems(mapped);
-    } else {
-      // Guest: local state
+    try {
+      await request;
+    } catch (error) {
       setItems(prev => {
-        const exists = prev.find(i => i.id === newItem.id);
-        if (exists) return prev.map(i => i.id === newItem.id ? { ...i, qty: i.qty + qty } : i);
-        return [...prev, { ...newItem, qty }];
+        const current = prev.find(i => i.id === newItem.id);
+        if (!current) return prev;
+        if (current.qty <= qty) return prev.filter(i => i.id !== newItem.id);
+        return prev.map(i => i.id === newItem.id ? { ...i, qty: i.qty - qty } : i);
       });
+      throw error;
+    } finally {
+      if (addQueues.current.get(newItem.id) === request) addQueues.current.delete(newItem.id);
     }
   }, [isLoggedIn]);
 
@@ -156,18 +163,40 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // ── UPDATE QTY ──────────────────────────────────────────────
   const updateQty = useCallback(async (item: CartItem, qty: number) => {
-    if (isLoggedIn && item.menuItemId) {
+    const previousQty = item.qty;
+
+    if (qty < 1) {
+      setItems(prev => prev.filter(i => i.id !== item.id));
+    } else {
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, qty } : i));
+    }
+
+    if (!isLoggedIn || !item.menuItemId) return;
+
+    const previousRequest = quantityQueues.current.get(item.id) || Promise.resolve();
+    const request = previousRequest.catch(() => undefined).then(async () => {
       const response = await fetch("/api/cart/item", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ menuItemId: item.menuItemId, custom: item.custom, qty }),
       });
       if (!response.ok) throw new Error("Unable to update this cart item.");
-    }
-    if (qty < 1) {
-      setItems(prev => prev.filter(i => i.id !== item.id));
-    } else {
-      setItems(prev => prev.map(i => i.id === item.id ? { ...i, qty } : i));
+    });
+    quantityQueues.current.set(item.id, request);
+
+    try {
+      await request;
+    } catch (error) {
+      setItems(prev => {
+        const current = prev.find(i => i.id === item.id);
+        if (qty >= 1 && current?.qty !== qty) return prev;
+        if (qty < 1 && current) return prev;
+        if (qty < 1) return [...prev, { ...item, qty: previousQty }];
+        return prev.map(i => i.id === item.id ? { ...i, qty: previousQty } : i);
+      });
+      throw error;
+    } finally {
+      if (quantityQueues.current.get(item.id) === request) quantityQueues.current.delete(item.id);
     }
   }, [isLoggedIn]);
 

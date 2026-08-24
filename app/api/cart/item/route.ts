@@ -63,22 +63,20 @@ export async function PATCH(req: NextRequest) {
     const { menuItemId, custom, qty } = await req.json();
     await connectDB();
 
-    const cart = await Cart.findOne({ userId: user.id });
-    if (!cart) return NextResponse.json({ error: "Cart not found" }, { status: 404 });
-
-    const idx = cart.items.findIndex(
-      i => i.menuItemId.toString() === menuItemId && i.custom === (custom || "")
-    );
-    if (idx < 0) return NextResponse.json({ error: "Item not in cart" }, { status: 404 });
-
-    if (qty < 1) {
-      cart.items.splice(idx, 1); // remove
-    } else {
-      cart.items[idx].qty = qty;
+    if (!menuItemId || !Number.isInteger(qty)) {
+      return NextResponse.json({ error: "Valid menuItemId and quantity required" }, { status: 400 });
     }
 
-    await cart.save();
-    return NextResponse.json({ success: true, items: cart.items });
+    const itemQuery = {
+      userId: user.id,
+      items: { $elemMatch: { menuItemId, custom: custom || "" } },
+    };
+    const result = qty < 1
+      ? await Cart.updateOne(itemQuery, { $pull: { items: { menuItemId, custom: custom || "" } } })
+      : await Cart.updateOne(itemQuery, { $set: { "items.$.qty": qty } });
+
+    if (!result.matchedCount) return NextResponse.json({ error: "Item not in cart" }, { status: 404 });
+    return NextResponse.json({ success: true });
 
   } catch (err) {
     console.error("PATCH cart/item error:", err);
