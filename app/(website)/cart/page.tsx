@@ -168,6 +168,11 @@ export default function CartPage() {
     catch { toast.error("Item not removed", "Please try again.", { id: `cart-remove-${item.id}` }); }
   }
 
+  async function handleQtyChange(item: Parameters<typeof updateQty>[0], qty: number) {
+    try { await updateQty(item, qty); }
+    catch { toast.error("Quantity not updated", "Your previous quantity has been restored.", { id: `cart-quantity-${item.id}` }); }
+  }
+
   async function handleClearCart() {
     try { await clearCart(); toast.info("Cart cleared", undefined, { id: "cart-cleared" }); }
     catch { toast.error("Cart not cleared", "Please try again.", { id: "cart-cleared" }); }
@@ -258,9 +263,9 @@ export default function CartPage() {
                     </div>
                   </div>
                   <div className="qty-controls">
-                    <span className="qty-btn" onClick={() => updateQty(item, item.qty - 1)}>−</span>
+                    <span className="qty-btn" onClick={() => { void handleQtyChange(item, item.qty - 1); }}>−</span>
                     <span className="qty-num">{item.qty}</span>
-                    <span className="qty-btn" onClick={() => updateQty(item, item.qty + 1)}>+</span>
+                    <span className="qty-btn" onClick={() => { void handleQtyChange(item, item.qty + 1); }}>+</span>
                   </div>
                   <div className="item-price">₹{item.price * item.qty}</div>
                   <div className="remove-icon" onClick={() => handleRemoveItem(item)}>×</div>

@@ -71,7 +71,9 @@ export default function MenuItemCard({
       return;
     }
     if (variantType === "none") {
-      try { await addItem({ id: `${menuItemId}-plain`, menuItemId, name, custom: "", price: basePrice, image, variantType: "none" }, qty); toast.success("Added to cart", `${qty} × ${name}`, { id: `cart-add-${menuItemId}` }); }
+      const request = addItem({ id: `${menuItemId}-plain`, menuItemId, name, custom: "", price: basePrice, image, variantType: "none" }, qty);
+      toast.success("Added to cart", `${qty} × ${name}`, { id: `cart-add-${menuItemId}` });
+      try { await request; }
       catch { toast.error("Item not added", "Please try again.", { id: `cart-add-${menuItemId}` }); }
     } else {
       openModal();
@@ -135,7 +137,10 @@ export default function MenuItemCard({
         toast.error("Order not prepared", "Please try again.", { id: `order-now-${menuItemId}` });
       }
     } else {
-      try { await addItem({ id, menuItemId, name, custom, price, image, variantType }); closeModal(); toast.success("Added to cart", name, { id: `cart-add-${menuItemId}` }); }
+      const request = addItem({ id, menuItemId, name, custom, price, image, variantType });
+      closeModal();
+      toast.success("Added to cart", name, { id: `cart-add-${menuItemId}` });
+      try { await request; }
       catch { toast.error("Item not added", "Please try again.", { id: `cart-add-${menuItemId}` }); }
     }
   }
