@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
@@ -31,15 +31,22 @@ export async function POST(req: NextRequest) {
     if (!valid)
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
 
-    try {
-      const streakResult = await checkAndAwardDailyLogin(user._id);
-      if ("currentStreak" in streakResult) {
-        await evaluateStreakAchievements(user._id, streakResult.currentStreak);
-        await evaluateStreakMissions(user._id, streakResult.currentStreak);
+    // Reward processing is authoritative and idempotent, but it should not
+    // delay authentication. Next.js keeps this work alive after the response
+    // has been sent, so the user receives their session immediately.
+    after(async () => {
+      try {
+        const streakResult = await checkAndAwardDailyLogin(user._id);
+        if ("currentStreak" in streakResult) {
+          await Promise.all([
+            evaluateStreakAchievements(user._id, streakResult.currentStreak),
+            evaluateStreakMissions(user._id, streakResult.currentStreak),
+          ]);
+        }
+      } catch (err) {
+        console.error("checkAndAwardDailyLogin failed:", err);
       }
-    } catch (err) {
-      console.error("checkAndAwardDailyLogin failed:", err);
-    }
+    });
 
     const res = NextResponse.json({
       success: true,
