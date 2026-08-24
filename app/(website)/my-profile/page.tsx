@@ -525,6 +525,7 @@ function MyProfileContent() {
   const [rewardsCoupons,setRewardsCoupons]           = useState<RewardCoupon[]>([]);
   const [rewardsCouponsLoaded,setRewardsCouponsLoaded]=useState(false);
   const [rewardsUpcoming,setRewardsUpcoming]         = useState<RewardsUpcoming|null>(null);
+  const [rewardsUpcomingLoading,setRewardsUpcomingLoading] = useState(true);
   const [rewardsLoaded,setRewardsLoaded]             = useState(false);
   const [achievementsData,setAchievementsData]       = useState<AchievementsResponse|null>(null);
   const [achievementsLoading,setAchievementsLoading] = useState(false);
@@ -708,8 +709,11 @@ function MyProfileContent() {
   }
 
   async function loadRewardsUpcoming(){
-    const d=await rewardApi.getUpcoming();
-    if(!("error" in d && d.error))setRewardsUpcoming(d);
+    setRewardsUpcomingLoading(true);
+    try{
+      const d=await rewardApi.getUpcoming();
+      if(!("error" in d && d.error))setRewardsUpcoming(d);
+    }finally{setRewardsUpcomingLoading(false);}
   }
 
   async function loadAchievements(){
@@ -774,10 +778,10 @@ function MyProfileContent() {
     setRewardsLoaded(true);
     // Keep the wallet interactive immediately and avoid six competing database
     // requests. Lower sections hydrate progressively in their visual order.
+    await loadRewardsUpcoming();
     await loadMissions();
     await loadAchievements();
     await loadReferrals();
-    await loadRewardsUpcoming();
     const couponData=await rewardApi.getCoupons();
     setRewardsCoupons(couponData.coupons||[]);
     setRewardsCouponsLoaded(true);
@@ -1330,6 +1334,9 @@ function MyProfileContent() {
             {/* Occasion Profile */}
             <div className="rewards__section-title" id="rewards-occasion-form">Occasion Profile</div>
             <div className="profile__card">
+              {rewardsUpcomingLoading ? (
+                <p style={{fontFamily:"Poppins,sans-serif",fontSize:13,color:"#888",margin:0}}>Loading saved occasion datesâ€¦</p>
+              ) : <>
               <div className="rewards__occasion-row">
                 <div>
                   <p style={{fontFamily:"Poppins,sans-serif",fontWeight:600,fontSize:14,margin:"0 0 2px"}}>🎂 Date of Birth</p>
@@ -1368,6 +1375,7 @@ function MyProfileContent() {
                   <button className="profile__update-btn" onClick={handleSaveAnniversary} disabled={annivSaving}>{annivSaving?"Saving…":"Save"}</button>
                 )}
               </div>
+              </>}
             </div>
           </section>
         )}
