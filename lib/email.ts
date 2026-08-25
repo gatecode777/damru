@@ -12,6 +12,10 @@ async function getTransporter() {
   const smtpSecure = settings.smtpSecure ?? (process.env.SMTP_SECURE === "true");
   const fromName = settings.smtpFromName || settings.siteName || "Damru By Namo";
 
+  if (!smtpUser || !smtpPass) {
+    throw new Error("Email delivery is not configured. Add SMTP credentials before using email features.");
+  }
+
   const transporter = nodemailer.createTransport({
     host:   smtpHost,
     port:   smtpPort,

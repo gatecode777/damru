@@ -34,10 +34,6 @@ const REQUIRED_PRODUCTION_ENV = [
   "AUTH_SECRET",
   "NEXTAUTH_URL",
   "CRON_SECRET",
-  "SMTP_HOST",
-  "SMTP_PORT",
-  "SMTP_USER",
-  "SMTP_PASS",
 ];
 
 // Razorpay vars are conditionally required: only once online payment is
