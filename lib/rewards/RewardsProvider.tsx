@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { RewardsDashboard, RedeemResult } from "./rewardTypes";
+import type { RewardsDashboard } from "./rewardTypes";
 import * as rewardApi from "./rewardApi";
 
 interface RewardsContextType {
@@ -9,7 +9,6 @@ interface RewardsContextType {
   loading: boolean;
   error: string;
   refresh: () => Promise<void>;
-  redeem: (orderId: string, amount: number) => Promise<RedeemResult>;
 }
 
 const RewardsContext = createContext<RewardsContextType | null>(null);
@@ -56,14 +55,8 @@ export function RewardsProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refresh]);
 
-  const redeem = useCallback(async (orderId: string, amount: number): Promise<RedeemResult> => {
-    const result = await rewardApi.redeemDamru(orderId, amount);
-    if (result.success) await refresh();
-    return result;
-  }, [refresh]);
-
   return (
-    <RewardsContext.Provider value={{ dashboard, loading, error, refresh, redeem }}>
+    <RewardsContext.Provider value={{ dashboard, loading, error, refresh }}>
       {children}
     </RewardsContext.Provider>
   );

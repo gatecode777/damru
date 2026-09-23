@@ -30,6 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const result = await applyReversal(id, { reason: "ADMIN_CORRECTION", triggerId: `admin:${id}`, createdBy: admin._id, note, allowManualCredit: true });
     if (result.unsupported) return NextResponse.json({ error: "This legacy transaction cannot be reversed safely." }, { status: 409 });
+    if (result.alreadyReversed) return NextResponse.json({ error: "This reward has already been fully reversed." }, { status: 409 });
 
     await logAdminAction("reward_reversed", {
       targetType: "DamruTransaction",

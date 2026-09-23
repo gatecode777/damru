@@ -3414,3 +3414,20 @@ body {
         /* Hide tooltip on touch devices */
     }
 }
+
+/* Damru earn badge — rendered only when the server returns a live dish/category rule */
+.menu-parent .menu-reward-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding: 4px 12px;
+    border: 1px solid #fde3c8;
+    border-radius: 999px;
+    background: #fff7ed;
+    color: #b45309;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.4;
+}

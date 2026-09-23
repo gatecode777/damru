@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
 import { useToast } from "@/components/website/Toast";
 interface Variant { label: string; price: number }
+interface RewardBadge { damru: number; basis: string; label: string }
 
 interface Props {
   menuItemId:  string;
@@ -17,11 +18,13 @@ interface Props {
   variants:    Variant[];
   isVeg:       boolean;
   reverse?:    boolean;
+  /** Server-computed from an active Damru earn rule; absent when none applies. */
+  rewardBadge?: RewardBadge | null;
 }
 
 export default function MenuItemCard({
   menuItemId, name, description, image, basePrice,
-  variantType, variants, isVeg, reverse = false,
+  variantType, variants, isVeg, reverse = false, rewardBadge = null,
 }: Props) {
   const { addItem, replaceCart, isLoggedIn } = useCart();
   const toast = useToast();
@@ -169,6 +172,11 @@ export default function MenuItemCard({
           </div>
 
           <h2 className="menu-title-m">{name}</h2>
+          {rewardBadge && (
+            <span className="menu-reward-badge">
+              <span aria-hidden="true">🪙</span> {rewardBadge.label}
+            </span>
+          )}
           <p className="menu-desc">{description}</p>
 
           <div className="menu-actions">

@@ -4,6 +4,7 @@ import { getPublicMenu } from "@/lib/menuData";
 import ReservationForm from "../ReservationForm";
 import MenuClient from "./MenuClient";
 import { verifyTableToken } from "@/lib/tableAuth";
+import { getRewardBadges } from "@/lib/rewards/earnRules";
 
 // ── SEO metadata ────────────────────────────────────────────────
 export async function generateMetadata({
@@ -42,6 +43,7 @@ interface IMenuItem {
   isVeg: boolean;
   category: string;
   sortOrder: number;
+  rewardBadge: { damru: number; basis: string; label: string } | null;
 }
 
 // ── Page ─────────────────────────────────────────────────────────
@@ -79,6 +81,9 @@ export default async function MenuPage({
     description: c.description || "",
     sortOrder: c.sortOrder,
   }));
+  // Badges come from active earn rules (their own short cache), so a rule change
+  // shows up without waiting for the 5-minute menu cache.
+  const badges = await getRewardBadges(menuData.items);
   items = menuData.items.map(i => ({
     _id: i._id,
     name: i.name,
@@ -90,6 +95,7 @@ export default async function MenuPage({
     isVeg: i.isVeg !== false,
     category: i.category,
     sortOrder: i.sortOrder,
+    rewardBadge: badges.get(i._id) ?? null,
   }));
 
   if (isTableTokenInvalid) {

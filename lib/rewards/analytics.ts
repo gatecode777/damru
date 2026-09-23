@@ -1,6 +1,7 @@
 export const REWARD_ISSUE_CATEGORIES = [
   "welcome_registration", "birthday", "marriage_anniversary", "account_anniversary",
   "first_order", "daily_login", "achievement", "mission", "referral", "order_reward",
+  "item_reward", "category_reward", "tier_reward",
   "loyalty_tier", "admin_credit",
   "campaign",
 ] as const;
@@ -9,6 +10,7 @@ export const REWARD_SOURCE_LABELS: Record<string, string> = {
   welcome_registration: "Welcome", birthday: "Birthday", marriage_anniversary: "Anniversary",
   account_anniversary: "Account anniversary", first_order: "First order", daily_login: "Daily streak",
   achievement: "Achievements", mission: "Missions", referral: "Referrals", order_reward: "Orders",
+  item_reward: "Dish rewards", category_reward: "Category rewards", tier_reward: "Order-value rewards",
   loyalty_tier: "Loyalty tier", admin_credit: "Admin credit", refund_restore: "Refund restoration",
   redemption: "Redemption", expiry: "Expiry",
   campaign: "Campaign bonuses",
@@ -48,8 +50,9 @@ export function resolveAnalyticsRange(input: { preset?: string; start?: string |
   return { preset, start, end, groupBy: spanDays > 120 ? "month" as const : spanDays > 45 ? "week" as const : "day" as const };
 }
 
-export function calculateLiability(outstandingDamru: number, rupeesPerDamru: number) {
-  return Math.max(0, outstandingDamru) * Math.max(0, rupeesPerDamru);
+/** ₹ value of Damru at an integer paise-per-Damru rate (integer paise arithmetic, then ₹). */
+export function calculateLiability(outstandingDamru: number, paisePerDamru: number) {
+  return Math.round(Math.max(0, outstandingDamru) * Math.max(0, paisePerDamru)) / 100;
 }
 
 export function percentage(numerator: number, denominator: number) {

@@ -923,3 +923,24 @@ body {
         max-width: 1200px;
     }
 }
+
+/* Server-estimated Damru for this order (credited on delivery) */
+.rewards__earn-estimate {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fde3c8;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #7c2d12;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.rewards__earn-estimate small {
+  display: block;
+  color: #9a6b4f;
+  font-size: 0.72rem;
+}

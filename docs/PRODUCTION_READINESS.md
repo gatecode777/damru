@@ -17,7 +17,9 @@ Scope: the production-risk items deferred by `docs/CONSISTENCY_AUDIT.md` — rew
 
 `lib/env.ts`'s `validateProductionEnv()` is the central startup check: in production it returns the names (never values) of any required variable that's missing. `instrumentation.ts` calls it once at server startup and **throws**, refusing to serve requests with an incomplete production configuration, rather than failing unpredictably later on the first request that needs the missing secret.
 
-Required in production: `MONGODB_URI`, `AUTH_SECRET`, `NEXTAUTH_URL`, `JWT_SECRET`, `CRON_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
+Required in production: `MONGODB_URI`, `AUTH_SECRET`, `NEXTAUTH_URL`, `JWT_SECRET`, `CRON_SECRET`.
+
+**Optional email configuration:** `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`. The application can start without SMTP, but email-dependent actions fail with a clear configuration error until credentials are supplied.
 
 **Conditionally required:** `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` — the app stays COD-only and startup succeeds if none of the three are set. Once any one is set, all three become required (a half-configured gateway — e.g. a key with no way to verify its webhooks — is worse than none).
 

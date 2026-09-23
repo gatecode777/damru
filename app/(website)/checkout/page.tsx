@@ -49,27 +49,14 @@ export default function CheckoutPage() {
   const [quote, setQuote] = useState<{ subtotal: number; couponDiscount: number; deliveryFee: number; taxAmount: number; damruDiscount: number; finalAmount: number; freeDeliveryApplied: boolean } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState("");
+  // Server-computed only: the estimated Damru this order earns on delivery,
+  // and how much of the requested redemption the order can actually absorb.
+  const [earnEstimate, setEarnEstimate] = useState<{ estimatedDamru: number; eligible: boolean; dailyLimitApplied: boolean; note: string } | null>(null);
+  const [redemptionNote, setRedemptionNote] = useState("");
 
   function handleRequestedDamruChange(value: string) {
-    setRequestedDamru(value);
-
-    // Give immediate feedback from the last server-approved quote. Damru is
-    // applied after tax and delivery, so only the discount and final amount
-    // change here. The quote request below still validates balance/config.
-    const amount = Number(value || 0);
-    const redemption = rewardsDashboard?.redemption;
-    if (!quote || !redemption || !Number.isFinite(amount) || amount < 0) return;
-    if (amount > rewardsDashboard.damruBalance || amount > redemption.maximumPerOrder) return;
-
-    const beforeDamru = quote.finalAmount + quote.damruDiscount;
-    const discount = amount === 0 || amount >= redemption.minimum
-      ? Math.min(beforeDamru, Math.round(amount * redemption.rate))
-      : 0;
-    setQuote(current => current ? {
-      ...current,
-      damruDiscount: discount,
-      finalAmount: Math.max(0, beforeDamru - discount),
-    } : current);
+    // Whole Damru only. Every monetary effect comes from the next server quote.
+    setRequestedDamru(value.replace(/\D/g, ""));
   }
 
   // ── Dine-in state ─────────────────────────────────────────
@@ -103,6 +90,7 @@ export default function CheckoutPage() {
   const [placedOrder, setPlacedOrder] = useState<{
     orderId: string; internalOrderId: string; total: number;
     redeemedAmount?: number; redeemedDiscount?: number; redeemError?: string;
+    damruEstimate?: number;
     // Only meaningful for non-COD orders — COD's paymentStatus stays undefined,
     // which the success screen below treats identically to "paid".
     paymentStatus?: "paid" | "pending" | "failed";
@@ -287,6 +275,8 @@ export default function CheckoutPage() {
           }),
         });
         const data = await response.json();
+        setEarnEstimate(data.damruEstimate ?? null);
+        setRedemptionNote(data.damruRedemption?.message || "");
         if (!response.ok) { setQuote(data.partialTotals || null); setQuoteError(data.error || "Unable to calculate order total."); return; }
         setQuote(data.totals);
       } catch (error) {
@@ -429,9 +419,11 @@ export default function CheckoutPage() {
       const result: {
         orderId: string; internalOrderId: string; total: number;
         redeemedAmount?: number; redeemedDiscount?: number; redeemError?: string;
+        damruEstimate?: number;
         paymentStatus?: "paid" | "pending" | "failed";
       } = {
         orderId: data.order.orderId, internalOrderId: data.order._id, total: data.order.total,
+        damruEstimate: typeof data.order.damruEstimate === "number" ? data.order.damruEstimate : undefined,
       };
 
       if (data.redemption) {
@@ -439,7 +431,7 @@ export default function CheckoutPage() {
           result.redeemedAmount = data.redemption.amount;
           result.redeemedDiscount = data.redemption.discount;
           trackRewardEvent("damru_redeemed", { amount: data.redemption.amount });
-          toast.success("Damru redeemed", `${data.redemption.amount} Damru applied for a ₹${data.redemption.discount} discount.`, { id: "checkout-damru" });
+          toast.success("Damru redeemed", `${data.redemption.amount} Damru applied for a ₹${data.redemption.discount} discount.${data.redemption.capped ? ` Only ${data.redemption.amount} of the ${data.redemption.requestedAmount} requested could be used on this order.` : ""}`, { id: "checkout-damru" });
         } else {
           result.redeemError = getSafeUserMessage(data.redemption.error,"Redemption failed.");
           toast.error("Damru not redeemed", result.redeemError, { id: "checkout-damru" });
@@ -522,7 +514,11 @@ export default function CheckoutPage() {
               Damru redemption didn&apos;t go through: {placedOrder.redeemError}. Your balance wasn&apos;t affected.
             </p>
           )}
-          <p style={{ color: "#999", fontSize: 13, marginBottom: 32 }}>🎁 Damru from qualifying orders is credited once your order is delivered.</p>
+          <p style={{ color: "#999", fontSize: 13, marginBottom: 32 }}>
+            {placedOrder.damruEstimate && placedOrder.damruEstimate > 0
+              ? <>🎁 You&apos;ll earn approximately <b style={{ color: "#e67e22" }}>{placedOrder.damruEstimate.toLocaleString("en-IN")} Damru</b> once this order is delivered.</>
+              : "🎁 Damru from qualifying orders is credited once your order is delivered."}
+          </p>
 
           <button onClick={() => router.push("/menu")}
             style={{ background: "#e67e22", color: "#fff", border: "none", borderRadius: 10, padding: "12px 32px", fontFamily: "Poppins,sans-serif", fontSize: "1rem", fontWeight: 600, cursor: "pointer" }}>
@@ -686,22 +682,37 @@ export default function CheckoutPage() {
                   <b style={{ fontSize: 18, color: "#e67e22" }}>{quote ? fmtINR(grandTotal) : quoteLoading ? "Calculating…" : fmtINR(0)}</b>
                 </div>
                 {quoteError && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{quoteError}</p>}
+                {isLoggedIn && earnEstimate?.eligible && earnEstimate.estimatedDamru > 0 && (
+                  <div className="rewards__earn-estimate">
+                    <span aria-hidden="true">🪙</span>
+                    <span>
+                      You&apos;ll earn approximately <b>{earnEstimate.estimatedDamru.toLocaleString("en-IN")} Damru</b> on this order.
+                      <small>{earnEstimate.dailyLimitApplied ? "Includes today's earning limit. " : ""}{earnEstimate.note}</small>
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Redeem Damru */}
               {isLoggedIn && rewardsDashboard && rewardsDashboard.damruBalance > 0 && (
                 <div className="rewards__redeem-box">
-                  <p className="rewards__redeem-title">🪙 Redeem Damru — Available: {rewardsDashboard.damruBalance}</p>
+                  <p className="rewards__redeem-title">
+                    🪙 Redeem Damru — Available: {rewardsDashboard.damruBalance.toLocaleString("en-IN")}
+                    {typeof rewardsDashboard.walletValue === "number" && <> (≈ {fmtINR(rewardsDashboard.walletValue)})</>}
+                  </p>
                   <input
-                    type="number"
-                    min={0}
-                    max={rewardsDashboard.damruBalance}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={requestedDamru}
                     onChange={e => handleRequestedDamruChange(e.target.value)}
                     placeholder="0"
+                    aria-label="Damru to redeem"
                     style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontFamily: "Poppins,sans-serif", fontSize: 13, boxSizing: "border-box" }}
                   />
-                  <p className="rewards__redeem-note">The backend validates your balance and shows the exact discount above.</p>
+                  <p className="rewards__redeem-note">
+                    {redemptionNote || `Minimum ${rewardsDashboard.redemption.minimum} Damru. The exact discount is shown above.`}
+                  </p>
                 </div>
               )}
 

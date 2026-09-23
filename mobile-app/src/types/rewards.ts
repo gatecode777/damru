@@ -11,6 +11,9 @@ export type DamruTransactionCategory =
   | "mission"
   | "referral"
   | "order_reward"
+  | "item_reward"
+  | "category_reward"
+  | "tier_reward"
   | "campaign"
   | "reward_reversal"
   | "reward_debt_recovery"
@@ -162,8 +165,27 @@ export type ReferralsResponse = {
   totalPages: number;
 };
 
+/** Server estimate of Damru an order earns on delivery (from /api/checkout/quote). */
+export type DamruEstimate = {
+  isEstimate: true;
+  eligible: boolean;
+  estimatedDamru: number;
+  dailyLimitApplied: boolean;
+  estimatedValue: number;
+  note: string;
+};
+
 export type RewardsDashboard = {
   damruBalance: number;
+  /** ₹ value of the balance at the server-configured rate — never converted in the app. */
+  walletValuePaise?: number;
+  walletValue?: number;
+  redemption?: {
+    paisePerDamru: number;
+    damruPerRupee: number;
+    minimum: number;
+    maximumPerOrder: number;
+  };
   damruTotalEarned: number;
   damruTotalRedeemed: number;
   rewardDebt: number;
@@ -201,9 +223,3 @@ export type RewardsUpcoming = {
   damruToNextLevel: number;
 };
 
-export type RedeemResult = {
-  success: boolean;
-  discount?: number;
-  newBalance?: number;
-  error?: string;
-};

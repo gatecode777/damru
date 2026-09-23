@@ -8,6 +8,7 @@ import User from "@/models/User";
 import { getRazorpayClient, toRazorpayAmount } from "@/lib/payments/razorpay";
 import { getDamruConfig } from "@/lib/getDamruConfig";
 import { assignLotFields } from "@/lib/rewards/damruAllocation";
+import { valueSnapshot } from "@/lib/rewards/damruValue";
 import { notifyRewardEvent } from "@/lib/notifications/rewardNotificationService";
 import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
 import { reverseOrderRewards } from "@/lib/rewards/reversalEngine";
@@ -86,7 +87,7 @@ export async function restoreDamruForOrder(
   const redemption = await DamruTransaction.findOne({
     idempotencyKey: `redeem_order_${orderId}`,
     category: "redemption",
-  }).select("amount allocations").lean<{ amount: number; allocations?: IDamruAllocation[] }>();
+  }).select("amount allocations paisePerDamru").lean<{ amount: number; allocations?: IDamruAllocation[]; paisePerDamru?: number }>();
   if (!redemption || redemption.amount <= 0) return;
 
   const tracedAllocations = redemption.allocations || [];
@@ -106,6 +107,8 @@ export async function restoreDamruForOrder(
       description: "Damru restored — order cancelled/refunded before delivery",
       idempotencyKey,
       orderId,
+      // Restored at the value the Damru was redeemed at.
+      ...valueSnapshot(redemption.amount, redemption.paisePerDamru ?? config.paisePerDamru),
       // Only the untraced shortfall becomes THIS transaction's own spendable lot —
       // the traced portion is restored directly into its original lots below, so
       // counting it here too would double the wallet-invariant sum.

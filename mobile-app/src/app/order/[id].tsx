@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { get } from "@/lib/api";
 import { colors } from "@/config";
 import type { Order } from "@/types";
@@ -25,6 +25,16 @@ export default function OrderDetailScreen() {
   });
 
   const order = data?.find((o) => o._id === id);
+
+  // Once an order is delivered (or its reward changed), the wallet may have
+  // moved — refetch reward data instead of showing a cached balance.
+  const queryClient = useQueryClient();
+  const damruStatus = order?.damru?.status;
+  useEffect(() => {
+    if (damruStatus === "earned" || damruStatus === "reversed") {
+      void queryClient.invalidateQueries({ queryKey: ["rewards"] });
+    }
+  }, [damruStatus, queryClient]);
 
   function handleCancelSubmit(reason: string) {
     setSheetOpen(false);
@@ -163,14 +173,35 @@ export default function OrderDetailScreen() {
           {discount > 0 && <BillRow label={order.couponCode ? `Discount (${order.couponCode})` : "Discount"} value={-discount} />}
           {tax > 0 && <BillRow label="Tax" value={tax} />}
           {shipping > 0 && <BillRow label="Delivery Fee" value={shipping} />}
+          {(order.damruDiscount ?? 0) > 0 && <BillRow label="Damru redeemed" value={-(order.damruDiscount ?? 0)} />}
           <View style={styles.divider} />
           <BillRow label="Total" value={order.total} bold />
+          <DamruLine damru={order.damru} />
         </View>
       </ScrollView>
 
       <CancelOrderSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} onSubmit={handleCancelSubmit} />
     </View>
   );
+}
+
+/** Server-computed Damru status for this order — display only. */
+function DamruLine({ damru }: { damru: Order["damru"] }) {
+  if (!damru) return null;
+  let text = "";
+  let color = colors.ink;
+  if (damru.status === "earned") {
+    text = `🪙 ${damru.net.toLocaleString("en-IN")} Damru earned${damru.reversed > 0 ? ` (${damru.reversed.toLocaleString("en-IN")} reversed)` : ""}`;
+    color = colors.green;
+  } else if (damru.status === "reversed") {
+    text = `🪙 ${damru.reversed.toLocaleString("en-IN")} Damru reversed`;
+    color = colors.danger;
+  } else if (damru.status === "estimated" && damru.estimated) {
+    text = `🪙 Earn ~${damru.estimated.toLocaleString("en-IN")} Damru when delivered`;
+    color = "#b45309";
+  }
+  if (!text) return null;
+  return <Text style={[styles.damruLine, { color }]}>{text}</Text>;
 }
 
 function BillRow({ label, value, bold }: { label: string; value: number; bold?: boolean }) {
@@ -213,4 +244,5 @@ const styles = StyleSheet.create({
   billLabel: { fontFamily: "Poppins_400Regular", fontSize: 13, color: "#756860" },
   billLabelBold: { fontFamily: "Poppins_700Bold", fontSize: 15, color: colors.ink },
   billValue: { fontFamily: "Poppins_500Medium", fontSize: 13, color: colors.ink },
+  damruLine: { fontFamily: "Poppins_500Medium", fontSize: 12.5, marginTop: 8 },
 });

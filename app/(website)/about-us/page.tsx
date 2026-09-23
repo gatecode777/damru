@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/website/aboutus.css";
-import Link from "next/link";
+import Image from "next/image";
 import ReservationForm from "../ReservationForm";
 
 export const metadata: Metadata = {
@@ -31,14 +31,14 @@ export default function AboutUsPage() {
             <p>
               Welcome to डमरू (Damru) — where pure vegetarian food meets warmth, quality, and timeless hospitality.<br />
               At Damru, our vision is simple: to serve fresh, pure, and delicious vegetarian cuisine at affordable prices without compromising on quality or experience. We believe that great food should be accessible to everyone, served in an elegant and welcoming environment that makes every visit memorable.<br />
-              Every dish is prepared using carefully selected ingredients, authentic recipes, and uncompromising hygiene standards. Whether you're joining us for a family dinner, a casual outing with friends, or a special celebration, we strive to create an experience that combines exceptional taste, heartfelt service, and a premium ambience.<br />
-              At Damru, we don't just serve meals—we create moments where every guest enjoys purity, quality, comfort, and value, all under one roof.
+              Every dish is prepared using carefully selected ingredients, authentic recipes, and uncompromising hygiene standards. Whether you&apos;re joining us for a family dinner, a casual outing with friends, or a special celebration, we strive to create an experience that combines exceptional taste, heartfelt service, and a premium ambience.<br />
+              At Damru, we don&apos;t just serve meals—we create moments where every guest enjoys purity, quality, comfort, and value, all under one roof.
               Pure Taste. Premium Experience. Honest Value
             </p>
           </div>
 
           <div className="story-image">
-            <img src="/assets/images/ourstory.png" alt="Our Story Chef" />
+            <Image src="/assets/images/ourstory.png" alt="Our Story Chef" width={666} height={477} sizes="(max-width: 1024px) 100vw, 50vw" />
           </div>
         </div>
       </section>
@@ -53,8 +53,8 @@ export default function AboutUsPage() {
                 <p className="name">Raja Choudhary</p>
               </div>
               <div className="image-relative">
-                <img src="/assets/images/abtusflower.png" alt="" className="deco-art art-founder" />
-                <img src="/assets/images/raja.png" alt="Founder" className="main-photo" />
+                <Image src="/assets/images/abtusflower.png" alt="" width={256} height={229} className="deco-art art-founder" />
+                <Image src="/assets/images/raja.png" alt="Founder" width={726} height={861} className="main-photo" sizes="(max-width: 1024px) 100vw, 36vw" />
               </div>
             </div>
             <div className="member-text-col">
@@ -87,8 +87,8 @@ export default function AboutUsPage() {
                 <p className="name">Sandeep Rana</p>
               </div>
               <div className="image-relative">
-                <img src="/assets/images/abtusflower.png" alt="" className="deco-art art-chef" />
-                <img src="/assets/images/sandeep.png" alt="Executive Chef" className="main-photo" />
+                <Image src="/assets/images/abtusflower.png" alt="" width={256} height={229} className="deco-art art-chef" />
+                <Image src="/assets/images/sandeep.png" alt="Executive Chef" width={617} height={861} className="main-photo" sizes="(max-width: 1024px) 100vw, 36vw" />
               </div>
             </div>
             <div className="member-text-col">
@@ -134,15 +134,15 @@ export default function AboutUsPage() {
       </section>
 
       <section className="process-section">
-        <img src="/assets/images/rosemary.png" alt="" className="process-leaf leaf-top-right" />
-        <img src="/assets/images/rosemary (1).png" alt="" className="process-leaf leaf-bottom-left" />
+        <Image src="/assets/images/rosemary.png" alt="" width={351} height={547} className="process-leaf leaf-top-right" />
+        <Image src="/assets/images/rosemary (1).png" alt="" width={240} height={326} className="process-leaf leaf-bottom-left" />
 
         <div className="process-container">
           <h2 className="section-main-title">Sophisticated Process</h2>
 
           <div className="process-row">
             <div className="process-img">
-              <img src="/assets/images/slice.png" alt="Slice" />
+              <Image src="/assets/images/slice.png" alt="Fresh vegetables being sliced" width={560} height={452} sizes="(max-width: 1024px) 100vw, 50vw" />
             </div>
             <div className="process-text">
               <h3>01.Slice</h3>
@@ -156,7 +156,7 @@ export default function AboutUsPage() {
 
           <div className="process-row reverse">
             <div className="process-img">
-              <img src="/assets/images/marinated.png" alt="Marinated" />
+              <Image src="/assets/images/marinated.png" alt="Vegetables being marinated" width={560} height={452} sizes="(max-width: 1024px) 100vw, 50vw" />
             </div>
             <div className="process-text">
               <h3>02.Marinated</h3>
@@ -170,7 +170,7 @@ export default function AboutUsPage() {
 
           <div className="process-row">
             <div className="process-img">
-              <img src="/assets/images/bake.png" alt="Bake" />
+              <Image src="/assets/images/bake.png" alt="Marinated ingredients being baked" width={560} height={452} sizes="(max-width: 1024px) 100vw, 50vw" />
             </div>
             <div className="process-text">
               <h3>03.Bake</h3>

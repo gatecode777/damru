@@ -44,8 +44,7 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "runtimeVersion": {
       "policy": "appVersion"
@@ -56,8 +55,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "ddeb7623-671e-4e99-b639-08e4d7472e43"
+        "projectId": "e026794a-cf38-4a97-8023-510dcee93a9b"
       }
-    }
+    },
+    "owner": "ironrahul"
   }
 }

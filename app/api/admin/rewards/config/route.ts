@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkApiPerm } from "@/lib/checkApiPerm";
-import { getOrCreateDamruConfig } from "@/lib/getDamruConfig";
-import { validateExpiryConfig } from "@/lib/rewards/damruAllocation";
+import { logAdminAction } from "@/lib/auditLog";
+import { getClientIp } from "@/lib/rateLimit";
+import { getOrCreateDamruConfig, invalidateDamruConfigCache, toDamruConfigValues, type DamruConfigValues } from "@/lib/getDamruConfig";
+import { damruPerRupee } from "@/lib/rewards/damruValue";
+import { validateDamruConfigUpdate } from "@/lib/rewards/damruConfigUpdate";
+
+function withDisplay(config: DamruConfigValues) {
+  return { ...config, damruPerRupee: damruPerRupee(config.paisePerDamru) };
+}
 
 export async function GET() {
   const deny = await checkApiPerm("rewards", "view");
   if (deny) return deny;
 
   try {
-    const config = await getOrCreateDamruConfig();
-    return NextResponse.json({ config: JSON.parse(JSON.stringify(config)) });
+    const config = toDamruConfigValues(await getOrCreateDamruConfig());
+    return NextResponse.json({ config: withDisplay(config) });
   } catch (err) {
     console.error("GET admin/rewards/config error:", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
@@ -22,39 +29,48 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { redemptionRate, minRedemption, maxRedemptionPerOrder, dailyEarnLimit, expiryEnabled, expiryDays, expiryWarningDays, loyaltyThresholds } = body;
+    const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) : "";
+    const doc = await getOrCreateDamruConfig();
+    const before = toDamruConfigValues(doc);
 
-    if (redemptionRate !== undefined && redemptionRate <= 0) return NextResponse.json({ error: "Redemption rate must be positive." }, { status: 400 });
-    if (minRedemption !== undefined && maxRedemptionPerOrder !== undefined && minRedemption > maxRedemptionPerOrder) {
-      return NextResponse.json({ error: "Minimum redemption cannot exceed maximum redemption." }, { status: 400 });
+    const { next, error } = validateDamruConfigUpdate(body, before);
+    if (error || !next) return NextResponse.json({ error }, { status: 400 });
+
+    // Changing expiry only affects future credits — existing lots keep the
+    // expiresAt they were assigned at creation time. Changing the Damru value
+    // never rewrites history: every ledger row carries its own value snapshot.
+    doc.paisePerDamru = next.paisePerDamru;
+    doc.orderEarn = { ...next.orderEarn };
+    doc.minRedemption = next.minRedemption;
+    doc.maxRedemptionPerOrder = next.maxRedemptionPerOrder;
+    doc.dailyEarnLimit = next.dailyEarnLimit;
+    doc.expiryEnabled = next.expiryEnabled;
+    doc.expiryDays = next.expiryDays;
+    doc.expiryWarningDays = next.expiryWarningDays;
+    doc.loyaltyThresholds = { ...next.loyaltyThresholds };
+    await doc.save();
+    invalidateDamruConfigCache();
+
+    const after = toDamruConfigValues(doc);
+    const changed = (Object.keys(after) as (keyof DamruConfigValues)[]).filter(k => JSON.stringify(after[k]) !== JSON.stringify(before[k]));
+    if (changed.length > 0) {
+      await logAdminAction(
+        changed.includes("paisePerDamru") ? "damru_value_changed" : "damru_config_updated",
+        {
+          targetType: "DamruConfig",
+          targetId: String(doc._id),
+          details: {
+            changed,
+            before: Object.fromEntries(changed.map(k => [k, before[k]])),
+            after: Object.fromEntries(changed.map(k => [k, after[k]])),
+            ...(reason ? { reason } : {}),
+            request: { ip: getClientIp(req), userAgent: req.headers.get("user-agent") || undefined },
+          },
+        }
+      );
     }
 
-    const config = await getOrCreateDamruConfig();
-
-    // Section 39 of PRD 4A: validated server-side regardless of what the
-    // client sends, against the EFFECTIVE post-update values (not just the
-    // fields present in this request) since expiryEnabled/expiryDays/
-    // expiryWarningDays can be submitted independently of each other.
-    const effectiveEnabled = expiryEnabled !== undefined ? Boolean(expiryEnabled) : config.expiryEnabled;
-    const effectiveDays = expiryDays !== undefined ? expiryDays : config.expiryDays;
-    const effectiveWarningDays = expiryWarningDays !== undefined ? expiryWarningDays : config.expiryWarningDays;
-
-    const expiryError = validateExpiryConfig({ expiryEnabled: effectiveEnabled, expiryDays: effectiveDays, expiryWarningDays: effectiveWarningDays });
-    if (expiryError) return NextResponse.json({ error: expiryError }, { status: 400 });
-
-    if (redemptionRate !== undefined) config.redemptionRate = redemptionRate;
-    if (minRedemption !== undefined) config.minRedemption = minRedemption;
-    if (maxRedemptionPerOrder !== undefined) config.maxRedemptionPerOrder = maxRedemptionPerOrder;
-    if (dailyEarnLimit !== undefined) config.dailyEarnLimit = dailyEarnLimit;
-    // Changing these only affects future credits — existing lots keep the
-    // expiresAt they were assigned at creation time (PRD 4A section 40/41).
-    if (expiryEnabled !== undefined) config.expiryEnabled = expiryEnabled;
-    if (expiryDays !== undefined) config.expiryDays = expiryDays;
-    if (expiryWarningDays !== undefined) config.expiryWarningDays = expiryWarningDays;
-    if (loyaltyThresholds !== undefined) config.loyaltyThresholds = { ...config.loyaltyThresholds, ...loyaltyThresholds };
-    await config.save();
-
-    return NextResponse.json({ success: true, config });
+    return NextResponse.json({ success: true, config: withDisplay(after) });
   } catch (err) {
     console.error("PUT admin/rewards/config error:", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });

@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import CategoryModel from "@/models/Category";
 import MenuItemModel from "@/models/MenuItem";
+import { getRewardBadges } from "@/lib/rewards/earnRules";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Accept",
 };
-const PUBLIC_CACHE = "public, s-maxage=300, stale-while-revalidate=86400";
+// Short CDN window: items carry Damru reward badges that follow admin rule changes.
+const PUBLIC_CACHE = "public, s-maxage=60, stale-while-revalidate=300";
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -45,6 +47,7 @@ export async function GET() {
       .select("name slug description image basePrice isVeg isFeatured tags variantType")
       .lean() as any[];
 
+    const badges = await getRewardBadges(raw.map(i => ({ _id: String(i._id), category: String(shakesCat._id) })));
     const items = raw.map((i) => ({
       _id: String(i._id),
       name: i.name,
@@ -56,6 +59,7 @@ export async function GET() {
       isFeatured: !!i.isFeatured,
       tags: i.tags || [],
       variantType: i.variantType || "none",
+      rewardBadge: badges.get(String(i._id)) ?? null,
     }));
 
     return NextResponse.json(

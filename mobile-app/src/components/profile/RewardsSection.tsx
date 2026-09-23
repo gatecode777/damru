@@ -170,7 +170,13 @@ export function RewardsSection({ onToast }: { onToast: (msg: string) => void }) 
       <View style={styles.walletGrid}>
         <View style={styles.walletStat}>
           <Text style={styles.walletLabel}>Available</Text>
-          <Text style={styles.walletValue}>{dashboard.damruBalance}</Text>
+          <Text style={styles.walletValue}>{dashboard.damruBalance.toLocaleString("en-IN")}</Text>
+          {typeof dashboard.walletValue === "number" ? (
+            <Text style={styles.walletSubValue}>
+              ≈ ₹{dashboard.walletValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+              {dashboard.redemption ? ` · ${dashboard.redemption.damruPerRupee} Damru = ₹1` : ""}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.walletStat}>
           <Text style={styles.walletLabel}>Lifetime Earned</Text>
@@ -419,6 +425,7 @@ const styles = StyleSheet.create({
   walletStat: { width: "47%", backgroundColor: "#fff7ed", borderWidth: 1, borderColor: "#fde3c8", borderRadius: 14, padding: 14 },
   walletLabel: { fontFamily: "Poppins_500Medium", fontSize: 11, color: "#9a7b52", textTransform: "uppercase", marginBottom: 4 },
   walletValue: { fontFamily: "Poppins_700Bold", fontSize: 20, color: colors.orange },
+  walletSubValue: { fontFamily: "Poppins_500Medium", fontSize: 11, color: "#9a7b52", marginTop: 2 },
   nextLevelText: { fontFamily: "Poppins_400Regular", fontSize: 12, color: "#756860", marginTop: 8, marginBottom: 4 },
   expiryHint: { fontFamily: "Poppins_400Regular", fontSize: 12, color: "#c2410c", marginTop: 2, marginBottom: 4 },
   expiryCard: { backgroundColor: "#fffbeb", borderWidth: 1, borderColor: "#fde68a", borderRadius: 16, padding: 14, marginTop: 14 },

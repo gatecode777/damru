@@ -8,6 +8,13 @@ export type User = {
   createdAt?: string;
 };
 
+/** Server-authored Damru badge from an active dish/category earn rule (never computed in the app). */
+export type RewardBadge = {
+  damru: number;
+  basis: "PER_UNIT" | "PER_LINE" | "PER_ORDER";
+  label: string;
+};
+
 export type MenuItem = {
   _id: string;
   name: string;
@@ -21,6 +28,7 @@ export type MenuItem = {
   isVeg?: boolean;
   custom?: string;
   qty?: number;
+  rewardBadge?: RewardBadge | null;
 };
 
 export type CartItem = {
@@ -115,6 +123,15 @@ export type Order = {
   couponCode?: string;
   tax?: number;
   shipping?: number;
+  damruDiscount?: number;
+  /** Server-computed Damru status for this order (GET /api/orders). */
+  damru?: {
+    status: "estimated" | "earned" | "reversed" | "none";
+    estimated: number | null;
+    earned: number;
+    reversed: number;
+    net: number;
+  };
   items?: OrderItem[];
   deliveryAddress?: {
     fullName: string;

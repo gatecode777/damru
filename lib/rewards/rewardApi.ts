@@ -1,5 +1,5 @@
 import type {
-  RewardsDashboard, RewardsHistoryPage, RewardsUpcoming, RedeemResult, RewardCoupon, AchievementsResponse, MissionsResponse, ReferralsResponse, LoyaltyResponse,
+  RewardsDashboard, RewardsHistoryPage, RewardsUpcoming, RewardCoupon, AchievementsResponse, MissionsResponse, ReferralsResponse, LoyaltyResponse,
 } from "./rewardTypes";
 
 async function getJson<T>(url: string): Promise<T> {
@@ -37,17 +37,6 @@ export function getReferrals(page = 1, limit = 20) {
   return getJson<ReferralsResponse & { error?: string }>(`/api/rewards/referrals?page=${page}&limit=${limit}`);
 }
 export function getLoyalty() { return getJson<LoyaltyResponse & { error?: string }>("/api/rewards/loyalty"); }
-
-export async function redeemDamru(orderId: string, amount: number): Promise<RedeemResult> {
-  const res = await fetch("/api/rewards/redeem", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ orderId, amount }),
-  });
-  const data = await res.json();
-  if (!res.ok || data.error) return { success: false, error: data.error || "Redemption failed." };
-  return { success: true, discount: data.discount, newBalance: data.newBalance };
-}
 
 export async function updateDateOfBirth(dateOfBirth: string): Promise<{ success: boolean; error?: string }> {
   const res = await fetch("/api/user/me", {

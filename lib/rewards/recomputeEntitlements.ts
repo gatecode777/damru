@@ -32,8 +32,9 @@ export interface RecomputeContext {
   userId: string | mongoose.Types.ObjectId;
   orderId: string | mongoose.Types.ObjectId;
   /** "ORDER_CANCELLED" — full order-level cancellation (COD or never-paid online).
-   *  "REFUND_PROCESSED" — a Razorpay refund reached "processed" state. */
-  trigger: "ORDER_CANCELLED" | "REFUND_PROCESSED";
+   *  "REFUND_PROCESSED" — a Razorpay refund reached "processed" state.
+   *  "PAYMENT_FAILED"   — a delivered COD order's payment was recorded as failed. */
+  trigger: "ORDER_CANCELLED" | "REFUND_PROCESSED" | "PAYMENT_FAILED";
   /** Stable identifier for this event — used as the idempotency discriminator
    *  in every financial write below. Must be unique per distinct event:
    *  - REFUND_PROCESSED: String(refund._id)
@@ -59,6 +60,18 @@ export interface RecomputeResult {
   loyalty: { downgraded: boolean; skipped: boolean; error?: string };
 }
 
+/** Cancellation and failed payment lose the whole order; a refund only when it covers the payment. */
+function isFullLoss(ctx: RecomputeContext): boolean {
+  if (ctx.trigger !== "REFUND_PROCESSED") return true;
+  return ctx.totalRefundedAmount != null && ctx.paymentAmount != null && ctx.totalRefundedAmount >= ctx.paymentAmount;
+}
+
+function fullLossReason(ctx: RecomputeContext) {
+  if (ctx.trigger === "ORDER_CANCELLED") return "ORDER_CANCELLED" as const;
+  if (ctx.trigger === "PAYMENT_FAILED") return "PAYMENT_REVERSED" as const;
+  return "FULL_REFUND" as const;
+}
+
 // ---------------------------------------------------------------------------
 // 1. Order Reward Recomputation (partial and full)
 // ---------------------------------------------------------------------------
@@ -67,15 +80,12 @@ async function recomputeOrderRewards(ctx: RecomputeContext): Promise<RecomputeRe
     const originals = await findReversibleTransactions(ctx.orderId);
     if (originals.length === 0) return { reversed: 0, skipped: true };
 
-    const isFullReversal = ctx.trigger === "ORDER_CANCELLED" ||
-      (ctx.totalRefundedAmount != null && ctx.paymentAmount != null && ctx.totalRefundedAmount >= ctx.paymentAmount);
+    const isFullReversal = isFullLoss(ctx);
 
     let totalReversed = 0;
 
     for (const original of originals) {
-      const reason = isFullReversal
-        ? (ctx.trigger === "ORDER_CANCELLED" ? "ORDER_CANCELLED" as const : "FULL_REFUND" as const)
-        : "PARTIAL_REFUND" as const;
+      const reason = isFullReversal ? fullLossReason(ctx) : "PARTIAL_REFUND" as const;
 
       if (isFullReversal) {
         const result = await applyReversal(original._id, {
@@ -85,7 +95,7 @@ async function recomputeOrderRewards(ctx: RecomputeContext): Promise<RecomputeRe
           refundId: ctx.trigger === "REFUND_PROCESSED" ? ctx.triggerId : undefined,
           note: reason === "FULL_REFUND" ? "Order fully refunded." : undefined,
         });
-        if (result.applied) totalReversed += original.amount;
+        if (result.applied && "transaction" in result && result.transaction) totalReversed += result.transaction.amount;
       } else {
         // Partial refund — compute proportional reversal.
         const order = await Order.findById(ctx.orderId)
@@ -94,6 +104,7 @@ async function recomputeOrderRewards(ctx: RecomputeContext): Promise<RecomputeRe
         const originalEligibleAmount = order?.eligibleRewardAmount ?? 0;
         const alreadyReversed = await getTotalReversedAmount(original._id);
         const campaignSnapshot = original.campaignSnapshot as Record<string, unknown> | undefined;
+        const ruleSnapshot = original.ruleSnapshot as Record<string, unknown> | undefined;
 
         const { additionalReversal } = calculatePartialReversalAmount({
           originalEligibleAmount,
@@ -102,6 +113,7 @@ async function recomputeOrderRewards(ctx: RecomputeContext): Promise<RecomputeRe
           paymentAmount: ctx.paymentAmount ?? 1,
           alreadyReversed,
           campaignSnapshot,
+          ruleSnapshot,
         });
 
         if (additionalReversal > 0) {
@@ -129,9 +141,7 @@ async function recomputeOrderRewards(ctx: RecomputeContext): Promise<RecomputeRe
 async function recomputeFirstOrder(ctx: RecomputeContext): Promise<RecomputeResult["firstOrder"]> {
   try {
     // Only act when the full order value is lost (cancellation or full refund).
-    const isFullLoss = ctx.trigger === "ORDER_CANCELLED" ||
-      (ctx.totalRefundedAmount != null && ctx.paymentAmount != null && ctx.totalRefundedAmount >= ctx.paymentAmount);
-    if (!isFullLoss) return { requalified: false, skipped: true };
+    if (!isFullLoss(ctx)) return { requalified: false, skipped: true };
 
     // Was there a first_order reward tied to this order?
     const firstOrderTx = await DamruTransaction.findOne({
@@ -146,7 +156,7 @@ async function recomputeFirstOrder(ctx: RecomputeContext): Promise<RecomputeResu
 
     // Reverse the first-order reward for this order.
     await applyReversal(firstOrderTx._id, {
-      reason: ctx.trigger === "ORDER_CANCELLED" ? "ORDER_CANCELLED" : "FULL_REFUND",
+      reason: fullLossReason(ctx),
       triggerId: ctx.triggerId,
       orderId: ctx.orderId,
       refundId: ctx.trigger === "REFUND_PROCESSED" ? ctx.triggerId : undefined,
@@ -182,9 +192,7 @@ async function recomputeFirstOrder(ctx: RecomputeContext): Promise<RecomputeResu
 // ---------------------------------------------------------------------------
 async function recomputeReferral(ctx: RecomputeContext): Promise<RecomputeResult["referral"]> {
   try {
-    const isFullLoss = ctx.trigger === "ORDER_CANCELLED" ||
-      (ctx.totalRefundedAmount != null && ctx.paymentAmount != null && ctx.totalRefundedAmount >= ctx.paymentAmount);
-    if (!isFullLoss) return { clawedBack: false, requalified: false, skipped: true };
+    if (!isFullLoss(ctx)) return { clawedBack: false, requalified: false, skipped: true };
 
     const { evaluateReferralClawback } = await import("@/lib/referralEngine");
     const clawbackResult = await evaluateReferralClawback(ctx.orderId, ctx.triggerId);
@@ -206,9 +214,7 @@ async function recomputeReferral(ctx: RecomputeContext): Promise<RecomputeResult
 // ---------------------------------------------------------------------------
 async function recomputeMissions(ctx: RecomputeContext): Promise<RecomputeResult["missions"]> {
   try {
-    const isFullLoss = ctx.trigger === "ORDER_CANCELLED" ||
-      (ctx.totalRefundedAmount != null && ctx.paymentAmount != null && ctx.totalRefundedAmount >= ctx.paymentAmount);
-    if (!isFullLoss) return { reversed: 0, skipped: true };
+    if (!isFullLoss(ctx)) return { reversed: 0, skipped: true };
 
     const { recomputeMissionProgress } = await import("@/lib/missionEngine");
     const result = await recomputeMissionProgress(ctx.userId, ctx.orderId, ctx.triggerId);
@@ -224,9 +230,7 @@ async function recomputeMissions(ctx: RecomputeContext): Promise<RecomputeResult
 // ---------------------------------------------------------------------------
 async function recomputeAchievements(ctx: RecomputeContext): Promise<RecomputeResult["achievements"]> {
   try {
-    const isFullLoss = ctx.trigger === "ORDER_CANCELLED" ||
-      (ctx.totalRefundedAmount != null && ctx.paymentAmount != null && ctx.totalRefundedAmount >= ctx.paymentAmount);
-    if (!isFullLoss) return { reversed: 0, skipped: true };
+    if (!isFullLoss(ctx)) return { reversed: 0, skipped: true };
 
     const { recomputeAchievementProgress } = await import("@/lib/achievementEngine");
     const result = await recomputeAchievementProgress(ctx.userId, ctx.triggerId);
