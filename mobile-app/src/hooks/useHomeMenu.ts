@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { publicGet } from '../lib/api';
 import { queryKeys } from '../lib/queryClient';
+import type { RewardBadge } from '../types';
 
 export interface HomeMenuItem {
   _id: string;
@@ -13,6 +14,7 @@ export interface HomeMenuItem {
   isFeatured: boolean;
   tags: string[];
   variantType: string;
+  rewardBadge?: RewardBadge | null;
 }
 
 interface HomeMenuResponse {

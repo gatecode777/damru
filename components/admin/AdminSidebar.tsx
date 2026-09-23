@@ -10,7 +10,7 @@ import {
   LogOut, ChevronLeft, ChevronRight, FileText, BookOpen, Images, Ticket,
   ShoppingBag, ReceiptIndianRupee, ShieldAlert,
   CalendarDays,
-  MessageSquareWarning, MapPin, CalendarCheck, UserCog, QrCode, Gift,
+  MessageSquareWarning, MapPin, CalendarCheck, UserCog, QrCode, Gift, Coins,
 } from "lucide-react";
 
 interface Perms {
@@ -72,6 +72,7 @@ const navGroups = [
     label: "Loyalty",
     items: [
       { icon: Gift,            label: "Damru Rewards", href: "/admin/rewards", permission: "rewards" },
+      { icon: Coins,           label: "Earn Rules",   href: "/admin/rewards/earn-rules", permission: "rewards" },
       { icon: BarChart3,       label: "Rewards Analytics", href: "/admin/rewards/analytics", permission: "rewards" },
       { icon: CalendarDays,    label: "Reward Campaigns", href: "/admin/rewards/campaigns", permission: "rewards" },
       { icon: ShieldAlert,     label: "Risk & Abuse", href: "/admin/rewards/risk", permission: "rewards" },

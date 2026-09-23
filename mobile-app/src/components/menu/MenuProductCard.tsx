@@ -48,9 +48,16 @@ export const MenuProductCard = React.memo(function MenuProductCard({
           <Text style={styles.price}>₹{item.price}</Text>
         </View>
 
-        <Text style={styles.description} numberOfLines={2}>
+        <Text style={styles.description} numberOfLines={item.rewardBadge ? 1 : 2}>
           {item.description}
         </Text>
+
+        {/* Damru badge — only when the server returns an active earn rule for this dish */}
+        {item.rewardBadge ? (
+          <View style={styles.rewardBadge} accessibilityLabel={item.rewardBadge.label}>
+            <Text style={styles.rewardBadgeText}>🪙 {item.rewardBadge.label}</Text>
+          </View>
+        ) : null}
 
         {/* Action Row */}
         <View style={styles.actionRow}>
@@ -114,8 +121,23 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    height: 100,
+    minHeight: 100,
     justifyContent: "space-between",
+  },
+  rewardBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#fff7ed",
+    borderColor: "#fde3c8",
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 2,
+  },
+  rewardBadgeText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 11,
+    color: "#b45309",
   },
   titleRow: {
     flexDirection: "row",

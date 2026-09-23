@@ -27,6 +27,9 @@ export interface IUser extends Document {
   longestStreak: number;
   lastEligibleActivityDate: string | null;
   lastStreakRewardDate: string | null;
+  /** DamruConfig.dailyEarnLimit counter — business date (Asia/Kolkata, YYYY-MM-DD) and Damru earned on it. */
+  dailyEarnDate?: string | null;
+  dailyEarnAmount?: number;
   referralCode?: string;
   notificationPreferences?: {
     orderUpdates: boolean;
@@ -69,6 +72,8 @@ const UserSchema = new Schema<IUser>(
     longestStreak: { type: Number, default: 0 },
     lastEligibleActivityDate: { type: String, default: null },
     lastStreakRewardDate: { type: String, default: null },
+    dailyEarnDate: { type: String, default: null },
+    dailyEarnAmount: { type: Number, default: 0 },
     referralCode: { type: String, unique: true, sparse: true, index: true },
     notificationPreferences: {
       type: {

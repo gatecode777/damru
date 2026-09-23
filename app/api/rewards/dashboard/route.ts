@@ -15,6 +15,29 @@ import Referral from "@/models/Referral";
 import { getOrCreateReferralCode } from "@/lib/referralEngine";
 import { getLoyaltySummary } from "@/lib/loyaltyEngine";
 import { getExpiringSummary } from "@/lib/rewards/damruAllocation";
+import { damruPerRupee, damruToPaise } from "@/lib/rewards/damruValue";
+import { fromPaise } from "@/lib/checkout/money";
+
+/**
+ * Server-derived money view of the wallet. Clients render these values and
+ * never convert Damru to ₹ themselves, so an admin rate change reaches the
+ * website and APK on their next fetch without a release.
+ */
+function redemptionView(config: { paisePerDamru: number; minRedemption: number; maxRedemptionPerOrder: number }) {
+  return {
+    paisePerDamru: config.paisePerDamru,
+    damruPerRupee: damruPerRupee(config.paisePerDamru),
+    // Legacy field kept for already-installed app versions: ₹ per Damru, derived from paisePerDamru.
+    rate: fromPaise(config.paisePerDamru),
+    minimum: config.minRedemption,
+    maximumPerOrder: config.maxRedemptionPerOrder,
+  };
+}
+
+function walletValue(balance: number, paisePerDamru: number) {
+  const walletValuePaise = damruToPaise(Math.max(0, balance), paisePerDamru);
+  return { walletValuePaise, walletValue: fromPaise(walletValuePaise) };
+}
 
 const LEVEL_ORDER = ["bronze", "silver", "gold", "platinum"] as const;
 
@@ -70,11 +93,8 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         damruBalance: u.damruBalance ?? 0,
-        redemption: {
-          rate: config.redemptionRate,
-          minimum: config.minRedemption,
-          maximumPerOrder: config.maxRedemptionPerOrder,
-        },
+        ...walletValue(u.damruBalance ?? 0, config.paisePerDamru),
+        redemption: redemptionView(config),
         damruTotalEarned: u.damruTotalEarned ?? 0,
         damruTotalRedeemed: u.damruTotalRedeemed ?? 0,
         rewardDebt: u.rewardDebt || 0,
@@ -217,11 +237,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       damruBalance: u.damruBalance ?? 0,
-      redemption: {
-        rate: config.redemptionRate,
-        minimum: config.minRedemption,
-        maximumPerOrder: config.maxRedemptionPerOrder,
-      },
+      ...walletValue(u.damruBalance ?? 0, config.paisePerDamru),
+      redemption: redemptionView(config),
       damruTotalEarned: u.damruTotalEarned ?? 0,
       damruTotalRedeemed: u.damruTotalRedeemed ?? 0,
       rewardDebt: u.rewardDebt || 0,

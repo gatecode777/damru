@@ -12,6 +12,9 @@ export type DamruTransactionCategory =
   | "mission"
   | "referral"
   | "order_reward"
+  | "item_reward"
+  | "category_reward"
+  | "tier_reward"
   | "loyalty_tier"
   | "redemption"
   | "admin_credit"
@@ -37,6 +40,24 @@ export interface IDamruTransaction extends Document {
   description: string;
   idempotencyKey: string;
   ruleId?: mongoose.Types.ObjectId;
+  /** Set on item/category/tier credits — the EarnRule that produced them. */
+  earnRuleId?: mongoose.Types.ObjectId;
+  /**
+   * Immutable record of the rule inputs used to compute an order-derived
+   * credit (rule version, basis, rate, eligible amount…). Reversals use this,
+   * never the current rule, so editing a rule can't change how an old order
+   * is clawed back.
+   */
+  ruleSnapshot?: Record<string, unknown>;
+  /** Damru value at write time — later rate changes never re-value history. */
+  paisePerDamru?: number;
+  valuePaise?: number;
+  /**
+   * Credits only: running total already clawed back by reversals. Claimed
+   * atomically so reversals from different triggers (cancel + refund) can
+   * never together exceed the original credit.
+   */
+  reversedAmount?: number;
   orderId?: mongoose.Types.ObjectId;
   couponId?: mongoose.Types.ObjectId;
   adjustedBy?: mongoose.Types.ObjectId;
@@ -86,6 +107,9 @@ const DamruTransactionSchema = new Schema<IDamruTransaction>(
         "mission",
         "referral",
         "order_reward",
+        "item_reward",
+        "category_reward",
+        "tier_reward",
         "loyalty_tier",
         "redemption",
         "admin_credit",
@@ -99,11 +123,16 @@ const DamruTransactionSchema = new Schema<IDamruTransaction>(
       ],
       required: true,
     },
-    amount: { type: Number, required: true, min: 0 },
+    amount: { type: Number, required: true, min: 0, validate: { validator: Number.isInteger, message: "Damru amounts must be whole numbers." } },
     balanceAfter: { type: Number, required: true },
     description: { type: String, default: "" },
     idempotencyKey: { type: String, required: true, unique: true },
     ruleId: { type: Schema.Types.ObjectId, ref: "RewardRule" },
+    earnRuleId: { type: Schema.Types.ObjectId, ref: "EarnRule" },
+    ruleSnapshot: { type: Schema.Types.Mixed },
+    paisePerDamru: { type: Number },
+    valuePaise: { type: Number },
+    reversedAmount: { type: Number },
     orderId: { type: Schema.Types.ObjectId, ref: "Order" },
     couponId: { type: Schema.Types.ObjectId, ref: "Coupon" },
     adjustedBy: { type: Schema.Types.ObjectId, ref: "Admin" },
@@ -136,6 +165,8 @@ DamruTransactionSchema.index({ userId: 1, createdAt: -1 });
 DamruTransactionSchema.index({ orderId: 1, type: 1, category: 1 });
 DamruTransactionSchema.index({ originalTransactionId: 1 }, { sparse: true });
 DamruTransactionSchema.index({ adjustedBy: 1, createdAt: -1 }, { sparse: true });
+// Per-rule analytics (dish / category / tier earn rules).
+DamruTransactionSchema.index({ earnRuleId: 1, createdAt: -1 }, { sparse: true });
 // Bounded admin analytics scans filter by time before grouping by category.
 DamruTransactionSchema.index({ createdAt: -1, type: 1, category: 1 });
 // FEFO allocator's per-user lot lookup (redemption, admin debit). Sparse because

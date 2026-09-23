@@ -17,18 +17,37 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, EmptyState } from "../components/ui";
 import { useApp } from "../providers/AppProvider";
 import { assetUrl, colors } from "../config";
+import { useQuery } from "@tanstack/react-query";
 import { post } from "../lib/api";
+import type { DamruEstimate } from "../types/rewards";
 
 export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { cart, subtotal, setQuantity, totalItems, user } = useApp();
+  const { cart, subtotal, setQuantity, totalItems, user, flushCartSync } = useApp();
 
   const [code, setCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [coupon, setCoupon] = useState("");
   const [busy, setBusy] = useState(false);
   const [couponModalOpen, setCouponModalOpen] = useState(false);
+
+  // Damru this cart would earn — computed by the server's reward evaluator
+  // (the same one used on delivery). The app never estimates Damru itself.
+  const { data: earnEstimate } = useQuery({
+    queryKey: ["cart", "damruEstimate", coupon, cart.map(item => `${item.menuItemId}:${item.custom}:${item.qty}`).join("|")],
+    queryFn: async () => {
+      await flushCartSync();
+      const data = await post<{ damruEstimate?: DamruEstimate | null }>("/api/checkout/quote", {
+        couponCode: coupon || undefined,
+        estimateWithoutAddress: true,
+      });
+      return data.damruEstimate ?? null;
+    },
+    enabled: Boolean(user && cart.length),
+    staleTime: 10 * 1000,
+    retry: false,
+  });
 
   // Taxes are 5% of subtotal after coupon discount
   const tax = Math.round((subtotal - discount) * 0.05 * 100) / 100;
@@ -224,6 +243,13 @@ export default function CartScreen() {
                     <Text style={styles.payLabel}>To Pay</Text>
                     <Text style={styles.payVal}>₹{total.toFixed(2)}</Text>
                   </View>
+
+                  {earnEstimate?.eligible && earnEstimate.estimatedDamru > 0 ? (
+                    <View style={styles.earnEstimate}>
+                      <Text style={styles.earnEstimateText}>🪙 You&apos;ll earn ~{earnEstimate.estimatedDamru.toLocaleString("en-IN")} Damru</Text>
+                      <Text style={styles.earnEstimateNote}>Confirmed at checkout and credited after delivery.</Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             }
@@ -495,6 +521,25 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_500Medium",
     fontSize: 13,
     color: colors.ink,
+  },
+  earnEstimate: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#fde3c8",
+    backgroundColor: "#fff7ed",
+  },
+  earnEstimateText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 13,
+    color: "#9a3412",
+  },
+  earnEstimateNote: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: "#9a6b4f",
+    marginTop: 2,
   },
   billDivider: {
     height: 1,

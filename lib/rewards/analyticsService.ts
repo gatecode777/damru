@@ -11,6 +11,8 @@ import UserMission from "@/models/UserMission";
 import Referral from "@/models/Referral";
 import LoyaltyTier from "@/models/LoyaltyTier";
 import Coupon from "@/models/Coupon";
+import EarnRule from "@/models/EarnRule";
+import { damruPerRupee } from "@/lib/rewards/damruValue";
 import { getRiskAnalytics } from "@/lib/rewards/riskAdminService";
 
 type AnalyticsQuery = { preset?: string; start?: string | null; end?: string | null; page?: number; limit?: number };
@@ -29,14 +31,19 @@ export async function getRewardsAnalytics(query: AnalyticsQuery) {
   const now = new Date();
   const in7 = new Date(now.getTime() + 7 * 86400000), in30 = new Date(now.getTime() + 30 * 86400000), in90 = new Date(now.getTime() + 90 * 86400000);
 
-  const [config, ledger, balances, usersWithBalance, activeUsers, topBalances, topEarners, achievementStats, achievementRows,
+  const config = await getDamruConfig();
+  // Rows written before value snapshots existed are valued at today's rate (see scripts/backfill-damru-value-snapshots.ts).
+  const valuePaiseExpr = { $ifNull: ["$valuePaise", { $multiply: ["$amount", config.paisePerDamru] }] };
+  const [, ledger, balances, usersWithBalance, activeUsers, topBalances, topEarners, achievementStats, achievementRows,
     missionStats, missionRows, referralStats, tiers, loyaltyRows, couponStats, streakStats, streakDistribution, risk] = await Promise.all([
-    getDamruConfig(),
+    Promise.resolve(config),
     DamruTransaction.aggregate([
       { $facet: {
         totals: [{ $match: { createdAt: period } }, { $group: { _id: null,
           issued: { $sum: { $cond: [{ $and: [{ $eq: ["$type", "credit"] }, { $in: ["$category", [...REWARD_ISSUE_CATEGORIES]] }] }, "$amount", 0] } },
           redeemed: { $sum: { $cond: [{ $eq: ["$category", "redemption"] }, "$amount", 0] } },
+          // Historical ₹ value uses each row's own snapshot, so later rate changes never re-value the past.
+          redeemedValuePaise: { $sum: { $cond: [{ $eq: ["$category", "redemption"] }, valuePaiseExpr, 0] } },
           expired: { $sum: { $cond: [{ $eq: ["$category", "expiry"] }, "$amount", 0] } },
           restored: { $sum: { $cond: [{ $eq: ["$category", "refund_restore"] }, "$amount", 0] } },
           reversed: { $sum: { $cond: [{ $eq: ["$category", "reward_reversal"] }, "$amount", 0] } },
@@ -50,7 +57,8 @@ export async function getRewardsAnalytics(query: AnalyticsQuery) {
         } }],
         trends: [{ $match: { createdAt: period, category: { $in: [...REWARD_ISSUE_CATEGORIES, "redemption", "expiry", "refund_restore", "reward_reversal"] } } },
           { $group: { _id: { bucket: { $dateToString: { format: bucket, date: "$createdAt", timezone: "Asia/Kolkata" } }, category: "$category", type: "$type" }, amount: { $sum: "$amount" } } }, { $sort: { "_id.bucket": 1 } }],
-        sources: [{ $match: { ...earnedMatch, createdAt: period } }, { $group: { _id: "$category", issued: { $sum: "$amount" }, users: { $addToSet: "$userId" }, transactions: { $sum: 1 } } }, { $sort: { issued: -1 } }],
+        sources: [{ $match: { ...earnedMatch, createdAt: period } }, { $group: { _id: "$category", issued: { $sum: "$amount" }, valuePaise: { $sum: valuePaiseExpr }, users: { $addToSet: "$userId" }, transactions: { $sum: 1 } } }, { $sort: { issued: -1 } }],
+        earnRules: [{ $match: { type: "credit", earnRuleId: { $exists: true }, createdAt: period } }, { $group: { _id: "$earnRuleId", category: { $first: "$category" }, issued: { $sum: "$amount" }, valuePaise: { $sum: valuePaiseExpr }, orders: { $addToSet: "$orderId" }, transactions: { $sum: 1 } } }, { $sort: { issued: -1 } }, { $limit: 20 }],
         expiry: [{ $match: { type: "credit", remainingAmount: { $gt: 0 } } }, { $group: { _id: null,
           next7: { $sum: { $cond: [{ $and: [{ $gt: ["$expiresAt", now] }, { $lte: ["$expiresAt", in7] }] }, "$remainingAmount", 0] } },
           next30: { $sum: { $cond: [{ $and: [{ $gt: ["$expiresAt", now] }, { $lte: ["$expiresAt", in30] }] }, "$remainingAmount", 0] } },
@@ -80,7 +88,10 @@ export async function getRewardsAnalytics(query: AnalyticsQuery) {
 
   const facet = ledger[0] || {}, totals = facet.totals?.[0] || {}, prior = facet.previous?.[0] || {}, balance = balances[0] || {};
   const issued = n(totals.issued), redeemed = n(totals.redeemed), expired = n(totals.expired), restored = n(totals.restored), reversed = n(totals.reversed), outstanding = n(balance.outstanding);
-  const sourceRows = (facet.sources || []).map((row: any) => ({ category: row._id, label: REWARD_SOURCE_LABELS[row._id] || row._id, issued: n(row.issued), users: row.users.length, transactions: row.transactions, average: percentage(row.issued, row.transactions), share: percentage(row.issued, issued), estimatedValue: calculateLiability(row.issued, config.redemptionRate) }));
+  const sourceRows = (facet.sources || []).map((row: any) => ({ category: row._id, label: REWARD_SOURCE_LABELS[row._id] || row._id, issued: n(row.issued), users: row.users.length, transactions: row.transactions, average: percentage(row.issued, row.transactions), share: percentage(row.issued, issued), estimatedValue: n(row.valuePaise) / 100 }));
+  const earnRuleRows = facet.earnRules || [];
+  const earnRuleDocs = earnRuleRows.length ? await EarnRule.find({ _id: { $in: earnRuleRows.map((r: any) => r._id) } }).select("name code ruleType status").lean() : [];
+  const earnRuleById = new Map((earnRuleDocs as any[]).map(r => [String(r._id), r]));
   const trendMap = new Map<string, any>();
   for (const row of facet.trends || []) { const item = trendMap.get(row._id.bucket) || { bucket: row._id.bucket, issued: 0, redeemed: 0, expired: 0, restored: 0, reversed: 0 }; const key = row._id.category === "redemption" ? "redeemed" : row._id.category === "expiry" ? "expired" : row._id.category === "refund_restore" ? "restored" : row._id.category === "reward_reversal" ? "reversed" : "issued"; item[key] += row.amount; trendMap.set(row._id.bucket, item); }
   const rewarded = referralStats[2] as any[];
@@ -88,7 +99,7 @@ export async function getRewardsAnalytics(query: AnalyticsQuery) {
 
   return {
     meta: { preset: range.preset, start: range.start, end: range.end, timezone: "Asia/Kolkata", groupBy: range.groupBy, generatedAt: new Date(), page, limit },
-    kpis: { issued, grossIssued: issued, reversed, netIssued: issued - reversed, campaignReversed: n(totals.campaignReversed), orderRewardReversed: n(totals.orderRewardReversed), rewardDebt: n(balance.rewardDebt), redeemed, expired, restored, outstanding, liability: calculateLiability(outstanding, config.redemptionRate), activeRewardUsers: totals.activeUsers?.length || 0, usersWithBalance, redemptionRate: percentage(redeemed, issued), breakageRate: percentage(expired, issued), refundOrders: totals.refundOrders?.filter(Boolean).length || 0, comparison: { issued: percentage(issued - n(prior.issued), n(prior.issued)), redeemed: percentage(redeemed - n(prior.redeemed), n(prior.redeemed)) } },
+    kpis: { issued, grossIssued: issued, reversed, netIssued: issued - reversed, campaignReversed: n(totals.campaignReversed), orderRewardReversed: n(totals.orderRewardReversed), rewardDebt: n(balance.rewardDebt), redeemed, expired, restored, outstanding, liability: calculateLiability(outstanding, config.paisePerDamru), activeRewardUsers: totals.activeUsers?.length || 0, usersWithBalance, redemptionRate: percentage(redeemed, issued), breakageRate: percentage(expired, issued), refundOrders: totals.refundOrders?.filter(Boolean).length || 0, comparison: { issued: percentage(issued - n(prior.issued), n(prior.issued)), redeemed: percentage(redeemed - n(prior.redeemed), n(prior.redeemed)) } },
     trends: [...trendMap.values()], sources: sourceRows, expiry: facet.expiry?.[0] || { next7: 0, next30: 0, next90: 0, after90: 0, nonExpiring: 0 },
     engagement: { earningUsers: activeUsers[0].length, redeemingUsers: activeUsers[1].length, noRewardActivity: Math.max(0, n(balance.users) - (totals.activeUsers?.length || 0)) },
     streaks: { ...(streakStats[0] || { users: 0, avg: 0, longestCurrent: 0, longestEver: 0 }), claims: sourceRows.find((s: any) => s.category === "daily_login")?.transactions || 0, issued: sourceRows.find((s: any) => s.category === "daily_login")?.issued || 0, distribution: streakDistribution },
@@ -98,8 +109,9 @@ export async function getRewardsAnalytics(query: AnalyticsQuery) {
     loyalty: { rows: (loyaltyRows as any[]).map(r => ({ code: r._id, name: tierNames.get(r._id) || String(r._id).replace(/_/g, " "), users: r.users, avgSpend: n(r.avgSpend), avgBalance: n(r.avgBalance) })), upgrades: sourceRows.find((s: any) => s.category === "loyalty_tier")?.transactions || 0, issued: sourceRows.find((s: any) => s.category === "loyalty_tier")?.issued || 0 },
     coupons: { issued: couponStats[0], redeemed: n((couponStats[1] as any[])[0]?.redemptions), expiredUnused: couponStats[2] },
     occasions: sourceRows.filter((s: any) => ["birthday", "marriage_anniversary", "account_anniversary"].includes(s.category)),
-    orderRelationship: { rewardIssued: sourceRows.find((s: any) => s.category === "order_reward")?.issued || 0, rewardReversed: n(totals.orderRewardReversed), campaignReversed: n(totals.campaignReversed), redeemedDamru: redeemed, estimatedDiscount: calculateLiability(redeemed, config.redemptionRate) },
+    orderRelationship: { rewardIssued: sourceRows.find((s: any) => s.category === "order_reward")?.issued || 0, rewardReversed: n(totals.orderRewardReversed), campaignReversed: n(totals.campaignReversed), redeemedDamru: redeemed, estimatedDiscount: n(totals.redeemedValuePaise) / 100 },
+    earnRules: earnRuleRows.map((row: any) => { const rule: any = earnRuleById.get(String(row._id)); return { id: String(row._id), name: rule?.name || "Deleted rule", code: rule?.code || "", ruleType: rule?.ruleType || row.category, status: rule?.status || "", issued: n(row.issued), estimatedValue: n(row.valuePaise) / 100, orders: (row.orders || []).filter(Boolean).length, transactions: row.transactions }; }),
     topUsers: { total: usersWithBalance, rows: (topBalances as any[]).map(u => ({ id: u._id, name: u.name || "Customer", email: maskEmail(u.email), balance: n(u.damruBalance), lifetimeEarned: n(u.damruTotalEarned), lifetimeRedeemed: n(u.damruTotalRedeemed) })) },
-    highEarners: { rows: (topEarners as any[]).map(u => ({ id: u._id, name: u.name || "Customer", email: maskEmail(u.email), earned: n(u.earned), balance: n(u.balance) })) }, risk, conversionRate: config.redemptionRate
+    highEarners: { rows: (topEarners as any[]).map(u => ({ id: u._id, name: u.name || "Customer", email: maskEmail(u.email), earned: n(u.earned), balance: n(u.balance) })) }, risk, paisePerDamru: config.paisePerDamru, damruPerRupee: damruPerRupee(config.paisePerDamru)
   };
 }

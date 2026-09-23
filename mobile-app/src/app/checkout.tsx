@@ -22,6 +22,7 @@ import { get, post, ApiRequestError } from "../lib/api";
 import { useApp } from "../providers/AppProvider";
 import type { Address } from "../types";
 import { getRewardsDashboard } from "../services/rewardsApi";
+import type { DamruEstimate } from "../types/rewards";
 import { createRazorpayOrder, verifyRazorpayPayment, reportRazorpayPaymentFailed } from "../services/paymentApi";
 import { trackRewardEvent } from "../lib/rewardsAnalytics";
 import type { RazorpayCheckoutOptions, RazorpaySuccessResponse } from "react-native-razorpay";
@@ -103,6 +104,9 @@ export default function CheckoutScreen() {
       return post<{
         totals: { subtotal: number; couponDiscount: number; deliveryFee: number; taxAmount: number; damruDiscount: number; finalAmount: number; taxName: string };
         paymentAvailability: { razorpay: boolean };
+        // Server-computed only — the app never converts or estimates Damru itself.
+        damruEstimate?: DamruEstimate | null;
+        damruRedemption?: { requested: number; applied: number; capped: boolean; message: string };
       }>("/api/checkout/quote", {
         addressId: selectedAddr,
         couponCode: coupon || undefined,
@@ -114,6 +118,7 @@ export default function CheckoutScreen() {
     retry: false,
   });
   const quote = quoteData?.totals;
+  const earnEstimate = quoteData?.damruEstimate;
   const subtotal = quote?.subtotal ?? 0;
   const discount = quote?.couponDiscount ?? 0;
   const deliveryFee = quote?.deliveryFee ?? 0;
@@ -175,8 +180,8 @@ export default function CheckoutScreen() {
     setBusy(true);
     try {
       const response = await post<{
-        order: { orderId: string; _id: string; total: number };
-        redemption?: { success: boolean; amount?: number; discount?: number; error?: string };
+        order: { orderId: string; _id: string; total: number; damruEstimate?: number };
+        redemption?: { success: boolean; amount?: number; requestedAmount?: number; capped?: boolean; discount?: number; error?: string };
       }>("/api/orders", {
         addressId: selectedAddr,
         paymentMethod: payMethod,
@@ -198,7 +203,7 @@ export default function CheckoutScreen() {
         trackRewardEvent("damru_redemption_started");
         if (result.success) {
           trackRewardEvent("damru_redemption_succeeded");
-          redeemMessage = `\n\n🪙 ${damruAmount} Damru redeemed → ₹${result.discount} discount recorded.`;
+          redeemMessage = `\n\n🪙 ${damruAmount} Damru redeemed → ₹${result.discount} discount recorded.${result.capped ? ` Only ${damruAmount} of the ${result.requestedAmount} requested could be used on this order.` : ""}`;
           queryClient.invalidateQueries({ queryKey: queryKeys.rewards.dashboard() });
         } else {
           trackRewardEvent("damru_redemption_failed");
@@ -207,6 +212,9 @@ export default function CheckoutScreen() {
       }
 
       const orderLabel = response.order.orderId;
+      if (response.order.damruEstimate && response.order.damruEstimate > 0) {
+        redeemMessage += `\n\n🎁 You'll earn about ${response.order.damruEstimate.toLocaleString("en-IN")} Damru once this order is delivered.`;
+      }
 
       if (payMethod === "cod") {
         await clearCart();
@@ -398,6 +406,12 @@ export default function CheckoutScreen() {
             </View>
           )}
           {quoteQueryError && <Text style={{ color: colors.danger, marginTop: 8, fontSize: 12 }}>{quoteQueryError instanceof Error ? quoteQueryError.message : "Unable to calculate order total."}</Text>}
+          {earnEstimate?.eligible && earnEstimate.estimatedDamru > 0 ? (
+            <View style={styles.earnEstimate}>
+              <Text style={styles.earnEstimateText}>🪙 Estimated earning: {earnEstimate.estimatedDamru.toLocaleString("en-IN")} Damru</Text>
+              <Text style={styles.earnEstimateNote}>{earnEstimate.dailyLimitApplied ? "Includes today's earning limit. " : ""}{earnEstimate.note}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* ── Delivery Address Section ── */}
@@ -479,16 +493,19 @@ export default function CheckoutScreen() {
           <>
             <Text style={styles.sectionHeader}>Redeem Damru</Text>
             <View style={styles.sectionCard}>
-              <Text style={styles.redeemAvailableText}>🪙 Available: {rewardsDashboard.damruBalance} Damru</Text>
+              <Text style={styles.redeemAvailableText}>
+                🪙 Available: {rewardsDashboard.damruBalance.toLocaleString("en-IN")} Damru
+                {typeof rewardsDashboard.walletValue === "number" ? ` (≈ ₹${rewardsDashboard.walletValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })})` : ""}
+              </Text>
               <TextInput
                 value={requestedDamru}
-                onChangeText={setRequestedDamru}
+                onChangeText={(value) => setRequestedDamru(value.replace(/\D/g, ""))}
                 keyboardType="number-pad"
                 placeholder="0"
                 placeholderTextColor="#a99c94"
                 style={styles.notesInput}
               />
-              <Text style={styles.redeemNoteText}>The exact discount is confirmed once your order is placed.</Text>
+              <Text style={styles.redeemNoteText}>{quoteData?.damruRedemption?.message || "The exact discount is shown in the bill above and confirmed when you place the order."}</Text>
             </View>
           </>
         )}
@@ -825,6 +842,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.ink,
     marginBottom: 8,
+  },
+  earnEstimate: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#fde3c8",
+    backgroundColor: "#fff7ed",
+  },
+  earnEstimateText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 13,
+    color: "#9a3412",
+  },
+  earnEstimateNote: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: "#9a6b4f",
+    marginTop: 2,
   },
   redeemNoteText: {
     fontFamily: "Poppins_400Regular",

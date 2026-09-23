@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
 import { getAdminPerms } from "@/lib/adminPermissions";
-import { checkAndAwardFirstOrderReward, checkAndAwardOrderReward } from "@/lib/rewardEngine";
+import { checkAndAwardFirstOrderReward } from "@/lib/rewardEngine";
+import { awardOrderEarnings } from "@/lib/rewards/orderEarnings";
 import { awardCampaignBonuses } from "@/lib/rewards/campaignEngine";
 import { evaluateOrderAchievements } from "@/lib/achievementEngine";
 import { evaluateOrderMissions } from "@/lib/missionEngine";
@@ -34,7 +35,10 @@ export async function updateOrderStatus(id: string, status: string) {
   const perms = await getAdminPerms();
   if (!perms.can("orders", "edit")) throw new Error("Forbidden - You don't have permission to update order status.");
   if (!mongoose.isValidObjectId(id) || !ORDER_STATUSES.has(status)) throw new Error("Invalid order status request.");
-  
+  // Cancellation has side effects (coupon release, redeemed-Damru restoration,
+  // reward reversal) that only cancelOrder performs — never set it directly.
+  if (status === "cancelled") return cancelOrder(id);
+
   await connectDB();
   const currentOrder = await Order.findById(id).select("paymentMethod paymentStatus").lean();
   if (!currentOrder) throw new Error("Order not found.");
@@ -56,14 +60,19 @@ export async function updateOrderStatus(id: string, status: string) {
   }
 
   if (order && order.userId && status === "delivered") {
-    let baseOrderReward = 0;
+    // Base, dish, category and order-value Damru — one evaluation, frozen on
+    // the order and reused by every retry (lib/rewards/orderEarnings.ts).
+    let campaignBase: number | null = null;
     try {
-      const base = await checkAndAwardOrderReward(order.userId, order._id);
-      if ("transaction" in base && base.transaction) baseOrderReward = base.transaction.amount;
-      else baseOrderReward = Math.floor(Math.max(0, order.eligibleRewardAmount ?? order.subtotal - order.discount) / 10);
+      campaignBase = (await awardOrderEarnings(order._id)).campaignBase;
     } catch (err) { console.error("Order reward failed:", err); }
+    if (campaignBase === null) {
+      // Earnings partly failed; campaign bonuses still use the frozen evaluation when present.
+      const stored = await Order.findById(order._id).select("rewardEvaluation").lean();
+      campaignBase = Number((stored?.rewardEvaluation as { campaignBase?: number } | undefined)?.campaignBase ?? 0);
+    }
     try {
-      await awardCampaignBonuses({ trigger:"ORDER_DELIVERED", userId:order.userId, sourceId:String(order._id), baseReward:baseOrderReward, orderId:order._id, eligibleAmount:order.eligibleRewardAmount ?? Math.max(0,order.subtotal-order.discount), branchId:order.branchId, categoryIds:order.items.map(i=>i.categoryId).filter(Boolean) as mongoose.Types.ObjectId[], menuItemIds:order.items.map(i=>i.menuItemId).filter(Boolean) as mongoose.Types.ObjectId[] });
+      await awardCampaignBonuses({ trigger:"ORDER_DELIVERED", userId:order.userId, sourceId:String(order._id), baseReward:campaignBase, orderId:order._id, eligibleAmount:order.eligibleRewardAmount ?? Math.max(0,order.subtotal-order.discount), branchId:order.branchId, categoryIds:order.items.map(i=>i.categoryId).filter(Boolean) as mongoose.Types.ObjectId[], menuItemIds:order.items.map(i=>i.menuItemId).filter(Boolean) as mongoose.Types.ObjectId[] });
     } catch (err) { console.error("Order campaign reward failed:", err); }
     try {
       await checkAndAwardFirstOrderReward(order.userId, order._id);
@@ -92,21 +101,6 @@ export async function updateOrderStatus(id: string, status: string) {
     }
   }
 
-  if (order?.userId && status === "cancelled") {
-    try {
-      await recomputeRewardEntitlements({
-        userId: order.userId,
-        orderId: order._id,
-        trigger: "ORDER_CANCELLED",
-        triggerId: `cancel:${order._id}`,
-      });
-      await evaluateRiskSafely("order-cancelled", () => evaluateOrderRisk({ userId: order.userId!, orderId: order._id }));
-    } catch (err) {
-      console.error("Order reward reversal failed:", err);
-      throw new Error("Order was cancelled, but its reward adjustment could not be completed. Retry the action or escalate for review.");
-    }
-  }
-
   if (order && order.userId) {
     const notifType = ORDER_STATUS_TO_NOTIFICATION_TYPE[status];
     if (notifType) {
@@ -132,12 +126,28 @@ export async function updatePaymentStatus(id: string, paymentStatus: string) {
   if (!mongoose.isValidObjectId(id) || !COD_PAYMENT_STATUSES.has(paymentStatus)) throw new Error("Invalid payment status request.");
   
   await connectDB();
-  const order = await Order.findById(id).select("paymentMethod").lean();
+  const order = await Order.findById(id).select("paymentMethod paymentStatus status userId").lean();
   if (!order) throw new Error("Order not found.");
   if (order.paymentMethod !== "cod") {
     throw new Error("Online payment status is controlled by Razorpay verification and reconciliation.");
   }
   await Order.findByIdAndUpdate(id, { paymentStatus });
+
+  // A delivered COD order whose cash was never collected must not keep its
+  // order rewards. Keyed per order, so repeating this is a safe no-op.
+  if (paymentStatus === "failed" && order.status === "delivered" && order.userId) {
+    try {
+      await recomputeRewardEntitlements({
+        userId: order.userId,
+        orderId: order._id,
+        trigger: "PAYMENT_FAILED",
+        triggerId: `cod-payment-failed:${order._id}`,
+      });
+    } catch (err) {
+      console.error("COD payment-failed reward reversal failed:", err);
+      throw new Error("Payment was marked failed, but its reward adjustment could not be completed. Retry the action or escalate for review.");
+    }
+  }
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);
   return { success: true };

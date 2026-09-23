@@ -23,6 +23,12 @@ interface CartQuote {
   couponDiscount: number;
 }
 
+interface DamruEarnEstimate {
+  eligible: boolean;
+  estimatedDamru: number;
+  note: string;
+}
+
 export default function CartPage() {
   const toast = useToast();
   const router = useRouter();
@@ -42,6 +48,7 @@ export default function CartPage() {
   const [showCoupons,      setShowCoupons]      = useState(false);
   const [couponsLoaded,    setCouponsLoaded]    = useState(false);
   const [quote,            setQuote]            = useState<CartQuote | null>(null);
+  const [earnEstimate,     setEarnEstimate]     = useState<DamruEarnEstimate | null>(null);
 
   // Fetch available coupons when section opens
   async function loadAvailableCoupons() {
@@ -126,10 +133,12 @@ export default function CartPage() {
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || "Unable to calculate cart totals.");
           setQuote(data.totals);
+          setEarnEstimate(data.damruEstimate ?? null);
         })
         .catch(error => {
           if (error instanceof DOMException && error.name === "AbortError") return;
           setQuote(null);
+          setEarnEstimate(null);
         })
     }, 0);
     return () => {
@@ -401,6 +410,16 @@ export default function CartPage() {
                 <span className="calculation-badge">At checkout</span>
               </div>
             </div>
+
+            {isLoggedIn && earnEstimate?.eligible && earnEstimate.estimatedDamru > 0 && (
+              <div className="rewards__earn-estimate">
+                <span aria-hidden="true">🪙</span>
+                <span>
+                  You&apos;ll earn ~<b>{earnEstimate.estimatedDamru.toLocaleString("en-IN")} Damru</b> on this order.
+                  <small>Final amount is confirmed at checkout and credited after delivery.</small>
+                </span>
+              </div>
+            )}
 
             <div className="summary-total-preview">
               <div>

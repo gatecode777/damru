@@ -45,10 +45,14 @@ function LoyaltyTab({ canEdit }: { canEdit: boolean }) {
   </div>;
 }
 interface DamruConfigValues {
-  redemptionRate: number; minRedemption: number; maxRedemptionPerOrder: number;
+  paisePerDamru: number; damruPerRupee?: number;
+  orderEarn: { rupeesPerDamru: number; rounding: "FLOOR"; enabled: boolean };
+  minRedemption: number; maxRedemptionPerOrder: number;
   dailyEarnLimit: number | null; expiryEnabled: boolean; expiryDays: number | null; expiryWarningDays: number;
   loyaltyThresholds: { silver: number; gold: number; platinum: number };
 }
+/** "Damru per ₹1" values that keep 1 Damru a whole number of paise. */
+const DAMRU_PER_RUPEE_OPTIONS = [1, 2, 4, 5, 10, 20, 25, 50, 100] as const;
 interface RewardUser {
   _id: string; name: string; email: string; phone?: string;
   damruBalance: number; damruTotalEarned: number; damruTotalRedeemed: number; rewardDebt: number; loyaltyLevel: string;
@@ -260,63 +264,138 @@ function RulesTab({ canEdit }: { canEdit: boolean }) {
 }
 
 // ── Damru Configuration ──────────────────────────────────────
+const rupeesFromPaise = (paise: number) => `₹${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: paise % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
+const formatDamruPerRupee = (paisePerDamru: number) => {
+  const perRupee = 100 / paisePerDamru;
+  return Number.isInteger(perRupee) ? String(perRupee) : perRupee.toFixed(2);
+};
+
 function ConfigTab({ canEdit }: { canEdit: boolean }) {
   const toast = useToast();
   const [config, setConfig] = useState<DamruConfigValues | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  const [savedPaise, setSavedPaise] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/rewards/config").then(r => r.json()).then(d => { setConfig(d.config); setLoading(false); });
+    fetch("/api/admin/rewards/config").then(r => r.json()).then(d => {
+      if (d.config) { setConfig(d.config); setSavedPaise(d.config.paisePerDamru); } else setError(d.error || "Could not load configuration.");
+      setLoading(false);
+    });
   }, []);
 
   async function save() {
     if (!config) return;
-    setSaving(true); setSaved(false);
+    setSaving(true); setSaved(false); setError("");
     try {
+      const payload = { ...config };
+      delete payload.damruPerRupee; // display-only field from the server
       const res = await fetch("/api/admin/rewards/config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify({ ...payload, reason: reason.trim() || undefined }),
       });
       const data = await res.json();
-      if (data.config) { setConfig(data.config); setSaved(true); toast.success("Damru configuration saved"); }
-      else toast.error("Unable to save Damru configuration");
+      if (res.ok && data.config) {
+        setConfig(data.config); setSavedPaise(data.config.paisePerDamru); setSaved(true); setReason("");
+        toast.success("Damru configuration saved");
+      } else {
+        setError(data.error || "Unable to save Damru configuration.");
+        toast.error("Unable to save Damru configuration", data.error);
+      }
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading || !config) return <div style={{ padding: 40, textAlign: "center", color: "#9ca3af" }}><Loader2 size={20} style={{ animation: "spin 0.8s linear infinite" }} /></div>;
+  if (loading || !config) return <div style={{ padding: 40, textAlign: "center", color: error ? "#dc2626" : "#9ca3af" }}>{error || <Loader2 size={20} style={{ animation: "spin 0.8s linear infinite" }} />}</div>;
 
   const set = (k: keyof DamruConfigValues, v: unknown) => setConfig(prev => prev ? { ...prev, [k]: v } as DamruConfigValues : prev);
+  const setOrderEarn = (patch: Partial<DamruConfigValues["orderEarn"]>) =>
+    setConfig(prev => prev ? { ...prev, orderEarn: { ...prev.orderEarn, ...patch } } : prev);
   const setThreshold = (k: "silver" | "gold" | "platinum", v: number) =>
     setConfig(prev => prev ? { ...prev, loyaltyThresholds: { ...prev.loyaltyThresholds, [k]: v } } : prev);
 
+  const damruPerRupee = 100 / config.paisePerDamru;
+  const perRupeeIsOption = (DAMRU_PER_RUPEE_OPTIONS as readonly number[]).includes(damruPerRupee);
+  const valueChanged = savedPaise !== null && savedPaise !== config.paisePerDamru;
+  const sectionTitle: React.CSSProperties = { fontSize: "0.8rem", fontWeight: 700, color: "#111827", margin: "0 0 10px", fontFamily: "DM Sans, sans-serif" };
+  const hint: React.CSSProperties = { fontSize: "0.72rem", color: "#6b7280", margin: "6px 0 0", fontFamily: "DM Sans, sans-serif", lineHeight: 1.5 };
+
   return (
-    <div style={{ maxWidth: 640 }}>
-      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", margin: "0 0 10px", fontFamily: "DM Sans, sans-serif" }}>Redemption</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+    <div style={{ maxWidth: 680 }}>
+      <p style={sectionTitle}>Damru Monetary Value</p>
+      <div style={{ border: "1.5px solid #fed7aa", background: "#fff7ed", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <p style={{ margin: "0 0 12px", fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "1.15rem", color: "#9a3412" }}>
+          {formatDamruPerRupee(config.paisePerDamru)} Damru = ₹1
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "end" }}>
+          <div>
+            <label style={lbl}>Damru per ₹1</label>
+            <select style={inp} disabled={!canEdit} value={perRupeeIsOption ? damruPerRupee : ""}
+              onChange={e => set("paisePerDamru", 100 / Number(e.target.value))}>
+              {!perRupeeIsOption && <option value="">Custom ({config.paisePerDamru} paise per Damru)</option>}
+              {DAMRU_PER_RUPEE_OPTIONS.map(n => <option key={n} value={n}>{n} Damru = ₹1</option>)}
+            </select>
+          </div>
+          <p style={{ ...hint, margin: 0 }}>
+            1 Damru = {rupeesFromPaise(config.paisePerDamru)} · 100 Damru = {rupeesFromPaise(config.paisePerDamru * 100)} · 1,000 Damru = {rupeesFromPaise(config.paisePerDamru * 1000)}
+          </p>
+        </div>
+        <p style={hint}>
+          Only whole numbers that divide ₹1 evenly are offered, so every Damru is worth a whole number of paise. The server applies this value
+          to checkout redemption, wallet ₹ amounts on the website and app, and liability — no app release is needed.
+        </p>
+        {valueChanged && savedPaise !== null && (
+          <div style={{ marginTop: 12, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px" }}>
+            <p style={{ ...hint, margin: 0, color: "#92400e" }}>
+              Changing from {formatDamruPerRupee(savedPaise)} to {formatDamruPerRupee(config.paisePerDamru)} Damru per ₹1 changes what every
+              customer&apos;s balance is worth for future redemptions. Past transactions keep the value they were recorded at.
+            </p>
+            <label style={{ ...lbl, marginTop: 10 }}>Reason for change (saved in the audit log)</label>
+            <input style={inp} value={reason} maxLength={500} onChange={e => setReason(e.target.value)} placeholder="e.g. Approved by finance on 23 Sep" />
+          </div>
+        )}
+      </div>
+
+      <p style={sectionTitle}>Base Order Earning</p>
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "center", marginBottom: 6 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "DM Sans, sans-serif", fontSize: "0.84rem", color: "#111827" }}>
+          <Toggle on={config.orderEarn.enabled} onClick={() => canEdit && setOrderEarn({ enabled: !config.orderEarn.enabled })} />
+          {config.orderEarn.enabled ? "On" : "Off"}
+        </span>
         <div>
-          <label style={lbl}>₹ per 1 Damru</label>
-          <input type="number" step="0.01" style={inp} value={config.redemptionRate} disabled={!canEdit} onChange={e => set("redemptionRate", Number(e.target.value))} />
+          <label style={lbl}>Spend (₹) to earn 1 Damru</label>
+          <input type="number" min={1} step={1} style={inp} value={config.orderEarn.rupeesPerDamru} disabled={!canEdit}
+            onChange={e => setOrderEarn({ rupeesPerDamru: Number(e.target.value) })} />
+        </div>
+      </div>
+      <p style={{ ...hint, marginBottom: 20 }}>
+        1 Damru for every ₹{config.orderEarn.rupeesPerDamru} of eligible spend, rounded down. Eligible spend is the item subtotal after the coupon;
+        tax, delivery fee and Damru redemption are excluded. Credited when the order is delivered. Dish, category and order-value rewards are set up
+        in <a href="/admin/rewards/earn-rules" style={{ color: "#f97316" }}>Earn Rules</a>.
+      </p>
+
+      <p style={sectionTitle}>Redemption</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+        <div>
+          <label style={lbl}>Min Redemption (Damru)</label>
+          <input type="number" min={0} step={1} style={inp} value={config.minRedemption} disabled={!canEdit} onChange={e => set("minRedemption", Number(e.target.value))} />
         </div>
         <div>
-          <label style={lbl}>Min Redemption</label>
-          <input type="number" style={inp} value={config.minRedemption} disabled={!canEdit} onChange={e => set("minRedemption", Number(e.target.value))} />
-        </div>
-        <div>
-          <label style={lbl}>Max Redemption / Order</label>
-          <input type="number" style={inp} value={config.maxRedemptionPerOrder} disabled={!canEdit} onChange={e => set("maxRedemptionPerOrder", Number(e.target.value))} />
+          <label style={lbl}>Max Redemption / Order (Damru)</label>
+          <input type="number" min={1} step={1} style={inp} value={config.maxRedemptionPerOrder} disabled={!canEdit} onChange={e => set("maxRedemptionPerOrder", Number(e.target.value))} />
         </div>
       </div>
 
-      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", margin: "0 0 10px", fontFamily: "DM Sans, sans-serif" }}>Limits</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+      <p style={sectionTitle}>Limits</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 6 }}>
         <div>
-          <label style={lbl}>Daily Earn Limit</label>
-          <input type="number" style={inp} value={config.dailyEarnLimit ?? ""} placeholder="Unlimited" disabled={!canEdit}
+          <label style={lbl}>Daily Earn Limit (Damru)</label>
+          <input type="number" min={1} step={1} style={inp} value={config.dailyEarnLimit ?? ""} placeholder="Unlimited" disabled={!canEdit}
             onChange={e => set("dailyEarnLimit", e.target.value ? Number(e.target.value) : null)} />
         </div>
         <div>
@@ -325,8 +404,12 @@ function ConfigTab({ canEdit }: { canEdit: boolean }) {
             onChange={e => set("expiryDays", e.target.value ? Number(e.target.value) : null)} />
         </div>
       </div>
+      <p style={{ ...hint, marginBottom: 20 }}>
+        The daily limit applies per customer per India calendar day to order, dish, category and order-value rewards and to campaign bonuses.
+        Welcome, first-order, referral, streak, mission, achievement, occasion and admin credits are not limited.
+      </p>
 
-      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", margin: "0 0 10px", fontFamily: "DM Sans, sans-serif" }}>Damru Expiry</p>
+      <p style={sectionTitle}>Damru Expiry</p>
       <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 12, marginBottom: 10, alignItems: "center" }}>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "DM Sans, sans-serif", fontSize: "0.84rem", color: "#111827" }}>
           <input type="checkbox" checked={config.expiryEnabled} disabled={!canEdit} onChange={e => set("expiryEnabled", e.target.checked)} />
@@ -341,17 +424,16 @@ function ConfigTab({ canEdit }: { canEdit: boolean }) {
         <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
           <p style={{ fontSize: "0.78rem", color: "#92400e", margin: 0, fontFamily: "DM Sans, sans-serif", lineHeight: 1.5 }}>
             Damru expiry affects customer wallet balances. New Damru credited from now on will expire {config.expiryDays || "—"} days after being earned.
-            Existing customers&apos; Damru follows the legacy-balance policy (see docs/DAMRU_EXPIRY_SYSTEM.md) — it will not expire unless the legacy migration
-            has been run to backfill it, and even then only counts from migration time, not original earn date. Changing this setting later only affects
-            future credits; already-assigned expiry dates are never retroactively changed or removed.
+            Existing customers&apos; Damru only expires if the legacy-balance migration (scripts/migrate-damru-expiry-lots.ts) has been run, and then
+            only counts from migration time. Changing this setting later only affects future credits; assigned expiry dates are never changed.
           </p>
         </div>
       )}
       <p style={{ fontSize: "0.72rem", color: "#9ca3af", margin: "0 0 20px", fontFamily: "DM Sans, sans-serif" }}>
-        Expiry defaults OFF and only applies to Damru credited after being enabled — see the Deferred Decisions section of docs/DAMRU_EXPIRY_SYSTEM.md.
+        Expiry defaults OFF and only applies to Damru credited after it is enabled.
       </p>
 
-      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", margin: "0 0 10px", fontFamily: "DM Sans, sans-serif" }}>Loyalty Level Thresholds (total Damru earned)</p>
+      <p style={sectionTitle}>Loyalty Level Thresholds (total Damru earned)</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
         <div>
           <label style={lbl}>Silver</label>
@@ -367,6 +449,7 @@ function ConfigTab({ canEdit }: { canEdit: boolean }) {
         </div>
       </div>
 
+      {error && <p style={{ color: "#dc2626", fontSize: "0.8rem", fontFamily: "DM Sans, sans-serif", margin: "0 0 12px" }}>{error}</p>}
       {canEdit && (
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={save} disabled={saving}

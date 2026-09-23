@@ -1,7 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-
-export interface IAddress extends Document {
-  userId:    mongoose.Types.ObjectId;
+export interface IAddress extends Document {  userId:    mongoose.Types.ObjectId;
   label:     "Home" | "Office" | "Other";
   fullName:  string;
   phone:     string;

@@ -20,7 +20,8 @@ import { readProfileSessionUser, writeProfileSessionUser } from "@/lib/profileSe
 interface UserInfo { id?: string; name: string; email: string; phone: string; city: string; avatar: string; createdAt?: string }
 interface Address { _id: string; label: string; fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string; isDefault: boolean }
 interface OrderItem { name: string; custom: string; price: number; qty: number; image?: string }
-interface Order { _id: string; orderId: string; status: string; paymentMethod: string; paymentStatus?: string; paymentAmount?: number; refundedAmount?: number; total: number; subtotal: number; discount: number; couponCode: string; tax: number; shipping: number; items: OrderItem[]; deliveryAddress: { fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string }; createdAt: string; tableNumber?: string; tableName?: string; cancellationReason?: string; cancelledBy?: "customer"|"admin"|"system"; cancelledAt?: string }
+interface OrderDamru { status: "estimated" | "earned" | "reversed" | "none"; estimated: number | null; earned: number; reversed: number; net: number }
+interface Order { _id: string; orderId: string; status: string; paymentMethod: string; paymentStatus?: string; paymentAmount?: number; refundedAmount?: number; total: number; subtotal: number; discount: number; couponCode: string; tax: number; shipping: number; damruDiscount?: number; damru?: OrderDamru; items: OrderItem[]; deliveryAddress: { fullName: string; phone: string; house: string; area: string; city: string; state: string; pincode: string }; createdAt: string; tableNumber?: string; tableName?: string; cancellationReason?: string; cancelledBy?: "customer"|"admin"|"system"; cancelledAt?: string }
 
 // Backend-confirmed states only — never inferred from order.status. See
 // docs/PAYMENT_RELIABILITY_REFUNDS.md's Payment State Machine.
@@ -33,6 +34,15 @@ const PAYMENT_STATUS_DISPLAY: Record<string, { label: string; color: string; bg:
   refunded:           { label: "Refunded",            color: "#6d28d9", bg: "#f5f3ff" },
 };
 interface Coupon { _id: string; code: string; description: string; type: string; value: number; maxDiscount: number | null; minOrderValue: number; expiryDate: string | null; usageLimit: number | null; usedCount: number }
+/** Server-computed Damru status for an order (GET /api/orders). Display only. */
+function orderDamruLabel(d?: OrderDamru): { text: string; color: string } | null {
+  if (!d) return null;
+  if (d.status === "earned") return { text: `🪙 ${d.net.toLocaleString("en-IN")} Damru earned${d.reversed > 0 ? ` (${d.reversed.toLocaleString("en-IN")} reversed)` : ""}`, color: "#15803d" };
+  if (d.status === "reversed") return { text: `🪙 ${d.reversed.toLocaleString("en-IN")} Damru reversed`, color: "#b91c1c" };
+  if (d.status === "estimated" && d.estimated) return { text: `🪙 Earn ~${d.estimated.toLocaleString("en-IN")} Damru on delivery`, color: "#b45309" };
+  return null;
+}
+
 type Section = "overview" | "rewards" | "notifications" | "address" | "orders" | "payment" | "coupons" | "settings" | "help";
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; icon: string }> = {
@@ -966,7 +976,7 @@ function MyProfileContent() {
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
                     <span style={{fontSize:"1.6rem"}}>🪙</span>
                     <div>
-                      <p style={{fontFamily:"Poppins,sans-serif",fontWeight:700,fontSize:"1.1rem",color:"#e67e22",margin:0}}>{rewardsDashboard.damruBalance} Damru</p>
+                      <p style={{fontFamily:"Poppins,sans-serif",fontWeight:700,fontSize:"1.1rem",color:"#e67e22",margin:0}}>{rewardsDashboard.damruBalance.toLocaleString("en-IN")} Damru{typeof rewardsDashboard.walletValue === "number" && <span style={{fontSize:12,fontWeight:500,color:"#aaa"}}> ≈ ₹{rewardsDashboard.walletValue.toLocaleString("en-IN",{maximumFractionDigits:2})}</span>}</p>
                       <p style={{fontFamily:"Poppins,sans-serif",fontSize:12,color:"#aaa",margin:0,textTransform:"capitalize"}}>{rewardsDashboard.loyaltyLevel} member</p>
                     </div>
                   </div>
@@ -1039,7 +1049,10 @@ function MyProfileContent() {
                 <div className="rewards__wallet-grid">
                   <div className="rewards__wallet-stat">
                     <p className="rewards__wallet-stat-label">Available Damru</p>
-                    <p className="rewards__wallet-stat-value">{rewardsDashboard.damruBalance}</p>
+                    <p className="rewards__wallet-stat-value">{rewardsDashboard.damruBalance.toLocaleString("en-IN")}</p>
+                    {typeof rewardsDashboard.walletValue === "number" && (
+                      <p className="rewards__wallet-stat-label" style={{marginTop:2}}>≈ ₹{rewardsDashboard.walletValue.toLocaleString("en-IN",{maximumFractionDigits:2})}{rewardsDashboard.redemption.damruPerRupee ? ` · ${rewardsDashboard.redemption.damruPerRupee} Damru = ₹1` : ""}</p>
+                    )}
                   </div>
                   <div className="rewards__wallet-stat">
                     <p className="rewards__wallet-stat-label">Lifetime Earned</p>
@@ -1513,7 +1526,7 @@ function MyProfileContent() {
                     </div>
                     <div className="profile__order-card-items">{o.items.map(i=>`${i.qty}x ${i.name}`).join(", ")}</div>
                     <div className="profile__order-card-footer">
-                      <span className="profile__order-card-total">Total ₹{o.total}/-</span>
+                      <span className="profile__order-card-total">Total ₹{o.total}/-{(()=>{const d=orderDamruLabel(o.damru);return d?<small style={{display:"block",fontSize:12,fontWeight:500,color:d.color}}>{d.text}</small>:null;})()}</span>
                       <div className="profile__order-btns"><button className="profile__btn-view" onClick={()=>setViewOrder(o)}>View Order</button></div>
                     </div>
                   </div>
@@ -1627,10 +1640,11 @@ function MyProfileContent() {
                 </div>
               ))}
               <div style={{marginTop:14,borderTop:"1px solid #f3f4f6",paddingTop:12,fontSize:14,fontFamily:"Poppins,sans-serif"}}>
-                {([ [`Subtotal`,`₹${viewOrder.subtotal}`], ...(viewOrder.discount>0?[[`Discount (${viewOrder.couponCode})`,`−₹${viewOrder.discount}`]]:[]), [`Tax`,`₹${viewOrder.tax}`], [`Shipping`,`₹${viewOrder.shipping}`] ] as [string,string][]).map(([l,v])=>(
+                {([ [`Subtotal`,`₹${viewOrder.subtotal}`], ...(viewOrder.discount>0?[[`Discount (${viewOrder.couponCode})`,`−₹${viewOrder.discount}`]]:[]), [`Tax`,`₹${viewOrder.tax}`], [`Shipping`,`₹${viewOrder.shipping}`], ...((viewOrder.damruDiscount??0)>0?[[`Damru redeemed`,`−₹${viewOrder.damruDiscount}`]]:[]) ] as [string,string][]).map(([l,v])=>(
                   <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{color:"#666"}}>{l}</span><span>{v}</span></div>
                 ))}
                 <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid #f3f4f6",paddingTop:8,fontWeight:700}}><span>Total</span><span style={{color:"#e67e22"}}>₹{viewOrder.total}</span></div>
+                {(()=>{const d=orderDamruLabel(viewOrder.damru);return d?<div style={{marginTop:8,fontSize:13,color:d.color}}>{d.text}</div>:null;})()}
               </div>
               {viewOrder.deliveryAddress&&(
                 <div style={{marginTop:12,padding:"12px 14px",background:"#fafafa",borderRadius:10,fontSize:13,fontFamily:"Poppins,sans-serif",color:"#555"}}>

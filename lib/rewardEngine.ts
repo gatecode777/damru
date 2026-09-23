@@ -14,6 +14,18 @@ import { notifyRewardEvent, mapCreditCategoryToType } from "@/lib/notifications/
 import { recoverRewardDebtFromCredit } from "@/lib/rewards/reversalEngine";
 import { evaluateAdminAdjustmentRisk, evaluateRedemptionRisk, evaluateRewardRisk, evaluateRiskSafely } from "@/lib/rewards/riskEngine";
 import { paymentEligibleOrderFilter } from "@/lib/orders/orderPaymentPolicy";
+import { damruToPaise, isWholeDamru, maxDamruForPaise, valueSnapshot } from "@/lib/rewards/damruValue";
+import { fromPaise, toPaise } from "@/lib/checkout/money";
+
+/**
+ * Categories that count toward DamruConfig.dailyEarnLimit: every
+ * order-derived earning plus campaign bonuses. One-off grants (welcome,
+ * first order, referral, occasions, missions, achievements, streak, loyalty,
+ * admin credits, refund restorations) are deliberately outside the limit.
+ */
+export const DAILY_LIMITED_CATEGORIES: ReadonlySet<DamruTransactionCategory> = new Set([
+  "order_reward", "item_reward", "category_reward", "tier_reward", "campaign",
+]);
 
 interface CouponTemplate {
   type: "flat" | "percentage";
@@ -37,6 +49,46 @@ export interface AwardDamruInput {
   campaignId?: mongoose.Types.ObjectId;
   campaignCode?: string;
   campaignSnapshot?: Record<string, unknown>;
+  /** EarnRule behind an item/category/tier credit. */
+  earnRuleId?: string | mongoose.Types.ObjectId;
+  /** Immutable rule inputs used to compute this credit (reversals rely on it). */
+  ruleSnapshot?: Record<string, unknown>;
+  /** Caller sends its own consolidated notification (e.g. one per delivered order). */
+  suppressNotification?: boolean;
+}
+
+/** Business date (Asia/Kolkata) as YYYY-MM-DD — the day boundary for the daily earn limit. */
+export function istDateKey(date: Date): string {
+  const { year, month, day } = istDateParts(date);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * Atomically reserves up to `amount` of today's remaining daily allowance for
+ * the user and returns how much was granted (0..amount). A single-document
+ * pipeline update, so concurrent awards can never together exceed the limit.
+ */
+export async function reserveDailyEarnAllowance(
+  userId: string | mongoose.Types.ObjectId,
+  amount: number,
+  limit: number,
+  now: Date = new Date()
+): Promise<number> {
+  const today = istDateKey(now);
+  const prior = { $cond: [{ $eq: ["$dailyEarnDate", today] }, { $ifNull: ["$dailyEarnAmount", 0] }, 0] };
+  const before = await User.findOneAndUpdate(
+    { _id: userId },
+    [{ $set: { dailyEarnAmount: { $max: [prior, { $min: [limit, { $add: [prior, amount] }] }] }, dailyEarnDate: today } }],
+    { new: false, updatePipeline: true }
+  ).select("dailyEarnDate dailyEarnAmount").lean<{ dailyEarnDate?: string | null; dailyEarnAmount?: number }>();
+  if (!before) return 0;
+  const used = before.dailyEarnDate === today ? before.dailyEarnAmount || 0 : 0;
+  return Math.max(0, Math.min(limit, used + amount) - used);
+}
+
+async function releaseDailyEarnAllowance(userId: string | mongoose.Types.ObjectId, granted: number, now: Date) {
+  if (granted <= 0) return;
+  await User.updateOne({ _id: userId, dailyEarnDate: istDateKey(now), dailyEarnAmount: { $gte: granted } }, { $inc: { dailyEarnAmount: -granted } });
 }
 
 function loyaltyLevelFor(totalEarned: number, thresholds: { silver: number; gold: number; platinum: number }): LoyaltyLevel {
@@ -73,27 +125,52 @@ async function grantPrivateCoupon(userId: mongoose.Types.ObjectId | string, temp
 /** Core reward-issuing primitive. Every Damru credit must go through this. */
 export async function awardDamru(input: AwardDamruInput) {
   await connectDB();
+  if (!isWholeDamru(input.amount)) throw new Error(`Damru awards must be whole numbers (got ${input.amount}).`);
   if (input.amount <= 0) return { duplicate: false, skipped: true as const };
 
   const config = await getDamruConfig();
+  const now = new Date();
+  let amount = input.amount;
+  let ruleSnapshot = input.ruleSnapshot;
+  let dailyGranted = 0;
+
+  if (config.dailyEarnLimit !== null && DAILY_LIMITED_CATEGORIES.has(input.category)) {
+    // Cheap pre-check so a replay of an already-credited event never consumes allowance.
+    if (await DamruTransaction.exists({ idempotencyKey: input.idempotencyKey })) {
+      const existing = await DamruTransaction.findOne({ idempotencyKey: input.idempotencyKey });
+      if (existing) await recoverRewardDebtFromCredit(existing._id);
+      return { duplicate: true as const };
+    }
+    dailyGranted = await reserveDailyEarnAllowance(input.userId, amount, config.dailyEarnLimit, now);
+    if (dailyGranted <= 0) return { duplicate: false, skipped: true as const, reason: "DAILY_LIMIT" as const };
+    if (dailyGranted < amount) {
+      ruleSnapshot = { ...(ruleSnapshot ?? {}), dailyLimit: { limit: config.dailyEarnLimit, requested: amount, granted: dailyGranted } };
+      amount = dailyGranted;
+    }
+  }
+
   let transaction;
   try {
     transaction = await DamruTransaction.create({
       userId: input.userId,
       type: "credit",
       category: input.category,
-      amount: input.amount,
+      amount,
       balanceAfter: 0, // patched below
       description: input.description,
       idempotencyKey: input.idempotencyKey,
       ruleId: input.ruleId,
+      earnRuleId: input.earnRuleId,
+      ruleSnapshot,
       orderId: input.orderId,
       campaignId: input.campaignId,
       campaignCode: input.campaignCode,
       campaignSnapshot: input.campaignSnapshot,
-      ...assignLotFields(input.amount, input.category, config, { neverExpires: input.neverExpires }),
+      ...valueSnapshot(amount, config.paisePerDamru),
+      ...assignLotFields(amount, input.category, config, { neverExpires: input.neverExpires }),
     });
   } catch (err: unknown) {
+    await releaseDailyEarnAllowance(input.userId, dailyGranted, now);
     if (typeof err === "object" && err !== null && "code" in err && (err as { code: number }).code === 11000) {
       const existing = await DamruTransaction.findOne({ idempotencyKey: input.idempotencyKey });
       if (existing) await recoverRewardDebtFromCredit(existing._id);
@@ -104,7 +181,7 @@ export async function awardDamru(input: AwardDamruInput) {
 
   const user = await User.findByIdAndUpdate(
     input.userId,
-    { $inc: { damruBalance: input.amount, damruTotalEarned: input.amount } },
+    { $inc: { damruBalance: amount, damruTotalEarned: amount } },
     { new: true }
   );
   if (!user) return { duplicate: false, transaction };
@@ -127,14 +204,14 @@ export async function awardDamru(input: AwardDamruInput) {
   // Notification delivery is intentionally decoupled from the reward above —
   // notifyRewardEvent() never throws, so a failure here can never roll back
   // or block the Damru that was already credited (PRD 4B v2 section 2).
-  const notificationType = mapCreditCategoryToType(input.category);
+  const notificationType = input.suppressNotification ? null : mapCreditCategoryToType(input.category);
   if (notificationType) {
     await notifyRewardEvent({
       userId: user._id,
       type: notificationType,
       sourceId: transaction._id,
       sourceType: "DamruTransaction",
-      amount: input.amount,
+      amount,
       description: input.description,
       route: "/my-profile?tab=rewards",
     });
@@ -162,17 +239,38 @@ export async function awardDamru(input: AwardDamruInput) {
   return { duplicate: false as const, transaction, newBalance: finalBalance, coupon, debtRecovery };
 }
 
-/** Redeem Damru at a fixed conversion rate. Concurrency-safe via conditional atomic decrement. */
-export async function redeemDamru(userId: string | mongoose.Types.ObjectId, amount: number, orderId: string | mongoose.Types.ObjectId) {
+/**
+ * Redeem Damru against an order that is still being placed. Concurrency-safe
+ * via conditional atomic decrement. Server-authoritative on every number:
+ * - `requestedAmount` must be a whole number within the configured limits;
+ * - the debit is capped at the most Damru the order's payable amount can
+ *   absorb, so a customer can never lose Damru for which no discount was given;
+ * - the discount is computed in integer paise from DamruConfig.paisePerDamru.
+ */
+export async function redeemDamru(userId: string | mongoose.Types.ObjectId, requestedAmount: number, orderId: string | mongoose.Types.ObjectId) {
   await connectDB();
+  if (!isWholeDamru(requestedAmount) || requestedAmount <= 0) return { success: false as const, error: "Damru must be redeemed in whole numbers." };
   if (!mongoose.isValidObjectId(orderId)) return { success: false as const, error: "Invalid order." };
-  const order = await Order.findOne({ _id: orderId, userId }).select("_id orderId").lean<{ _id: mongoose.Types.ObjectId; orderId: string }>();
+  const order = await Order.findOne({ _id: orderId, userId })
+    .select("_id orderId status paymentStatus razorpayOrderId finalAmount total damruDiscount")
+    .lean<{ _id: mongoose.Types.ObjectId; orderId: string; status: string; paymentStatus: string; razorpayOrderId?: string; finalAmount?: number; total: number; damruDiscount?: number }>();
   if (!order) return { success: false as const, error: "Order not found." };
+  // Only while the order is being placed: nothing paid, fulfilled, or already
+  // priced into a gateway payment (whose amount is frozen at that point).
+  if (!["pending", "confirmed"].includes(order.status) || order.paymentStatus !== "pending" || order.razorpayOrderId || (order.damruDiscount ?? 0) > 0) {
+    return { success: false as const, error: "Damru can only be redeemed while an order is being placed." };
+  }
 
   const config = await getDamruConfig();
 
-  if (amount < config.minRedemption) return { success: false as const, error: `Minimum redemption is ${config.minRedemption} Damru.` };
-  if (amount > config.maxRedemptionPerOrder) return { success: false as const, error: `Maximum redemption per order is ${config.maxRedemptionPerOrder} Damru.` };
+  if (requestedAmount < config.minRedemption) return { success: false as const, error: `Minimum redemption is ${config.minRedemption} Damru.` };
+  if (requestedAmount > config.maxRedemptionPerOrder) return { success: false as const, error: `Maximum redemption per order is ${config.maxRedemptionPerOrder} Damru.` };
+
+  const payablePaise = toPaise(order.finalAmount ?? order.total);
+  const amount = Math.min(requestedAmount, maxDamruForPaise(payablePaise, config.paisePerDamru));
+  if (amount < config.minRedemption) {
+    return { success: false as const, error: `This order is too small to redeem the minimum of ${config.minRedemption} Damru.` };
+  }
 
   const idempotencyKey = `redeem_order_${orderId}`;
   const existing = await DamruTransaction.findOne({ idempotencyKey }).lean();
@@ -192,6 +290,7 @@ export async function redeemDamru(userId: string | mongoose.Types.ObjectId, amou
       description: "Redeemed at checkout",
       idempotencyKey,
       orderId,
+      ...valueSnapshot(amount, config.paisePerDamru),
       allocations: allocation.allocations.length > 0 ? allocation.allocations : undefined,
     });
   } catch (err: unknown) {
@@ -203,7 +302,7 @@ export async function redeemDamru(userId: string | mongoose.Types.ObjectId, amou
     throw err;
   }
 
-  const discount = Math.round(amount * config.redemptionRate);
+  const discountPaise = damruToPaise(amount, config.paisePerDamru);
 
   await notifyRewardEvent({
     userId,
@@ -221,7 +320,16 @@ export async function redeemDamru(userId: string | mongoose.Types.ObjectId, amou
     orderId,
   }));
 
-  return { success: true as const, discount, newBalance: allocation.newBalance, transaction };
+  return {
+    success: true as const,
+    amount,
+    requestedAmount,
+    capped: amount < requestedAmount,
+    discount: fromPaise(discountPaise),
+    discountPaise,
+    newBalance: allocation.newBalance,
+    transaction,
+  };
 }
 
 /**
@@ -248,7 +356,8 @@ export async function adjustDamru(input: {
 }) {
   await connectDB();
   if (!input.reason?.trim()) return { success: false as const, error: "A reason is required." };
-  if (input.amount <= 0) return { success: false as const, error: "Amount must be positive." };
+  if (!isWholeDamru(input.amount) || input.amount <= 0) return { success: false as const, error: "Amount must be a positive whole number of Damru." };
+  const { paisePerDamru } = await getDamruConfig();
 
   const idempotencyKey = input.requestId
     ? `admin_adjust_${input.requestId}`
@@ -268,6 +377,7 @@ export async function adjustDamru(input: {
         idempotencyKey,
         adjustedBy: input.adminId,
         adjustmentReason: input.reason.trim(),
+        ...valueSnapshot(input.amount, paisePerDamru),
         ...assignLotFields(input.amount, "admin_credit", config, { neverExpires: input.neverExpires }),
       });
     } catch (err: unknown) {
@@ -324,6 +434,7 @@ export async function adjustDamru(input: {
       idempotencyKey,
       adjustedBy: input.adminId,
       adjustmentReason: input.reason.trim(),
+      ...valueSnapshot(input.amount, paisePerDamru),
       allocations: allocation.allocations.length > 0 ? allocation.allocations : undefined,
     });
   } catch (err: unknown) {
@@ -395,17 +506,6 @@ export async function checkAndAwardFirstOrderReward(
     ruleId: rule._id,
     orderId,
   });
-}
-
-/** Base order policy: floor(merchandise subtotal after coupon / ₹10). */
-export async function checkAndAwardOrderReward(userId: string | mongoose.Types.ObjectId, orderId: string | mongoose.Types.ObjectId) {
-  await connectDB();
-  const order = await Order.findOne({ _id: orderId, userId, status: "delivered", ...paymentEligibleOrderFilter() }).lean();
-  if (!order) return { skipped: true as const };
-  const eligibleAmount = Math.max(0, order.eligibleRewardAmount ?? Math.max(0, order.subtotal - order.discount));
-  const amount = Math.floor(eligibleAmount / 10);
-  if (amount <= 0) return { skipped: true as const };
-  return awardDamru({ userId, category: "order_reward", amount, description: `Order reward for ${order.orderId}`, idempotencyKey: `order_reward:${order._id}`, orderId: order._id });
 }
 
 // Occasion rewards (birthday/anniversary) are calendar-date concepts tied to a real-world

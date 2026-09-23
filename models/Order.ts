@@ -70,6 +70,15 @@ export interface IOrder extends Document {
   total:           number;
   chargesSnapshot?: IOrderChargesSnapshot;
   eligibleRewardAmount: number;
+  /** Server estimate of order-derived Damru at placement (display only — credit happens on delivery). */
+  damruEstimate?: number;
+  /**
+   * The reward evaluation frozen the first time the order is delivered.
+   * Re-running the delivered pipeline (retries, status toggles) reuses it,
+   * so later rule edits can never add a second, different set of credits.
+   */
+  rewardEvaluation?: Record<string, unknown>;
+  rewardEvaluatedAt?: Date;
   paymentMethod:   PaymentMethod;
   paymentStatus:   PaymentStatus;
   status:          OrderStatus;
@@ -169,6 +178,9 @@ const OrderSchema = new Schema<IOrder>(
     total:           { type: Number, required: true },
     chargesSnapshot: { type: OrderChargesSnapshotSchema },
     eligibleRewardAmount: { type: Number, default: 0, min: 0 },
+    damruEstimate:   { type: Number, min: 0 },
+    rewardEvaluation: { type: Schema.Types.Mixed },
+    rewardEvaluatedAt: { type: Date },
     paymentMethod:   { type: String, enum: ["cod", "razorpay", "upi", "card"], default: "cod" },
     paymentStatus:   { type: String, enum: ["pending", "paid", "failed", "refund_pending", "partially_refunded", "refunded"], default: "pending" },
     status:          { type: String, enum: ["pending","confirmed","preparing","out_for_delivery","delivered","cancelled"], default: "pending" },

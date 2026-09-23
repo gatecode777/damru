@@ -11,6 +11,9 @@ import { calculateOrderTotals, CheckoutPricingError, getCheckoutChargesConfig } 
 import { priceCoupon } from "@/lib/checkout/couponPricing";
 import { resolveOrderItems } from "@/lib/checkout/resolveOrderItems";
 import { redeemDamru } from "@/lib/rewardEngine";
+import { estimateOrderDamru } from "@/lib/rewards/orderEarnings";
+import { parseWholeDamru } from "@/lib/rewards/damruValue";
+import { attachOrderDamruSummaries } from "@/lib/rewards/orderDamruSummary";
 
 function generateOrderId(): string {
   const date = new Date();
@@ -26,8 +29,12 @@ export async function GET(req: NextRequest) {
 
   try {
     await connectDB();
-    const orders = await Order.find({ userId: user.id }).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ orders: JSON.parse(JSON.stringify(orders)) });
+    const orders = await Order.find({ userId: user.id })
+      .select("-rewardEvaluation")
+      .sort({ createdAt: -1 })
+      .lean();
+    const withDamru = await attachOrderDamruSummaries(orders, user.id);
+    return NextResponse.json({ orders: JSON.parse(JSON.stringify(withDamru)) });
   } catch (err) {
     console.error("GET orders error:", err);
     return NextResponse.json({ orders: [] }, { status: 500 });
@@ -42,7 +49,11 @@ export async function POST(req: NextRequest) {
   let orderPersisted = false;
 
   try {
-    const { addressId, paymentMethod, couponCode, notes = "", tableToken, items: bodyItems, requestedDamru = 0 } = await req.json();
+    const { addressId, paymentMethod, couponCode, notes = "", tableToken, items: bodyItems, requestedDamru: rawRequestedDamru = 0 } = await req.json();
+    const requestedDamru = parseWholeDamru(rawRequestedDamru);
+    if (requestedDamru === null) {
+      return NextResponse.json({ error: "Damru must be redeemed in whole numbers." }, { status: 400 });
+    }
     if (!paymentMethod) {
       return NextResponse.json({ error: "Select Cash on Delivery or Pay Online before placing your order." }, { status: 400 });
     }
@@ -206,12 +217,27 @@ export async function POST(req: NextRequest) {
       };
     }
 
+    // Display-only estimate of the Damru this order earns on delivery — the
+    // same server evaluator the delivered pipeline uses.
+    if (user) {
+      try {
+        const estimate = await estimateOrderDamru({
+          userId: user.id,
+          items: orderItems.map(i => ({ menuItemId: String(i.menuItemId), categoryId: String(i.categoryId), qty: i.qty })),
+          eligibleAmount: eligibleRewardAmount,
+          branchId: delivery?.serviceable ? String(delivery.branchId) : null,
+        });
+        orderData.damruEstimate = estimate.estimatedDamru;
+      } catch (err) {
+        console.error("Order Damru estimate failed:", err);
+      }
+    }
+
     let order = await Order.create(orderData);
     orderPersisted = true;
-    let redemption: { success: boolean; discount?: number; error?: string; amount?: number } | undefined;
-    const damruAmount = Number(requestedDamru);
-    if (user && Number.isFinite(damruAmount) && damruAmount > 0) {
-      const result = await redeemDamru(user.id, damruAmount, order._id);
+    let redemption: { success: boolean; discount?: number; error?: string; amount?: number; requestedAmount?: number; capped?: boolean } | undefined;
+    if (user && requestedDamru > 0) {
+      const result = await redeemDamru(user.id, requestedDamru, order._id);
       if (result.success) {
         const finalTotals = calculateOrderTotals(chargesConfig, {
           subtotal,
@@ -224,7 +250,7 @@ export async function POST(req: NextRequest) {
         order = (await Order.findByIdAndUpdate(order._id, {
           $set: { damruDiscount: finalTotals.damruDiscount, finalAmount: finalTotals.finalAmount, total: finalTotals.finalAmount },
         }, { new: true }))!;
-        redemption = { success: true, discount: finalTotals.damruDiscount, amount: damruAmount };
+        redemption = { success: true, discount: finalTotals.damruDiscount, amount: result.amount, requestedAmount: result.requestedAmount, capped: result.capped };
       } else {
         redemption = { success: false, error: result.error };
       }

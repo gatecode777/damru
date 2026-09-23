@@ -7,13 +7,41 @@ import Order from "@/models/Order";
 import RewardReversal, { RewardReversalReason } from "@/models/RewardReversal";
 import User from "@/models/User";
 import { evaluateRewardDebtRisk, evaluateRewardReversalRisk, evaluateRiskSafely } from "@/lib/rewards/riskEngine";
+import { getDamruConfig } from "@/lib/getDamruConfig";
+import { baseEarnDamru, valueSnapshot } from "@/lib/rewards/damruValue";
+import { toPaise } from "@/lib/checkout/money";
 
 // Order-linked categories that are directly reversible by the order reversal
 // pipeline. "referral", "mission", and "achievement" are intentionally absent
 // here — those are reversed by their own domain engines (referralEngine,
 // missionEngine, achievementEngine) which call applyReversal with
 // allowManualCredit: true.
-const DIRECT_ORDER_CATEGORIES = ["order_reward", "first_order", "campaign"] as const;
+const DIRECT_ORDER_CATEGORIES = ["order_reward", "item_reward", "category_reward", "tier_reward", "first_order", "campaign"] as const;
+
+/**
+ * Atomically claims up to `requested` Damru of an original credit's remaining
+ * reversible headroom and returns how much was granted. This is the guard that
+ * keeps reversals from DIFFERENT triggers (e.g. a cancellation and a later
+ * refund of the same order) from together clawing back more than was credited.
+ * Legacy credits (pre-dating `reversedAmount`) start from their recorded
+ * RewardReversal total.
+ */
+async function claimReversalHeadroom(originalId: mongoose.Types.ObjectId, requested: number): Promise<number> {
+  const legacyReversed = await getTotalReversedAmount(originalId);
+  const reversed = { $ifNull: ["$reversedAmount", legacyReversed] };
+  const before = await DamruTransaction.findOneAndUpdate(
+    { _id: originalId, type: "credit" },
+    [{ $set: { reversedAmount: { $min: ["$amount", { $add: [reversed, requested] }] } } }],
+    { new: false, updatePipeline: true }
+  ).select("amount reversedAmount").lean<{ amount: number; reversedAmount?: number }>();
+  if (!before) return 0;
+  const already = before.reversedAmount ?? legacyReversed;
+  return Math.max(0, Math.min(before.amount, already + requested) - already);
+}
+
+async function releaseReversalHeadroom(originalId: mongoose.Types.ObjectId, granted: number) {
+  if (granted > 0) await DamruTransaction.updateOne({ _id: originalId, reversedAmount: { $gte: granted } }, { $inc: { reversedAmount: -granted } });
+}
 
 function isDuplicateKeyError(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && (error as { code: number }).code === 11000;
@@ -60,22 +88,26 @@ export async function getTotalReversedAmount(originalTransactionId: string | mon
   const rows = await RewardReversal.find({
     originalTransactionId,
     status: "APPLIED",
-  }).select("partialAmount").lean<Array<{ partialAmount: number }>>();
-  return rows.reduce((sum, r) => sum + (r.partialAmount || 0), 0);
+  }).select("partialAmount amount").lean<Array<{ partialAmount?: number; amount: number }>>();
+  // Rows written before partialAmount existed were always full reversals.
+  return rows.reduce((sum, r) => sum + (r.partialAmount ?? r.amount ?? 0), 0);
 }
 
 /**
  * Computes the additional reversal amount warranted by a partial refund.
  *
- * Policy: the Damru reward is proportional to the eligible order amount,
- * floored to the nearest integer per the same rule as the award:
- *   reward = floor(eligibleAmount / 10)
+ * Refunds are amount-based (PaymentRefund has no item lines), so the refunded
+ * share of the payment is applied to the order's eligible amount, and each
+ * credit is recomputed from its OWN snapshot — never from today's rules:
+ * - base order reward with a ruleSnapshot: the snapshotted per-₹ rate is
+ *   re-applied to the remaining eligible amount (the original formula);
+ * - campaign FIXED_DAMRU: fully reversed on any refund of the trigger order;
+ * - campaign MULTIPLIER / PERCENT_BONUS, dish, category and order-value
+ *   rewards, and legacy credits without a snapshot: scaled in proportion to
+ *   the eligible amount that remains. A dish reward can't be tied to the
+ *   refunded dish because refunds carry no lines — see the implementation report.
  *
- * For campaign rewards (FIXED_DAMRU mode): the full original reward is
- * reversed regardless of refund fraction. For percentage/multiplier campaigns:
- * reapply the formula against the remaining eligible amount using the stored
- * campaignSnapshot.
- *
+ * All arithmetic is in integer paise; results are floored.
  * Returns `additionalReversal` — the amount to reverse on top of what has
  * already been reversed — clamped to [0, originalReward - alreadyReversed].
  */
@@ -86,6 +118,7 @@ export function calculatePartialReversalAmount(input: {
   paymentAmount: number;
   alreadyReversed: number;
   campaignSnapshot?: Record<string, unknown>;
+  ruleSnapshot?: Record<string, unknown>;
 }): { targetTotalReversal: number; additionalReversal: number } {
   const {
     originalEligibleAmount,
@@ -94,34 +127,32 @@ export function calculatePartialReversalAmount(input: {
     paymentAmount,
     alreadyReversed,
     campaignSnapshot,
+    ruleSnapshot,
   } = input;
 
   if (paymentAmount <= 0 || originalEligibleAmount <= 0) {
     return { targetTotalReversal: originalReward, additionalReversal: Math.max(0, originalReward - alreadyReversed) };
   }
 
-  // Remaining eligible after all processed refunds.
-  const refundFraction = Math.min(1, Math.max(0, refundedAmount / paymentAmount));
-  const refundedEligible = Math.round(originalEligibleAmount * refundFraction);
-  const remainingEligible = Math.max(0, originalEligibleAmount - refundedEligible);
+  // Remaining eligible (paise) after all processed refunds.
+  const eligiblePaise = toPaise(originalEligibleAmount);
+  const refundedPaise = Math.min(toPaise(paymentAmount), Math.max(0, toPaise(refundedAmount)));
+  const refundedEligiblePaise = Math.round((eligiblePaise * refundedPaise) / toPaise(paymentAmount));
+  const remainingEligiblePaise = Math.max(0, eligiblePaise - refundedEligiblePaise);
+  const proportional = Math.floor((remainingEligiblePaise * originalReward) / eligiblePaise);
 
   let targetReward: number;
+  // A daily-limit-capped credit no longer follows its formula, so it scales proportionally.
+  const rate = ruleSnapshot?.kind === "BASE" && !ruleSnapshot.dailyLimit ? Number(ruleSnapshot.rupeesPerDamru) : NaN;
 
   if (campaignSnapshot) {
     const mode = campaignSnapshot.rewardMode as string | undefined;
-    if (mode === "FIXED_DAMRU") {
-      // Fixed campaign bonus: fully reverse when the trigger order is refunded.
-      targetReward = 0;
-    } else if (mode === "PERCENT_BONUS") {
-      const value = Number(campaignSnapshot.rewardValue) || 0;
-      targetReward = Math.floor(remainingEligible * (value / 100));
-    } else {
-      // MULTIPLIER or unknown: scale proportionally with eligible amount.
-      targetReward = Math.floor((remainingEligible / originalEligibleAmount) * originalReward);
-    }
+    // Fixed campaign bonus: fully reverse when the trigger order is refunded.
+    targetReward = mode === "FIXED_DAMRU" ? 0 : proportional;
+  } else if (Number.isInteger(rate) && rate >= 1) {
+    targetReward = Math.min(originalReward, baseEarnDamru(remainingEligiblePaise, rate));
   } else {
-    // Standard order reward: floor(eligibleAmount / 10).
-    targetReward = Math.floor(remainingEligible / 10);
+    targetReward = proportional;
   }
 
   // Clamp to what was originally awarded and what is not yet reversed.
@@ -195,11 +226,19 @@ export async function applyReversal(originalTransactionId: string | mongoose.Typ
   const reserved = await reserveReversal(original, input, original.amount);
   if (reserved.duplicate) return { applied: reserved.reversal.status === "APPLIED", duplicate: true as const, reversal: reserved.reversal };
 
+  // Only what earlier reversals (from any trigger) have not already clawed back.
+  const amount = await claimReversalHeadroom(original._id, original.amount);
+  if (amount <= 0) {
+    await RewardReversal.deleteOne({ _id: reserved.reversal._id, status: "RESERVED" });
+    return { applied: false as const, alreadyReversed: true as const };
+  }
+  const { paisePerDamru: currentRate } = await getDamruConfig();
+
   let wallet: Awaited<ReturnType<typeof debitAvailableBalance>> | null = null;
   let debtAmount = 0;
   try {
-    wallet = await debitAvailableBalance(original.userId, original.amount);
-    debtAmount = original.amount - wallet.walletAmount;
+    wallet = await debitAvailableBalance(original.userId, amount);
+    debtAmount = amount - wallet.walletAmount;
     if (debtAmount > 0) await User.updateOne({ _id: original.userId }, { $inc: { rewardDebt: debtAmount } });
 
     const orderObjectId = (input.orderId || original.orderId) as mongoose.Types.ObjectId | undefined;
@@ -211,10 +250,12 @@ export async function applyReversal(originalTransactionId: string | mongoose.Typ
       userId: original.userId,
       type: "debit",
       category: "reward_reversal",
-      amount: original.amount,
+      amount,
       balanceAfter: wallet.newBalance,
       description,
       idempotencyKey: `reward-reversal:${original._id}:${input.triggerId}`,
+      // Valued at the rate the original credit was issued at, so issued − reversed stays consistent.
+      ...valueSnapshot(amount, original.paisePerDamru ?? currentRate),
       orderId: orderObjectId,
       refundId: input.refundId,
       campaignId: original.campaignId,
@@ -229,6 +270,7 @@ export async function applyReversal(originalTransactionId: string | mongoose.Typ
     }]);
 
     reserved.reversal.status = "APPLIED";
+    reserved.reversal.partialAmount = amount;
     reserved.reversal.walletAmount = wallet.walletAmount;
     reserved.reversal.debtAmount = debtAmount;
     reserved.reversal.reversalTransactionId = transaction._id;
@@ -239,7 +281,7 @@ export async function applyReversal(originalTransactionId: string | mongoose.Typ
       type: "REWARD_ADJUSTED",
       sourceId: transaction._id,
       sourceType: "DamruTransaction",
-      amount: original.amount,
+      amount,
       orderNumber: order?.orderId,
       description: input.reason === "FRAUD_CONFIRMED" ? "A reward adjustment was made to your account." : description,
       route: "/my-profile?tab=rewards",
@@ -263,6 +305,7 @@ export async function applyReversal(originalTransactionId: string | mongoose.Typ
   } catch (error) {
     if (wallet?.walletAmount) await releaseAllocation(original.userId, wallet.allocations, wallet.walletAmount);
     if (debtAmount > 0) await User.updateOne({ _id: original.userId }, { $inc: { rewardDebt: -debtAmount } });
+    await releaseReversalHeadroom(original._id, amount);
     await RewardReversal.deleteOne({ _id: reserved.reversal._id, status: "RESERVED" });
     throw error;
   }
@@ -289,13 +332,6 @@ export async function applyPartialReversal(
   const original = await DamruTransaction.findById(originalTransactionId);
   if (!original || original.type !== "credit" || original.amount <= 0) return { applied: false, skipped: true, reason: "invalid_original" };
 
-  // Compute remaining reversible headroom.
-  const alreadyReversed = await getTotalReversedAmount(originalTransactionId);
-  const remaining = Math.max(0, original.amount - alreadyReversed);
-  if (remaining <= 0) return { applied: false, skipped: true, reason: "already_fully_reversed" };
-
-  const clampedAmount = Math.min(partialAmount, remaining);
-
   const idempotencyKey = `reward-reversal:${original._id}:${input.triggerId}`;
   let reservedRecord: InstanceType<typeof RewardReversal> | null = null;
   let isDuplicate = false;
@@ -306,7 +342,7 @@ export async function applyPartialReversal(
       orderId: input.orderId || original.orderId,
       refundId: input.refundId,
       amount: original.amount,
-      partialAmount: clampedAmount,
+      partialAmount,
       walletAmount: 0,
       debtAmount: 0,
       reason: input.reason,
@@ -322,6 +358,14 @@ export async function applyPartialReversal(
     if (!existing) throw error;
     return { applied: existing.status === "APPLIED", duplicate: true, reversal: existing };
   }
+
+  // Ceiling: atomically claim what is still reversible across ALL triggers.
+  const clampedAmount = await claimReversalHeadroom(original._id, partialAmount);
+  if (clampedAmount <= 0) {
+    await RewardReversal.deleteOne({ _id: reservedRecord._id, status: "RESERVED" });
+    return { applied: false, skipped: true, reason: "already_fully_reversed" };
+  }
+  const { paisePerDamru: currentRate } = await getDamruConfig();
 
   let wallet: Awaited<ReturnType<typeof debitAvailableBalance>> | null = null;
   let debtAmount = 0;
@@ -344,6 +388,7 @@ export async function applyPartialReversal(
       balanceAfter: wallet.newBalance,
       description,
       idempotencyKey,
+      ...valueSnapshot(clampedAmount, original.paisePerDamru ?? currentRate),
       orderId: orderObjectId,
       refundId: input.refundId,
       campaignId: original.campaignId,
@@ -358,6 +403,7 @@ export async function applyPartialReversal(
     }]);
 
     reservedRecord.status = "APPLIED";
+    reservedRecord.partialAmount = clampedAmount;
     reservedRecord.walletAmount = wallet.walletAmount;
     reservedRecord.debtAmount = debtAmount;
     reservedRecord.reversalTransactionId = transaction._id;
@@ -384,6 +430,7 @@ export async function applyPartialReversal(
   } catch (error) {
     if (wallet?.walletAmount) await releaseAllocation(original.userId, wallet.allocations, wallet.walletAmount);
     if (debtAmount > 0) await User.updateOne({ _id: original.userId }, { $inc: { rewardDebt: -debtAmount } });
+    await releaseReversalHeadroom(original._id, clampedAmount);
     await RewardReversal.deleteOne({ _id: reservedRecord._id, status: "RESERVED" });
     throw error;
   }
@@ -432,6 +479,7 @@ export async function recoverRewardDebtFromCredit(transactionId: string | mongoo
         balanceAfter: 0,
         description: `${recovery} Damru used to settle a prior reward adjustment.`,
         idempotencyKey: key,
+        ...valueSnapshot(recovery, credit.paisePerDamru ?? (await getDamruConfig()).paisePerDamru),
         originalTransactionId: credit._id,
         originalCategory: credit.category,
         sourceType: "DamruTransaction",

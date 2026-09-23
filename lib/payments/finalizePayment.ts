@@ -5,6 +5,8 @@ import Cart from "@/models/Cart";
 import DamruTransaction from "@/models/DamruTransaction";
 import { notifyPaymentEvent } from "@/lib/notifications/paymentNotificationService";
 import { notifyOrderEvent } from "@/lib/notifications/orderNotificationService";
+import { damruToPaise } from "@/lib/rewards/damruValue";
+import { fromPaise, toPaise } from "@/lib/checkout/money";
 
 export async function removePurchasedItemsFromCart(userId: IOrder["userId"], items: IOrderItem[]): Promise<void> {
   if (!userId) return;
@@ -43,13 +45,15 @@ export async function computePayableAmount(order: Pick<IOrder, "_id" | "total" |
   const redemption = await DamruTransaction.findOne({
     idempotencyKey: `redeem_order_${order._id}`,
     category: "redemption",
-  }).select("amount").lean<{ amount: number }>();
+  }).select("amount paisePerDamru").lean<{ amount: number; paisePerDamru?: number }>();
 
   if (!redemption) return order.total;
 
-  const { redemptionRate } = await getDamruConfig();
-  const damruDiscount = Math.round(redemption.amount * redemptionRate);
-  return Math.max(0, order.total - damruDiscount);
+  // Use the rate the redemption was recorded at; only rows that predate the
+  // value snapshot fall back to the configured rate.
+  const paisePerDamru = redemption.paisePerDamru ?? (await getDamruConfig()).paisePerDamru;
+  const damruDiscountPaise = damruToPaise(redemption.amount, paisePerDamru);
+  return fromPaise(Math.max(0, toPaise(order.total) - damruDiscountPaise));
 }
 
 /**

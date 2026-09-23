@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "npx tsx scripts/seed.ts",
-    "test": "tsx --test --test-concurrency=1 tests/**/*.test.ts"
+    "test": "tsx scripts/run-tests.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -34,6 +34,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "mongodb-memory-server": "^11.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5"
   }

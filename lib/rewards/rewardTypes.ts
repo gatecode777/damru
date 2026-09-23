@@ -11,6 +11,9 @@ export type DamruTransactionCategory =
   | "mission"
   | "referral"
   | "order_reward"
+  | "item_reward"
+  | "category_reward"
+  | "tier_reward"
   | "campaign"
   | "reward_reversal"
   | "reward_debt_recovery"
@@ -45,6 +48,8 @@ export interface RewardTransaction {
   description: string;
   createdAt: string;
   expiresAt?: string | null;
+  orderId?: string | null;
+  valuePaise?: number;
 }
 
 export interface RewardsExpiry {
@@ -164,7 +169,13 @@ export interface ReferralsResponse {
 
 export interface RewardsDashboard {
   damruBalance: number;
+  /** Server-computed ₹ value of the balance at the current DamruConfig rate. */
+  walletValuePaise?: number;
+  walletValue?: number;
   redemption: {
+    paisePerDamru?: number;
+    damruPerRupee?: number;
+    /** @deprecated legacy ₹-per-Damru, derived server-side from paisePerDamru. */
     rate: number;
     minimum: number;
     maximumPerOrder: number;
@@ -206,9 +217,3 @@ export interface RewardsUpcoming {
   damruToNextLevel: number;
 }
 
-export interface RedeemResult {
-  success: boolean;
-  discount?: number;
-  newBalance?: number;
-  error?: string;
-}

@@ -25,6 +25,10 @@ if (!MONGODB_URI) {
   throw new Error("Please define MONGODB_URI in .env.local");
 }
 
+// Atlas requires TLS; a local mongod (e.g. the in-memory test database started
+// by scripts/run-tests.ts) does not speak it.
+const IS_LOCAL_MONGO = /^mongodb:\/\/(localhost|127\.0\.0\.1)[:/]/.test(MONGODB_URI);
+
 declare global {
   var _mongooseCache: {
     conn: typeof mongoose | null;
@@ -51,7 +55,7 @@ export async function connectDB() {
       .connect(MONGODB_URI, {
         serverSelectionTimeoutMS: 15000,
         socketTimeoutMS: 45000,
-        tls: true,
+        tls: !IS_LOCAL_MONGO,
         tlsAllowInvalidCertificates: false,
       })
       .then((m) => {

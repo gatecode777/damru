@@ -5,6 +5,7 @@ import { checkApiPerm } from "@/lib/checkApiPerm";
 import AdminUser from "@/models/Admin";
 import { adjustDamru } from "@/lib/rewardEngine";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rateLimit";
+import { logAdminAction } from "@/lib/auditLog";
 
 export async function POST(
   req: NextRequest,
@@ -16,7 +17,7 @@ export async function POST(
 
   try {
     const { amount, direction, reason, requestId, neverExpires } = await req.json();
-    if (!amount || amount <= 0) return NextResponse.json({ error: "Enter a valid amount." }, { status: 400 });
+    if (typeof amount !== "number" || !Number.isInteger(amount) || amount <= 0) return NextResponse.json({ error: "Enter a positive whole number of Damru." }, { status: 400 });
     if (direction !== "credit" && direction !== "debit") return NextResponse.json({ error: "Invalid direction." }, { status: 400 });
     if (!reason?.trim()) return NextResponse.json({ error: "A reason is required." }, { status: 400 });
     if (!requestId || typeof requestId !== "string") return NextResponse.json({ error: "Missing request id." }, { status: 400 });
@@ -39,6 +40,18 @@ export async function POST(
       neverExpires: direction === "credit" ? Boolean(neverExpires) : undefined,
     });
     if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 });
+
+    await logAdminAction(direction === "credit" ? "damru_manual_credit" : "damru_manual_debit", {
+      targetType: "User",
+      targetId: id,
+      details: {
+        amount,
+        reason: String(reason).trim(),
+        transactionId: String(result.transaction._id),
+        newBalance: result.newBalance,
+        ...(direction === "credit" ? { neverExpires: Boolean(neverExpires) } : {}),
+      },
+    });
 
     return NextResponse.json({ success: true, newBalance: result.newBalance, transaction: result.transaction });
   } catch (err) {

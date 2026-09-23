@@ -91,7 +91,14 @@ export function MenuCard({ item, index = 0 }: MenuCardProps) {
         <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
 
         {/* Description */}
-        <Text style={styles.desc} numberOfLines={2}>{item.description}</Text>
+        <Text style={styles.desc} numberOfLines={item.rewardBadge ? 1 : 2}>{item.description}</Text>
+
+        {/* Damru badge — only from an active server earn rule */}
+        {item.rewardBadge ? (
+          <View style={styles.rewardBadge} accessibilityLabel={item.rewardBadge.label}>
+            <Text style={styles.rewardBadgeText}>🪙 {item.rewardBadge.label}</Text>
+          </View>
+        ) : null}
 
         {/* Prep Time + Divider */}
         <View style={styles.metaRow}>
@@ -226,6 +233,21 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginBottom: 8,
     flex: 1,
+  },
+  rewardBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff7ed',
+    borderColor: '#fde3c8',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginBottom: 8,
+  },
+  rewardBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#b45309',
   },
   metaRow: {
     flexDirection: 'row',

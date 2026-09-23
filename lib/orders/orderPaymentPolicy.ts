@@ -8,14 +8,16 @@ const FULFILMENT_STATUSES = new Set([
 ]);
 
 /**
- * COD is settled operationally at fulfilment. Every online/legacy gateway
- * method must have a server-confirmed paid state before fulfilment or rewards.
+ * COD is settled operationally at fulfilment, so it is eligible unless its
+ * payment has been recorded as failed. Every online/legacy gateway method
+ * must have a server-confirmed paid state before fulfilment or rewards.
  */
 export function isOrderPaymentEligible(order: {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
 }): boolean {
-  return order.paymentMethod === "cod" || order.paymentStatus === "paid";
+  if (order.paymentMethod === "cod") return order.paymentStatus !== "failed";
+  return order.paymentStatus === "paid";
 }
 
 export function getOrderStatusPaymentError(
@@ -23,6 +25,9 @@ export function getOrderStatusPaymentError(
   nextStatus: string,
 ): string | null {
   if (!FULFILMENT_STATUSES.has(nextStatus) || isOrderPaymentEligible(order)) return null;
+  if (order.paymentMethod === "cod") {
+    return "This Cash on Delivery order's payment is marked failed. Update the payment status before moving it into fulfilment.";
+  }
   return "Online payment must be confirmed by Razorpay before this order can move into fulfilment.";
 }
 
@@ -30,7 +35,7 @@ export function getOrderStatusPaymentError(
 export function paymentEligibleOrderFilter() {
   return {
     $or: [
-      { paymentMethod: "cod" },
+      { paymentMethod: "cod", paymentStatus: { $ne: "failed" } },
       { paymentStatus: "paid" },
     ],
   };

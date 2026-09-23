@@ -4,6 +4,8 @@ import User from "@/models/User";
 import DamruTransaction, { DamruTransactionCategory, IDamruAllocation } from "@/models/DamruTransaction";
 import type { DamruConfigValues } from "@/lib/getDamruConfig";
 import { notifyRewardEvent } from "@/lib/notifications/rewardNotificationService";
+import { getDamruConfig } from "@/lib/getDamruConfig";
+import { isWholeDamru, valueSnapshot } from "@/lib/rewards/damruValue";
 
 /**
  * Central Damru expiry/allocation service (PRD 4A). Every path that debits a
@@ -163,8 +165,8 @@ export async function allocateDebit(
   extraWalletInc: Record<string, number> = {}
 ): Promise<AllocationResult> {
   await connectDB();
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { success: false, allocations: [], untrackedAmount: 0, error: "Invalid amount." };
+  if (!isWholeDamru(amount) || amount <= 0) {
+    return { success: false, allocations: [], untrackedAmount: 0, error: "Damru amounts must be positive whole numbers." };
   }
 
   const allocations: IDamruAllocation[] = [];
@@ -371,6 +373,8 @@ export async function processExpiredDamru(maxLots = 5000, userId?: string | mong
         balanceAfter: 0, // patched below
         description: "Damru Expired",
         idempotencyKey,
+        // Expired Damru is valued at the rate its lot was issued at.
+        ...valueSnapshot(claimedAmount, lot.paisePerDamru ?? (await getDamruConfig()).paisePerDamru),
         allocations: [{ creditTransactionId: lot._id, amount: claimedAmount }],
       });
     } catch (err) {

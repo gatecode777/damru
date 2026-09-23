@@ -24,6 +24,7 @@ interface IMenuItem {
   isVeg: boolean;
   category: string;
   sortOrder: number;
+  rewardBadge?: { damru: number; basis: string; label: string } | null;
 }
 
 interface MenuClientProps {
@@ -143,6 +144,7 @@ export default function MenuClient({
                 variants={item.variants}
                 isVeg={item.isVeg}
                 reverse={i % 2 !== 0}
+                rewardBadge={item.rewardBadge}
               />
             ))}
           </div>
