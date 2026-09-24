@@ -8,6 +8,7 @@ import MenuItemModel from "@/models/MenuItem";
 import BlogModel from "@/models/Blog";
 import { fmtDate } from "@/lib/formatDate";
 import BranchModel from "@/models/Branch";
+import { getRewardBadges, type RewardBadge } from "@/lib/rewards/earnRules";
 
 type SpecialFeatureIcon = "quality" | "seasonal" | "fruit";
 type LensCategoryIcon = "cloche" | "soup";
@@ -95,7 +96,7 @@ export const metadata: Metadata = {
 // content go stale for at most 5 minutes instead of indefinitely.
 export default async function HomePage() {
   // ── Fetch Shakes menu items ──────────────────────────────────
-  let shakeItems: { _id: string; name: string; description: string; image: string; basePrice: number }[] = [];
+  let shakeItems: { _id: string; name: string; description: string; image: string; basePrice: number; rewardBadge: RewardBadge | null }[] = [];
   let branches: { _id: string; name: string; slug: string; description: string; cardImage: string; cardAlt: string; contact: string; timing: string }[] = [];
   let blogs: { _id: string; title: string; slug: string; excerpt: string; coverImage: string; author: { name: string; avatar: string }; readTime: number; publishedAt: string; createdAt: string; category?: string }[] = [];
 
@@ -105,15 +106,17 @@ export default async function HomePage() {
     // The Shakes lookup is inherently two dependent steps (find the category, then its
     // items), but it doesn't depend on blogs/branches or vice versa — run all three
     // independent reads in parallel instead of one long sequential chain.
-    const [rawShakeItems, rawBlogs, rawBranches] = await Promise.all([
+    const [rawShakeData, rawBlogs, rawBranches] = await Promise.all([
       (async () => {
         const shakesCat = await CategoryModel.findOne({ name: /shakes?/i, isActive: true }).select("_id").lean() as any;
-        if (!shakesCat) return [];
-        return MenuItemModel.find({ category: shakesCat._id, isActive: true })
+        if (!shakesCat) return { items: [] as any[], badges: new Map<string, RewardBadge>() };
+        const items = (await MenuItemModel.find({ category: shakesCat._id, isActive: true })
           .select("name description image basePrice sortOrder")
           .sort({ sortOrder: 1 })
           .limit(4)
-          .lean() as Promise<any[]>;
+          .lean()) as any[];
+        const badges = await getRewardBadges(items.map(i => ({ _id: String(i._id), category: String(shakesCat._id) })));
+        return { items, badges };
       })(),
       BlogModel.find({ status: "published" })
         .sort({ publishedAt: -1, createdAt: -1 })
@@ -127,9 +130,10 @@ export default async function HomePage() {
         .lean() as Promise<any[]>,
     ]);
 
-    shakeItems = rawShakeItems.map(i => ({
+    shakeItems = rawShakeData.items.map(i => ({
       _id: String(i._id), name: i.name, description: i.description || "",
       image: i.image || "", basePrice: i.basePrice || 0,
+      rewardBadge: rawShakeData.badges.get(String(i._id)) ?? null,
     }));
     blogs = rawBlogs.map(b => ({
       _id: String(b._id), title: b.title, slug: b.slug, excerpt: b.excerpt || "",
@@ -286,6 +290,13 @@ export default async function HomePage() {
                       <span className="ms-price">₹{item.basePrice}</span>
                     </div>
                     <h3 className="ms-item-name">{item.name}</h3>
+                    {item.rewardBadge && (
+                      <div className="ms-reward-badge" title={item.rewardBadge.detailLabel || item.rewardBadge.label}>
+                        <span className="ms-reward-badge-icon" aria-hidden="true">🪙</span>
+                        <span className="ms-reward-badge-text">{item.rewardBadge.label}</span>
+                        <span className="ms-reward-badge-sparkle" aria-hidden="true">✨</span>
+                      </div>
+                    )}
                     <p className="ms-item-desc">{item.description}</p>
                     <div className="ms-btn-group">
                       <Link href="/menu" className="ms-order-btn">Order Now</Link>

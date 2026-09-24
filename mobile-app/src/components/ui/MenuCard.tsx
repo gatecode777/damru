@@ -93,10 +93,11 @@ export function MenuCard({ item, index = 0 }: MenuCardProps) {
         {/* Description */}
         <Text style={styles.desc} numberOfLines={item.rewardBadge ? 1 : 2}>{item.description}</Text>
 
-        {/* Damru badge — only from an active server earn rule */}
+        {/* Damru badge — prominent golden loyalty pill */}
         {item.rewardBadge ? (
           <View style={styles.rewardBadge} accessibilityLabel={item.rewardBadge.label}>
-            <Text style={styles.rewardBadgeText}>🪙 {item.rewardBadge.shortLabel ?? item.rewardBadge.label}</Text>
+            <Text style={styles.rewardBadgeCoin}>🪙</Text>
+            <Text style={styles.rewardBadgeText}>{item.rewardBadge.label}</Text>
           </View>
         ) : null}
 
@@ -234,20 +235,32 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flex: 1,
   },
-  rewardBadge: {
+        rewardBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#fff7ed',
-    borderColor: '#fde3c8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#fffbeb',
+    borderColor: '#fde68a',
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     marginBottom: 8,
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  rewardBadgeCoin: {
+    fontSize: 12,
   },
   rewardBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#b45309',
+    fontWeight: '700',
+    color: '#92400e',
+    letterSpacing: 0.1,
   },
   metaRow: {
     flexDirection: 'row',

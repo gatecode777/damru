@@ -1244,6 +1244,46 @@
   color: #1a1a1a;
 }
 
+/* Damru Dish Reward Badge on Home Menu Showcase */
+.ms-reward-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #fde68a;
+  border-radius: 999px;
+  color: #92400e;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.16);
+  letter-spacing: 0.2px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.ms-reward-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.25);
+}
+
+.ms-reward-badge-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.3));
+}
+
+.ms-reward-badge-text {
+  font-weight: 700;
+  color: #b45309;
+}
+
+.ms-reward-badge-sparkle {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
 .ms-item-desc {
   font-size: 1.5rem;
   color: #4d4d4d;
@@ -1310,6 +1350,7 @@
 
 /* Image Zoom Effect */
 .ms-image-box {
+  position: relative;
   width: 330px;
   height: 330px;
   overflow: hidden;
@@ -1564,8 +1605,20 @@
     line-height: 1.35;
   }
 
-  .ms-item-desc {
+  .ms-reward-badge {
     order: 2;
+    margin: 0 0 10px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+
+  .ms-reward-badge-icon {
+    font-size: 0.9rem;
+  }
+
+  .ms-item-desc {
+    order: 3;
     margin: 0 0 12px;
     overflow: hidden;
     display: -webkit-box;

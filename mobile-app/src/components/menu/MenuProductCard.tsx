@@ -55,7 +55,8 @@ export const MenuProductCard = React.memo(function MenuProductCard({
         {/* Damru badge — only when the server returns an active earn rule for this dish */}
         {item.rewardBadge ? (
           <View style={styles.rewardBadge} accessibilityLabel={item.rewardBadge.label}>
-            <Text style={styles.rewardBadgeText}>🪙 {item.rewardBadge.shortLabel ?? item.rewardBadge.label}</Text>
+            <Text style={styles.rewardBadgeCoin}>🪙</Text>
+            <Text style={styles.rewardBadgeText}>{item.rewardBadge.label}</Text>
           </View>
         ) : null}
 
@@ -106,6 +107,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   imageBox: {
+    position: "relative",
     width: 100,
     height: 100,
     borderRadius: 14,
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
   },
-  placeholderImg: {
+        placeholderImg: {
     backgroundColor: "#e0d9d3",
   },
   body: {
@@ -126,18 +128,25 @@ const styles = StyleSheet.create({
   },
   rewardBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#fff7ed",
-    borderColor: "#fde3c8",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    marginTop: 2,
+    marginTop: 3,
+  },
+  rewardBadgeCoin: {
+    fontSize: 10,
   },
   rewardBadgeText: {
     fontFamily: "Poppins_600SemiBold",
-    fontSize: 11,
-    color: "#b45309",
+    fontSize: 10.5,
+    color: "#92400e",
+    letterSpacing: 0.1,
   },
   titleRow: {
     flexDirection: "row",
