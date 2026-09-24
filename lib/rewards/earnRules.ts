@@ -5,7 +5,7 @@
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import EarnRule, {
-  BASE_REWARD_BEHAVIORS, EARN_RULE_BASES, EARN_RULE_STATUSES, EARN_RULE_TYPES, EARN_TIER_MODES,
+  BASE_REWARD_BEHAVIORS, DEFAULT_ITEM_REWARD_BASIS, EARN_RULE_BASES, EARN_RULE_STATUSES, EARN_RULE_TYPES, EARN_TIER_MODES,
   type BaseRewardBehavior, type EarnRuleBasis, type EarnRuleStatus, type EarnRuleType, type EarnTierMode, type IEarnRule,
 } from "@/models/EarnRule";
 import { isEarnRuleLive, type EarnRuleInput } from "@/lib/rewards/orderEarn";
@@ -66,10 +66,23 @@ export interface RewardBadge {
   basis: EarnRuleBasis;
   /** Server-authored display text so website and APK always show the same words. */
   label: string;
+  /** Compact form for small cards (APK): "+50 Damru". */
+  shortLabel: string;
+  /** Dish-detail / options view wording. */
+  detailLabel: string;
 }
 
+/** Card wording: per-unit rewards say "per item" so quantity is never ambiguous. */
 export function badgeLabel(damru: number, basis: EarnRuleBasis): string {
-  return basis === "PER_ORDER" ? `Earn ${damru} Damru per order` : `Earn ${damru} Damru`;
+  return basis === "PER_UNIT" ? `Earn ${damru} Damru per item` : `Earn ${damru} Damru`;
+}
+
+export function badgeDetailLabel(damru: number, basis: EarnRuleBasis): string {
+  return basis === "PER_UNIT" ? `Earn ${damru} Damru per item` : `Earn ${damru} Damru on this dish`;
+}
+
+export function toRewardBadge(damru: number, basis: EarnRuleBasis): RewardBadge {
+  return { damru, basis, label: badgeLabel(damru, basis), shortLabel: `+${damru} Damru`, detailLabel: badgeDetailLabel(damru, basis) };
 }
 
 /**
@@ -83,16 +96,17 @@ export function buildRewardBadges(
   items: { _id: string; category: string }[],
   now: Date = new Date()
 ): Map<string, RewardBadge> {
-  const live = rules.filter(r => isEarnRuleLive(r, now) && r.branchIds.length === 0 && r.damruPerUnit > 0);
+  // 0-Damru dish rules stay in the lookup: they are an explicit "no dish reward"
+  // and must hide a category badge for that dish, exactly like the evaluator.
+  const live = rules.filter(r => isEarnRuleLive(r, now) && r.branchIds.length === 0 && (r.ruleType === "ITEM" || r.damruPerUnit > 0));
   const strength = (a: EarnRuleInput, b: EarnRuleInput) => b.damruPerUnit - a.damruPerUnit || a.code.localeCompare(b.code);
   const itemRules = live.filter(r => r.ruleType === "ITEM").sort(strength);
   const categoryRules = live.filter(r => r.ruleType === "CATEGORY").sort(strength);
   const badges = new Map<string, RewardBadge>();
   for (const item of items) {
     const rule = itemRules.find(r => r.menuItemIds.includes(item._id)) || categoryRules.find(r => r.categoryIds.includes(item.category));
-    if (!rule) continue;
-    const basis = rule.basis ?? "PER_UNIT";
-    badges.set(item._id, { damru: rule.damruPerUnit, basis, label: badgeLabel(rule.damruPerUnit, basis) });
+    if (!rule || rule.damruPerUnit <= 0) continue;
+    badges.set(item._id, toRewardBadge(rule.damruPerUnit, rule.basis ?? DEFAULT_ITEM_REWARD_BASIS));
   }
   return badges;
 }
@@ -186,10 +200,15 @@ export function validateEarnRule(input: Record<string, unknown>): { values?: Ear
   if (ruleType === "ITEM" || ruleType === "CATEGORY") {
     const ids = ruleType === "ITEM" ? menu.ids : cats.ids;
     if (ids.length === 0) return { error: ruleType === "ITEM" ? "Select at least one dish." : "Select at least one category." };
-    if (!oneOf(input.basis, EARN_RULE_BASES)) return { error: "Choose how the reward counts: per unit, per line, or per order." };
-    if (!isInt(input.damruPerUnit, 1, MAX_DAMRU)) return { error: "Damru reward must be a whole number of at least 1." };
+    // Dish rewards default to per unit when the admin doesn't pick a basis.
+    const basis = input.basis === undefined || input.basis === null || input.basis === "" ? (ruleType === "ITEM" ? DEFAULT_ITEM_REWARD_BASIS : undefined) : input.basis;
+    if (!oneOf(basis, EARN_RULE_BASES)) return { error: "Choose how the reward counts: per unit, per line, or per order." };
+    // A dish may be set to 0 Damru (explicitly no dish reward, also overriding its
+    // category's reward); a category rule of 0 would do nothing, so it needs ≥ 1.
+    const minDamru = ruleType === "ITEM" ? 0 : 1;
+    if (!isInt(input.damruPerUnit, minDamru, MAX_DAMRU)) return { error: `Damru reward must be a whole number of at least ${minDamru}.` };
     if (ruleType === "ITEM") values.menuItemIds = ids; else values.categoryIds = ids;
-    values.basis = input.basis;
+    values.basis = basis;
     values.damruPerUnit = input.damruPerUnit;
     return { values };
   }

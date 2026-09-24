@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
 import { checkApiPerm } from "@/lib/checkApiPerm";
-import AdminUser from "@/models/Admin";
+import { resolveSessionAdmin } from "@/lib/auditLog";
 import Mission, { MissionType, MissionPeriodType } from "@/models/Mission";
 
 const MISSION_TYPES: MissionType[] = ["ORDER_COUNT", "SPENDING_AMOUNT", "LOGIN_STREAK", "PROFILE_COMPLETE"];
@@ -45,9 +44,7 @@ export async function PUT(
     if (isActive !== undefined) updates.isActive = isActive;
     if (eligibility !== undefined) updates.eligibility = eligibility;
 
-    const session = await auth();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const admin = await AdminUser.findOne({ email: (session?.user as any)?.email }).select("_id").lean<{ _id: unknown } | null>();
+    const admin = await resolveSessionAdmin();
     if (admin) updates.updatedBy = admin._id;
 
     const mission = await Mission.findByIdAndUpdate(id, updates, { new: true });

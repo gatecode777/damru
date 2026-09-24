@@ -944,3 +944,21 @@ body {
   color: #9a6b4f;
   font-size: 0.72rem;
 }
+.rewards__earn-lines {
+  display: block;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #fde3c8;
+}
+.rewards__earn-lines-title {
+  display: block;
+  font-size: 0.72rem;
+  color: #9a6b4f;
+  margin-bottom: 2px;
+}
+.rewards__earn-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.78rem;
+}

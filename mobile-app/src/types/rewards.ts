@@ -173,6 +173,8 @@ export type DamruEstimate = {
   dailyLimitApplied: boolean;
   estimatedValue: number;
   note: string;
+  /** Per-dish breakdown of dish/category rewards (server-computed). */
+  dishLines?: { menuItemId: string | null; name: string | null; qty: number; damru: number }[];
 };
 
 export type RewardsDashboard = {

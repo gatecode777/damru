@@ -11,6 +11,12 @@ export interface IOrderEarnConfig {
   rupeesPerDamru: number;
   rounding: "FLOOR";
   enabled: boolean;
+  /**
+   * What happens to the base order reward when an order also earns a dish or
+   * category reward: ADD (both are credited) or REPLACE (the base reward is
+   * dropped for that order). Explicit business configuration — never assumed.
+   */
+  dishRewardBaseBehavior: "ADD" | "REPLACE";
 }
 
 export interface IDamruConfig extends Document {
@@ -49,6 +55,7 @@ const OrderEarnSchema = new Schema<IOrderEarnConfig>(
     rupeesPerDamru: { type: Number, default: 10, min: 1, validate: wholeNumber },
     rounding: { type: String, enum: ["FLOOR"], default: "FLOOR" },
     enabled: { type: Boolean, default: true },
+    dishRewardBaseBehavior: { type: String, enum: ["ADD", "REPLACE"], default: "ADD" },
   },
   { _id: false }
 );

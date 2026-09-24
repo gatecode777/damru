@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/CartContext";
 import { useToast } from "@/components/website/Toast";
 interface Variant { label: string; price: number }
-interface RewardBadge { damru: number; basis: string; label: string }
+interface RewardBadge { damru: number; basis: string; label: string; shortLabel?: string; detailLabel?: string }
 
 interface Props {
   menuItemId:  string;
@@ -228,6 +228,7 @@ export default function MenuItemCard({
                 <span className="category-text">{categoryLabel[variantType]}</span>
                 <div className="title-row">
                   <h2 className="main-title">Customise as per your taste</h2>
+                  {rewardBadge && <p className="menu-reward-note"><span aria-hidden="true">🪙</span> {rewardBadge.detailLabel ?? rewardBadge.label}</p>}
                   <div className="close-btn" onClick={closeModal}>&times;</div>
                 </div>
                 <div className="divider"></div>
@@ -265,6 +266,7 @@ export default function MenuItemCard({
                   <span className="category-label">{categoryLabel.weight}</span>
                   <div className="title-row">
                     <h2 className="main-title">Customise as per your taste</h2>
+                    {rewardBadge && <p className="menu-reward-note"><span aria-hidden="true">🪙</span> {rewardBadge.detailLabel ?? rewardBadge.label}</p>}
                     <div className="close-btn" onClick={closeModal}>&times;</div>
                   </div>
                   <div className="divider"></div>
@@ -303,6 +305,7 @@ export default function MenuItemCard({
                   <span className="category-label">{categoryLabel.pound}</span>
                   <div className="title-row">
                     <h2 className="main-title">Customise as per your taste</h2>
+                    {rewardBadge && <p className="menu-reward-note"><span aria-hidden="true">🪙</span> {rewardBadge.detailLabel ?? rewardBadge.label}</p>}
                     <div className="close-icon" onClick={closeModal}>&times;</div>
                   </div>
                   <div className="divider"></div>
@@ -341,6 +344,7 @@ export default function MenuItemCard({
                   <div className="close-icon" onClick={closeModal}>&times;</div>
                   <div className="item-title">{categoryLabel.addon} <strong>₹{basePrice}</strong></div>
                   <h2 className="main-heading">Customise as per your taste</h2>
+                  {rewardBadge && <p className="menu-reward-note"><span aria-hidden="true">🪙</span> {rewardBadge.detailLabel ?? rewardBadge.label}</p>}
                   <div className="divider"></div>
                 </div>
                 <div className="body-content">

@@ -248,6 +248,16 @@ export default function CartScreen() {
                     <View style={styles.earnEstimate}>
                       <Text style={styles.earnEstimateText}>🪙 You&apos;ll earn ~{earnEstimate.estimatedDamru.toLocaleString("en-IN")} Damru</Text>
                       <Text style={styles.earnEstimateNote}>Confirmed at checkout and credited after delivery.</Text>
+                      {earnEstimate.dishLines && earnEstimate.dishLines.length > 0 ? (
+                        <View style={styles.earnLines}>
+                          {earnEstimate.dishLines.map((line, i) => (
+                            <View key={`${line.menuItemId}-${i}`} style={styles.earnLine}>
+                              <Text style={styles.earnLineName} numberOfLines={1}>{line.name ?? "Dish"} × {line.qty}</Text>
+                              <Text style={styles.earnLineValue}>+{line.damru}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
                     </View>
                   ) : null}
                 </View>
@@ -535,6 +545,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#9a3412",
   },
+  earnLines: { marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderColor: "#fde3c8", borderStyle: "dashed" },
+  earnLine: { flexDirection: "row", justifyContent: "space-between", gap: 8, marginTop: 2 },
+  earnLineName: { flex: 1, fontFamily: "Poppins_400Regular", fontSize: 12, color: "#7c2d12" },
+  earnLineValue: { fontFamily: "Poppins_600SemiBold", fontSize: 12, color: "#9a3412" },
   earnEstimateNote: {
     fontFamily: "Poppins_400Regular",
     fontSize: 11,

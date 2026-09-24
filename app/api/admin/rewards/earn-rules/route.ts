@@ -7,9 +7,12 @@ import MenuItem from "@/models/MenuItem";
 import Category from "@/models/Category";
 import Branch from "@/models/Branch";
 import { invalidateEarnRuleCache, validateEarnRule } from "@/lib/rewards/earnRules";
-import { auditView, currentAdminId, findActiveConflict, findMissingReferences } from "@/lib/rewards/earnRuleAdmin";
+import { auditView, conflictAfterWrite, currentAdminId, fillDishRuleIdentity, findActiveConflict, findMissingReferences } from "@/lib/rewards/earnRuleAdmin";
+import { loadDishRewardRows, type DishRewardFilters } from "@/lib/rewards/dishRewards";
 
 // GET /api/admin/rewards/earn-rules?type=&status=&withOptions=1
+// GET /api/admin/rewards/earn-rules?view=dishes&q=&category=&branch=&status=active|inactive&configured=yes|no&sort=name|reward_desc|reward_asc&page=&limit=
+//   — every dish with the custom reward that governs it (server-side search, filters, pagination).
 export async function GET(req: NextRequest) {
   const deny = await checkApiPerm("rewards", "view");
   if (deny) return deny;
@@ -17,6 +20,31 @@ export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);
+    if (searchParams.get("view") === "dishes") {
+      const pick = <T extends string>(value: string | null, allowed: readonly T[]) => (value && (allowed as readonly string[]).includes(value) ? value as T : undefined);
+      const filters: DishRewardFilters = {
+        q: searchParams.get("q")?.slice(0, 100) || undefined,
+        categoryId: searchParams.get("category") || undefined,
+        branchId: searchParams.get("branch") || undefined,
+        status: pick(searchParams.get("status"), ["active", "inactive"] as const),
+        configured: pick(searchParams.get("configured"), ["yes", "no"] as const),
+        sort: pick(searchParams.get("sort"), ["name", "reward_desc", "reward_asc"] as const),
+        page: Number(searchParams.get("page")) || 1,
+        limit: Number(searchParams.get("limit")) || 25,
+      };
+      const [result, categories, branches] = await Promise.all([
+        loadDishRewardRows(filters),
+        Category.find({}).select("name").sort({ name: 1 }).lean(),
+        Branch.find({}).select("name").sort({ name: 1 }).lean(),
+      ]);
+      return NextResponse.json({
+        ...result,
+        options: {
+          categories: categories.map(c => ({ _id: String(c._id), name: (c as { name: string }).name })),
+          branches: branches.map(b => ({ _id: String(b._id), name: (b as { name: string }).name })),
+        },
+      });
+    }
     const type = searchParams.get("type");
     const status = searchParams.get("status");
     const filter: Record<string, unknown> = {};
@@ -50,12 +78,12 @@ export async function POST(req: NextRequest) {
   if (deny) return deny;
 
   try {
-    const body = await req.json();
+    await connectDB();
+    const body = await fillDishRuleIdentity(await req.json());
     const { values, error } = validateEarnRule(body);
     if (error || !values) return NextResponse.json({ error }, { status: 400 });
     if (values.status === "ARCHIVED") return NextResponse.json({ error: "A new rule can't start archived." }, { status: 400 });
 
-    await connectDB();
     const missing = await findMissingReferences(values);
     if (missing) return NextResponse.json({ error: missing }, { status: 400 });
     const conflict = await findActiveConflict(values);
@@ -70,6 +98,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `A rule with code ${values.code} already exists.` }, { status: 409 });
       }
       throw err;
+    }
+    if (values.status === "ACTIVE") {
+      const raced = await conflictAfterWrite(values, String(rule._id));
+      if (raced) {
+        await EarnRule.updateOne({ _id: rule._id }, { $set: { status: "DRAFT" } });
+        await logAdminAction("earn_rule_created", { targetType: "EarnRule", targetId: String(rule._id), details: { after: auditView({ ...values, status: "DRAFT", version: 1 }), note: "Activation lost a race; saved as draft." } });
+        return NextResponse.json({ error: `${raced} This rule was saved as a draft instead.` }, { status: 409 });
+      }
     }
     invalidateEarnRuleCache();
     await logAdminAction("earn_rule_created", { targetType: "EarnRule", targetId: String(rule._id), details: { after: auditView({ ...values, version: 1 }) } });

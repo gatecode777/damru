@@ -223,7 +223,7 @@ export async function POST(req: NextRequest) {
       try {
         const estimate = await estimateOrderDamru({
           userId: user.id,
-          items: orderItems.map(i => ({ menuItemId: String(i.menuItemId), categoryId: String(i.categoryId), qty: i.qty })),
+          items: orderItems.map(i => ({ menuItemId: String(i.menuItemId), categoryId: String(i.categoryId), name: i.name, qty: i.qty })),
           eligibleAmount: eligibleRewardAmount,
           branchId: delivery?.serviceable ? String(delivery.branchId) : null,
         });

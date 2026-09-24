@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
 import { checkApiPerm } from "@/lib/checkApiPerm";
-import AdminUser from "@/models/Admin";
 import { adjustDamru } from "@/lib/rewardEngine";
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from "@/lib/rateLimit";
-import { logAdminAction } from "@/lib/auditLog";
+import { logAdminAction, resolveSessionAdmin } from "@/lib/auditLog";
 
 export async function POST(
   req: NextRequest,
@@ -23,8 +21,7 @@ export async function POST(
     if (!requestId || typeof requestId !== "string") return NextResponse.json({ error: "Missing request id." }, { status: 400 });
 
     await connectDB();
-    const session = await auth();
-    const admin = await AdminUser.findOne({ email: (session?.user as any)?.email }).select("_id").lean() as any;
+    const admin = await resolveSessionAdmin();
     if (!admin) return NextResponse.json({ error: "Admin not found." }, { status: 401 });
 
     const rl = await checkRateLimit(`admin-adjust:${admin._id}`, RATE_LIMITS.adminAdjust);

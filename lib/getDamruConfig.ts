@@ -5,7 +5,7 @@ import DamruConfig, { IDamruConfig } from "@/models/DamruConfig";
 export type DamruConfigValues = {
   /** Whole paise per Damru — the single source of Damru's monetary value. */
   paisePerDamru: number;
-  orderEarn: { rupeesPerDamru: number; rounding: "FLOOR"; enabled: boolean };
+  orderEarn: { rupeesPerDamru: number; rounding: "FLOOR"; enabled: boolean; dishRewardBaseBehavior: "ADD" | "REPLACE" };
   minRedemption: number;
   maxRedemptionPerOrder: number;
   dailyEarnLimit: number | null;
@@ -61,6 +61,7 @@ export function toDamruConfigValues(doc: IDamruConfig): DamruConfigValues {
       rupeesPerDamru: doc.orderEarn.rupeesPerDamru,
       rounding: doc.orderEarn.rounding,
       enabled: doc.orderEarn.enabled,
+      dishRewardBaseBehavior: doc.orderEarn.dishRewardBaseBehavior,
     },
     minRedemption: doc.minRedemption,
     maxRedemptionPerOrder: doc.maxRedemptionPerOrder,

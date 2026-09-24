@@ -126,8 +126,8 @@ test("menu badges come only from live, all-branch rules and a dish rule wins ove
     [dish("PER_UNIT"), categoryRule, { ...dish("PER_UNIT", 99), id: "branch", code: "BRANCH", menuItemIds: [PANEER], branchIds: [BRANCH_A] }],
     [{ _id: BIRYANI, category: MAINS }, { _id: PANEER, category: MAINS }, { _id: "64b000000000000000000009", category: STARTERS }]
   );
-  assert.deepEqual(badges.get(BIRYANI), { damru: 20, basis: "PER_UNIT", label: "Earn 20 Damru" });
-  assert.deepEqual(badges.get(PANEER), { damru: 5, basis: "PER_ORDER", label: "Earn 5 Damru per order" });
+  assert.deepEqual(badges.get(BIRYANI), { damru: 20, basis: "PER_UNIT", label: "Earn 20 Damru per item", shortLabel: "+20 Damru", detailLabel: "Earn 20 Damru per item" });
+  assert.deepEqual(badges.get(PANEER), { damru: 5, basis: "PER_ORDER", label: "Earn 5 Damru", shortLabel: "+5 Damru", detailLabel: "Earn 5 Damru on this dish" });
   assert.equal(badges.has("64b000000000000000000009"), false);
 });
 
@@ -136,7 +136,11 @@ test("earn-rule validation rejects decimals, negatives, duplicate or unsorted ti
   assert.equal(validateEarnRule(baseDish).values?.code, "BIRYANI-20");
   assert.ok(validateEarnRule({ ...baseDish, damruPerUnit: 20.5 }).error);
   assert.ok(validateEarnRule({ ...baseDish, damruPerUnit: -1 }).error);
-  assert.ok(validateEarnRule({ ...baseDish, basis: undefined }).error);
+  assert.equal(validateEarnRule({ ...baseDish, basis: undefined }).values?.basis, "PER_UNIT", "dish rewards default to per unit");
+  assert.ok(validateEarnRule({ ...baseDish, basis: "PER_SOMETHING" }).error);
+  assert.equal(validateEarnRule({ ...baseDish, damruPerUnit: 0 }).values?.damruPerUnit, 0, "0 Damru = explicitly no dish reward");
+  assert.ok(validateEarnRule({ name: "Mains", code: "MAINS", ruleType: "CATEGORY", categoryIds: [MAINS], damruPerUnit: 5 }).error, "category rules still need an explicit basis");
+  assert.ok(validateEarnRule({ name: "Mains", code: "MAINS", ruleType: "CATEGORY", categoryIds: [MAINS], basis: "PER_UNIT", damruPerUnit: 0 }).error, "a 0-Damru category rule is meaningless");
   assert.ok(validateEarnRule({ ...baseDish, menuItemIds: [] }).error);
   assert.ok(validateEarnRule({ ...baseDish, menuItemIds: ["not-an-id"] }).error);
   assert.ok(validateEarnRule({ ...baseDish, startsAt: "2026-10-02", endsAt: "2026-10-01" }).error);

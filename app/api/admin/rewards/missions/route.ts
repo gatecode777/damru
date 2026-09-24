@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import mongoose from "mongoose";
-import { auth } from "@/auth";
 import { connectDB } from "@/lib/mongodb";
 import { checkApiPerm } from "@/lib/checkApiPerm";
-import AdminUser from "@/models/Admin";
+import { resolveSessionAdmin } from "@/lib/auditLog";
 import Mission, { MissionType, MissionPeriodType } from "@/models/Mission";
 
 const MISSION_TYPES: MissionType[] = ["ORDER_COUNT", "SPENDING_AMOUNT", "LOGIN_STREAK", "PROFILE_COMPLETE"];
@@ -47,9 +45,7 @@ export async function POST(req: NextRequest) {
     const existing = await Mission.findOne({ code: code.trim().toUpperCase() }).lean();
     if (existing) return NextResponse.json({ error: "A mission with this code already exists." }, { status: 400 });
 
-    const session = await auth();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const admin = await AdminUser.findOne({ email: (session?.user as any)?.email }).select("_id").lean<{ _id: mongoose.Types.ObjectId } | null>();
+    const admin = await resolveSessionAdmin();
 
     const mission = await Mission.create({
       name: name.trim(),

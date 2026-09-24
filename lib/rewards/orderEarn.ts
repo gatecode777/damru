@@ -15,6 +15,10 @@
  *    code). If it matched a tier and is REPLACE, the base reward is 0.
  * 4. Item, category and tier rewards add to each other; every amount is a
  *    whole number (floored) and each rule's maxDamruPerOrder caps it.
+ *    A dish rule of 0 Damru is an explicit "no dish reward" for that dish
+ *    (it also blocks a category rule); a dish with no rule earns no dish reward.
+ * 4b. orderEarn.dishRewardBaseBehavior decides whether dish/category rewards
+ *    ADD to the base order reward or REPLACE it for that order.
  * 5. Campaign bonuses (evaluated separately by campaignEngine) use
  *    `campaignBase` = base + rules flagged includeInCampaignBase.
  */
@@ -48,6 +52,8 @@ export interface EarnRuleInput {
 export interface EarnOrderLine {
   menuItemId?: string | null;
   categoryId?: string | null;
+  /** Display only — copied into the snapshot/breakdown so ledger rows are self-explaining. */
+  name?: string | null;
   qty: number;
 }
 
@@ -62,6 +68,20 @@ export interface OrderEarnConfig {
   rupeesPerDamru: number;
   rounding: "FLOOR";
   enabled: boolean;
+  /** Absent on evaluations frozen before this setting existed — those always added. */
+  dishRewardBaseBehavior?: "ADD" | "REPLACE";
+}
+
+export interface EarnRuleLine {
+  menuItemId: string | null;
+  name: string | null;
+  qty: number;
+  basis: EarnRuleBasis;
+  damruPerUnit: number;
+  ruleVersion: number;
+  amount: number;
+  /** Human-readable, e.g. "50 × 2". */
+  calculation: string;
 }
 
 export interface AppliedEarnRule {
@@ -76,7 +96,7 @@ export interface AppliedEarnRule {
   includeInCampaignBase: boolean;
   basis?: EarnRuleBasis;
   damruPerUnit?: number;
-  lines?: { menuItemId: string | null; qty: number; amount: number }[];
+  lines?: EarnRuleLine[];
   tierMode?: EarnTierMode;
   baseRewardBehavior?: BaseRewardBehavior;
   tiers?: { minAmount: number; damru: number }[];
@@ -92,9 +112,11 @@ export interface OrderDamruEvaluation {
     enabled: boolean;
     rupeesPerDamru: number;
     rounding: "FLOOR";
-    /** What the base would have been before a REPLACE tier rule removed it. */
+    /** What the base would have been before a REPLACE rule removed it. */
     computedAmount: number;
     replacedByRuleId: string | null;
+    replacedBy: "ORDER_VALUE_TIER" | "DISH_REWARDS" | null;
+    dishRewardBaseBehavior: "ADD" | "REPLACE";
   };
   itemRewards: AppliedEarnRule[];
   categoryRewards: AppliedEarnRule[];
@@ -123,6 +145,7 @@ export function earnRuleCoversBranch(rule: Pick<EarnRuleInput, "branchIds">, bra
 }
 
 const cap = (amount: number, max: number | null) => (max === null ? amount : Math.min(amount, max));
+const sum = (rules: AppliedEarnRule[]) => rules.reduce((s, r) => s + r.amount, 0);
 
 const byStrength = (a: EarnRuleInput, b: EarnRuleInput) => b.damruPerUnit - a.damruPerUnit || a.code.localeCompare(b.code);
 
@@ -130,10 +153,20 @@ function applyLineRule(rule: EarnRuleInput, lines: EarnOrderLine[]): AppliedEarn
   const basis = rule.basis ?? "PER_UNIT";
   const perLine = lines.map((line, index) => {
     let amount = 0;
-    if (basis === "PER_UNIT") amount = rule.damruPerUnit * line.qty;
-    else if (basis === "PER_LINE") amount = rule.damruPerUnit;
-    else amount = index === 0 ? rule.damruPerUnit : 0; // PER_ORDER — once, however many lines match
-    return { menuItemId: line.menuItemId ? String(line.menuItemId) : null, qty: line.qty, amount };
+    let calculation = "";
+    if (basis === "PER_UNIT") { amount = rule.damruPerUnit * line.qty; calculation = `${rule.damruPerUnit} × ${line.qty}`; }
+    else if (basis === "PER_LINE") { amount = rule.damruPerUnit; calculation = `${rule.damruPerUnit} per line`; }
+    else { amount = index === 0 ? rule.damruPerUnit : 0; calculation = index === 0 ? `${rule.damruPerUnit} once per order` : "already counted"; } // PER_ORDER
+    return {
+      menuItemId: line.menuItemId ? String(line.menuItemId) : null,
+      name: line.name ?? null,
+      qty: line.qty,
+      basis,
+      damruPerUnit: rule.damruPerUnit,
+      ruleVersion: rule.version,
+      amount,
+      calculation,
+    };
   });
   const uncapped = perLine.reduce((sum, l) => sum + l.amount, 0);
   return {
@@ -225,8 +258,10 @@ export function evaluateOrderDamru(
 
   // ── Base reward ──
   const computedBase = config.enabled ? baseEarnDamru(eligiblePaise, config.rupeesPerDamru) : 0;
-  const replaced = tier !== null && tier.baseRewardBehavior === "REPLACE";
-  const baseAmount = replaced ? 0 : computedBase;
+  const dishRewardBaseBehavior = config.dishRewardBaseBehavior ?? "ADD";
+  const replacedByTier = tier !== null && tier.baseRewardBehavior === "REPLACE";
+  const replacedByDish = dishRewardBaseBehavior === "REPLACE" && sum(itemRewards) + sum(categoryRewards) > 0;
+  const baseAmount = replacedByTier || replacedByDish ? 0 : computedBase;
 
   const applied = [...itemRewards, ...categoryRewards, ...orderValueRewards];
   const campaignBase = baseAmount + applied.filter(r => r.includeInCampaignBase).reduce((s, r) => s + r.amount, 0);
@@ -242,7 +277,9 @@ export function evaluateOrderDamru(
       rupeesPerDamru: config.rupeesPerDamru,
       rounding: config.rounding,
       computedAmount: computedBase,
-      replacedByRuleId: replaced ? tier!.ruleId : null,
+      replacedByRuleId: replacedByTier ? tier!.ruleId : null,
+      replacedBy: replacedByTier ? "ORDER_VALUE_TIER" : replacedByDish ? "DISH_REWARDS" : null,
+      dishRewardBaseBehavior,
     },
     itemRewards,
     categoryRewards,

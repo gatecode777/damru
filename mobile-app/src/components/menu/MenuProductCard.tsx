@@ -55,7 +55,7 @@ export const MenuProductCard = React.memo(function MenuProductCard({
         {/* Damru badge — only when the server returns an active earn rule for this dish */}
         {item.rewardBadge ? (
           <View style={styles.rewardBadge} accessibilityLabel={item.rewardBadge.label}>
-            <Text style={styles.rewardBadgeText}>🪙 {item.rewardBadge.label}</Text>
+            <Text style={styles.rewardBadgeText}>🪙 {item.rewardBadge.shortLabel ?? item.rewardBadge.label}</Text>
           </View>
         ) : null}
 

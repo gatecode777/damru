@@ -3431,3 +3431,12 @@ body {
     font-weight: 600;
     line-height: 1.4;
 }
+
+/* Dish reward note inside the options modal (server-provided detail wording) */
+.menu-reward-note {
+    margin: 4px 0 10px;
+    color: #b45309;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+}

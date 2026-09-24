@@ -58,6 +58,22 @@ export async function getRewardsAnalytics(query: AnalyticsQuery) {
         trends: [{ $match: { createdAt: period, category: { $in: [...REWARD_ISSUE_CATEGORIES, "redemption", "expiry", "refund_restore", "reward_reversal"] } } },
           { $group: { _id: { bucket: { $dateToString: { format: bucket, date: "$createdAt", timezone: "Asia/Kolkata" } }, category: "$category", type: "$type" }, amount: { $sum: "$amount" } } }, { $sort: { "_id.bucket": 1 } }],
         sources: [{ $match: { ...earnedMatch, createdAt: period } }, { $group: { _id: "$category", issued: { $sum: "$amount" }, valuePaise: { $sum: valuePaiseExpr }, users: { $addToSet: "$userId" }, transactions: { $sum: 1 } } }, { $sort: { issued: -1 } }],
+        // Damru issued per dish, straight from each credit's frozen snapshot lines. A line's
+        // share of the credit is weighted by what was actually credited (caps / daily limit).
+        dishes: [
+          { $match: { type: "credit", category: { $in: ["item_reward", "category_reward"] }, createdAt: period } },
+          { $unwind: "$ruleSnapshot.lines" },
+          { $match: { "ruleSnapshot.lines.amount": { $gt: 0 } } },
+          { $group: {
+            _id: "$ruleSnapshot.lines.menuItemId",
+            name: { $last: "$ruleSnapshot.lines.name" },
+            issued: { $sum: { $cond: [{ $gt: ["$ruleSnapshot.uncappedAmount", 0] }, { $divide: [{ $multiply: ["$amount", "$ruleSnapshot.lines.amount"] }, "$ruleSnapshot.uncappedAmount"] }, 0] } },
+            units: { $sum: "$ruleSnapshot.lines.qty" },
+            orders: { $addToSet: "$orderId" },
+          } },
+          { $sort: { issued: -1 } },
+          { $limit: 20 },
+        ],
         earnRules: [{ $match: { type: "credit", earnRuleId: { $exists: true }, createdAt: period } }, { $group: { _id: "$earnRuleId", category: { $first: "$category" }, issued: { $sum: "$amount" }, valuePaise: { $sum: valuePaiseExpr }, orders: { $addToSet: "$orderId" }, transactions: { $sum: 1 } } }, { $sort: { issued: -1 } }, { $limit: 20 }],
         expiry: [{ $match: { type: "credit", remainingAmount: { $gt: 0 } } }, { $group: { _id: null,
           next7: { $sum: { $cond: [{ $and: [{ $gt: ["$expiresAt", now] }, { $lte: ["$expiresAt", in7] }] }, "$remainingAmount", 0] } },
@@ -110,6 +126,7 @@ export async function getRewardsAnalytics(query: AnalyticsQuery) {
     coupons: { issued: couponStats[0], redeemed: n((couponStats[1] as any[])[0]?.redemptions), expiredUnused: couponStats[2] },
     occasions: sourceRows.filter((s: any) => ["birthday", "marriage_anniversary", "account_anniversary"].includes(s.category)),
     orderRelationship: { rewardIssued: sourceRows.find((s: any) => s.category === "order_reward")?.issued || 0, rewardReversed: n(totals.orderRewardReversed), campaignReversed: n(totals.campaignReversed), redeemedDamru: redeemed, estimatedDiscount: n(totals.redeemedValuePaise) / 100 },
+    dishes: (facet.dishes || []).map((row: any) => { const orders = (row.orders || []).filter(Boolean).length; const issued = Math.round(n(row.issued)); return { menuItemId: row._id ? String(row._id) : null, name: row.name || "Dish", issued, units: n(row.units), orders, averagePerOrder: orders ? Math.round(issued / orders) : 0 }; }),
     earnRules: earnRuleRows.map((row: any) => { const rule: any = earnRuleById.get(String(row._id)); return { id: String(row._id), name: rule?.name || "Deleted rule", code: rule?.code || "", ruleType: rule?.ruleType || row.category, status: rule?.status || "", issued: n(row.issued), estimatedValue: n(row.valuePaise) / 100, orders: (row.orders || []).filter(Boolean).length, transactions: row.transactions }; }),
     topUsers: { total: usersWithBalance, rows: (topBalances as any[]).map(u => ({ id: u._id, name: u.name || "Customer", email: maskEmail(u.email), balance: n(u.damruBalance), lifetimeEarned: n(u.damruTotalEarned), lifetimeRedeemed: n(u.damruTotalRedeemed) })) },
     highEarners: { rows: (topEarners as any[]).map(u => ({ id: u._id, name: u.name || "Customer", email: maskEmail(u.email), earned: n(u.earned), balance: n(u.balance) })) }, risk, paisePerDamru: config.paisePerDamru, damruPerRupee: damruPerRupee(config.paisePerDamru)

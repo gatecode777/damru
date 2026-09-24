@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     const estimatePromise = estimateOrderDamru({
       userId: user?.id ?? null,
-      items: items.map(item => ({ menuItemId: String(item.menuItemId), categoryId: String(item.categoryId), qty: item.qty })),
+      items: items.map(item => ({ menuItemId: String(item.menuItemId), categoryId: String(item.categoryId), name: item.name, qty: item.qty })),
       eligibleAmount: Math.max(0, subtotal - coupon.discount),
       branchId: branchId ?? null,
     }).catch(err => {

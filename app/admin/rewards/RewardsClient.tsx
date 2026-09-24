@@ -46,7 +46,7 @@ function LoyaltyTab({ canEdit }: { canEdit: boolean }) {
 }
 interface DamruConfigValues {
   paisePerDamru: number; damruPerRupee?: number;
-  orderEarn: { rupeesPerDamru: number; rounding: "FLOOR"; enabled: boolean };
+  orderEarn: { rupeesPerDamru: number; rounding: "FLOOR"; enabled: boolean; dishRewardBaseBehavior: "ADD" | "REPLACE" };
   minRedemption: number; maxRedemptionPerOrder: number;
   dailyEarnLimit: number | null; expiryEnabled: boolean; expiryDays: number | null; expiryWarningDays: number;
   loyaltyThresholds: { silver: number; gold: number; platinum: number };
@@ -375,9 +375,23 @@ function ConfigTab({ canEdit }: { canEdit: boolean }) {
       </div>
       <p style={{ ...hint, marginBottom: 20 }}>
         1 Damru for every ₹{config.orderEarn.rupeesPerDamru} of eligible spend, rounded down. Eligible spend is the item subtotal after the coupon;
-        tax, delivery fee and Damru redemption are excluded. Credited when the order is delivered. Dish, category and order-value rewards are set up
-        in <a href="/admin/rewards/earn-rules" style={{ color: "#f97316" }}>Earn Rules</a>.
+        tax, delivery fee and Damru redemption are excluded. Credited when the order is delivered. Dish rewards are set up in{" "}
+        <a href="/admin/rewards/dish-rewards" style={{ color: "#f97316" }}>Dish Rewards</a>; category and order-value rewards in{" "}
+        <a href="/admin/rewards/earn-rules" style={{ color: "#f97316" }}>Earn Rules</a>.
       </p>
+      <div style={{ maxWidth: 420, marginBottom: 20 }}>
+        <label style={lbl}>When an order also earns dish rewards</label>
+        <select style={inp} disabled={!canEdit} value={config.orderEarn.dishRewardBaseBehavior}
+          onChange={e => setOrderEarn({ dishRewardBaseBehavior: e.target.value as "ADD" | "REPLACE" })}>
+          <option value="ADD">Add dish rewards to the base order reward</option>
+          <option value="REPLACE">Dish rewards replace the base order reward</option>
+        </select>
+        <p style={hint}>
+          {config.orderEarn.dishRewardBaseBehavior === "REPLACE"
+            ? `A ₹500 order with a 50-Damru dish earns 50 (the ₹${config.orderEarn.rupeesPerDamru}-per-Damru base is dropped for that order).`
+            : `A ₹500 order with a 50-Damru dish earns the base reward plus 50.`}
+        </p>
+      </div>
 
       <p style={sectionTitle}>Redemption</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>

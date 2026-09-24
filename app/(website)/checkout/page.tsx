@@ -51,7 +51,7 @@ export default function CheckoutPage() {
   const [quoteError, setQuoteError] = useState("");
   // Server-computed only: the estimated Damru this order earns on delivery,
   // and how much of the requested redemption the order can actually absorb.
-  const [earnEstimate, setEarnEstimate] = useState<{ estimatedDamru: number; eligible: boolean; dailyLimitApplied: boolean; note: string } | null>(null);
+  const [earnEstimate, setEarnEstimate] = useState<{ estimatedDamru: number; eligible: boolean; dailyLimitApplied: boolean; note: string; dishLines?: { menuItemId: string | null; name: string | null; qty: number; damru: number }[] } | null>(null);
   const [redemptionNote, setRedemptionNote] = useState("");
 
   function handleRequestedDamruChange(value: string) {
@@ -688,6 +688,14 @@ export default function CheckoutPage() {
                     <span>
                       You&apos;ll earn approximately <b>{earnEstimate.estimatedDamru.toLocaleString("en-IN")} Damru</b> on this order.
                       <small>{earnEstimate.dailyLimitApplied ? "Includes today's earning limit. " : ""}{earnEstimate.note}</small>
+                      {(earnEstimate.dishLines?.length ?? 0) > 0 && (
+                        <span className="rewards__earn-lines" aria-label="Dish rewards">
+                          <span className="rewards__earn-lines-title">Estimated dish rewards</span>
+                          {earnEstimate.dishLines!.map((line, i) => (
+                            <span key={`${line.menuItemId}-${i}`} className="rewards__earn-line"><span>{line.name ?? "Dish"} × {line.qty}</span><b>+{line.damru}</b></span>
+                          ))}
+                        </span>
+                      )}
                     </span>
                   </div>
                 )}

@@ -1,11 +1,9 @@
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { checkApiPerm } from "@/lib/checkApiPerm";
 import { connectDB } from "@/lib/mongodb";
-import { logAdminAction } from "@/lib/auditLog";
+import { logAdminAction, resolveSessionAdmin } from "@/lib/auditLog";
 import { applyReversal } from "@/lib/rewards/reversalEngine";
-import AdminUser from "@/models/Admin";
 import DamruTransaction from "@/models/DamruTransaction";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -20,9 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (note.length < 5 || note.length > 500) return NextResponse.json({ error: "Enter a correction note between 5 and 500 characters." }, { status: 400 });
 
     await connectDB();
-    const session = await auth();
-    const email = (session?.user as { email?: string } | undefined)?.email;
-    const admin = await AdminUser.findOne({ email }).select("_id").lean<{ _id: mongoose.Types.ObjectId }>();
+    const admin = await resolveSessionAdmin();
     if (!admin) return NextResponse.json({ error: "Admin not found." }, { status: 401 });
 
     const original = await DamruTransaction.findOne({ _id: id, type: "credit", amount: { $gt: 0 } }).select("_id").lean();

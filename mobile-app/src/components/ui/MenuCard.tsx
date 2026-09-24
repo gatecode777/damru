@@ -96,7 +96,7 @@ export function MenuCard({ item, index = 0 }: MenuCardProps) {
         {/* Damru badge — only from an active server earn rule */}
         {item.rewardBadge ? (
           <View style={styles.rewardBadge} accessibilityLabel={item.rewardBadge.label}>
-            <Text style={styles.rewardBadgeText}>🪙 {item.rewardBadge.label}</Text>
+            <Text style={styles.rewardBadgeText}>🪙 {item.rewardBadge.shortLabel ?? item.rewardBadge.label}</Text>
           </View>
         ) : null}
 

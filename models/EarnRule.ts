@@ -18,6 +18,11 @@ export type BaseRewardBehavior = "ADD" | "REPLACE";
 export const EARN_RULE_TYPES: readonly EarnRuleType[] = ["ITEM", "CATEGORY", "ORDER_VALUE_TIER"];
 export const EARN_RULE_STATUSES: readonly EarnRuleStatus[] = ["DRAFT", "ACTIVE", "PAUSED", "ARCHIVED"];
 export const EARN_RULE_BASES: readonly EarnRuleBasis[] = ["PER_UNIT", "PER_LINE", "PER_ORDER"];
+/**
+ * Business default for a dish reward when the admin doesn't choose a basis:
+ * every unit earns it (Biryani = 50 → qty 2 earns 100).
+ */
+export const DEFAULT_ITEM_REWARD_BASIS: EarnRuleBasis = "PER_UNIT";
 export const EARN_TIER_MODES: readonly EarnTierMode[] = ["HIGHEST_MATCH", "CUMULATIVE", "SLAB"];
 export const BASE_REWARD_BEHAVIORS: readonly BaseRewardBehavior[] = ["ADD", "REPLACE"];
 

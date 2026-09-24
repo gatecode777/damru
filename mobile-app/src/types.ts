@@ -12,7 +12,12 @@ export type User = {
 export type RewardBadge = {
   damru: number;
   basis: "PER_UNIT" | "PER_LINE" | "PER_ORDER";
+  /** "Earn 50 Damru per item" */
   label: string;
+  /** "+50 Damru" — compact card text. Optional for older server responses. */
+  shortLabel?: string;
+  /** "Earn 50 Damru on this dish" */
+  detailLabel?: string;
 };
 
 export type MenuItem = {

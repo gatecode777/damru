@@ -43,7 +43,7 @@ interface IMenuItem {
   isVeg: boolean;
   category: string;
   sortOrder: number;
-  rewardBadge: { damru: number; basis: string; label: string } | null;
+  rewardBadge: { damru: number; basis: string; label: string; shortLabel?: string; detailLabel?: string } | null;
 }
 
 // ── Page ─────────────────────────────────────────────────────────

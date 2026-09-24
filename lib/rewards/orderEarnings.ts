@@ -25,6 +25,33 @@ import { fromPaise } from "@/lib/checkout/money";
 
 type ObjectIdLike = string | mongoose.Types.ObjectId;
 
+export interface DishRewardLine {
+  menuItemId: string | null;
+  name: string | null;
+  qty: number;
+  basis: string;
+  damruPerUnit: number;
+  damru: number;
+  calculation: string;
+  source: "ITEM" | "CATEGORY";
+}
+
+/** Flattens dish + category rewards into one line per dish that actually earns. */
+export function toDishLines(evaluation: OrderDamruEvaluation): DishRewardLine[] {
+  return [...evaluation.itemRewards, ...evaluation.categoryRewards].flatMap(rule =>
+    (rule.lines ?? []).filter(line => line.amount > 0).map(line => ({
+      menuItemId: line.menuItemId,
+      name: line.name,
+      qty: line.qty,
+      basis: line.basis,
+      damruPerUnit: line.damruPerUnit,
+      damru: line.amount,
+      calculation: line.calculation,
+      source: rule.kind === "CATEGORY" ? "CATEGORY" as const : "ITEM" as const,
+    }))
+  );
+}
+
 export interface DamruEstimate {
   isEstimate: true;
   /** Whether this customer can earn at all (guests cannot). */
@@ -36,6 +63,8 @@ export interface DamruEstimate {
   itemDamru: number;
   categoryDamru: number;
   tierDamru: number;
+  /** Per-dish breakdown of dish/category rewards (server-computed, display only). */
+  dishLines: DishRewardLine[];
   appliedRules: { kind: string; ruleId: string | null; code: string; name: string; amount: number }[];
   dailyLimitApplied: boolean;
   paisePerDamru: number;
@@ -67,6 +96,7 @@ export async function estimateOrderDamru(
     itemDamru: sum(evaluation.itemRewards),
     categoryDamru: sum(evaluation.categoryRewards),
     tierDamru: sum(evaluation.orderValueRewards),
+    dishLines: toDishLines(evaluation),
     appliedRules: evaluation.appliedRules,
     dailyLimitApplied: false,
     paisePerDamru: config.paisePerDamru,
@@ -125,6 +155,15 @@ interface CreditPlan {
   ruleSnapshot: Record<string, unknown>;
 }
 
+/** Ledger text that explains the credit on its own, e.g. "Dish reward: Chicken Biryani × 2 (50 × 2) — order DMR-…". */
+function describeRuleCredit(rule: AppliedEarnRule, orderNumber: string): string {
+  if (rule.kind === "ORDER_VALUE_TIER") return `Order-value reward (${rule.name}) — order ${orderNumber}`;
+  const dishes = (rule.lines ?? []).filter(l => l.amount > 0).map(l => `${l.name ?? "Dish"} × ${l.qty} (${l.calculation})`).join(", ");
+  const label = rule.kind === "CATEGORY" ? `Category reward (${rule.name})` : "Dish reward";
+  const capped = rule.amount < rule.uncappedAmount ? `, capped at ${rule.amount}` : "";
+  return `${label}: ${dishes}${capped} — order ${orderNumber}`.slice(0, 480);
+}
+
 function planCredits(orderObjectId: string, orderNumber: string, evaluation: OrderDamruEvaluation): CreditPlan[] {
   const common = { eligiblePaise: evaluation.eligiblePaise, evaluatedAt: evaluation.evaluatedAt };
   const plans: CreditPlan[] = [];
@@ -149,7 +188,7 @@ function planCredits(orderObjectId: string, orderNumber: string, evaluation: Ord
         category,
         idempotencyKey: `${prefix}:${orderObjectId}:${rule.ruleId}`,
         amount: rule.amount,
-        description: `${rule.name} — order ${orderNumber}`,
+        description: describeRuleCredit(rule, orderNumber),
         earnRuleId: rule.ruleId,
         ruleSnapshot: { ...rule, ...common },
       });
@@ -192,7 +231,7 @@ export async function awardOrderEarnings(orderId: ObjectIdLike): Promise<OrderEa
   if (!evaluation) {
     const [config, rules] = await Promise.all([getDamruConfig(), getActiveEarnRules()]);
     const fresh = evaluateOrderDamru({
-      items: order.items.map(i => ({ menuItemId: i.menuItemId ? String(i.menuItemId) : null, categoryId: i.categoryId ? String(i.categoryId) : null, qty: i.qty })),
+      items: order.items.map(i => ({ menuItemId: i.menuItemId ? String(i.menuItemId) : null, categoryId: i.categoryId ? String(i.categoryId) : null, name: i.name, qty: i.qty })),
       eligibleAmount: order.eligibleRewardAmount ?? Math.max(0, order.subtotal - order.discount),
       branchId: order.branchId ? String(order.branchId) : null,
     }, rules, config.orderEarn, new Date());

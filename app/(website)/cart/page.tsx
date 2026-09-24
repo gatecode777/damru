@@ -27,6 +27,7 @@ interface DamruEarnEstimate {
   eligible: boolean;
   estimatedDamru: number;
   note: string;
+  dishLines?: { menuItemId: string | null; name: string | null; qty: number; damru: number }[];
 }
 
 export default function CartPage() {
@@ -417,6 +418,13 @@ export default function CartPage() {
                 <span>
                   You&apos;ll earn ~<b>{earnEstimate.estimatedDamru.toLocaleString("en-IN")} Damru</b> on this order.
                   <small>Final amount is confirmed at checkout and credited after delivery.</small>
+                  {(earnEstimate.dishLines?.length ?? 0) > 0 && (
+                    <span className="rewards__earn-lines" aria-label="Dish rewards">
+                      {earnEstimate.dishLines!.map((line, i) => (
+                        <span key={`${line.menuItemId}-${i}`} className="rewards__earn-line"><span>{line.name ?? "Dish"} × {line.qty}</span><b>+{line.damru}</b></span>
+                      ))}
+                    </span>
+                  )}
                 </span>
               </div>
             )}

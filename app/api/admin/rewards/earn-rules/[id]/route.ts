@@ -5,7 +5,7 @@ import { checkApiPerm } from "@/lib/checkApiPerm";
 import { logAdminAction } from "@/lib/auditLog";
 import EarnRule, { EARN_RULE_STATUSES, type EarnRuleStatus } from "@/models/EarnRule";
 import { invalidateEarnRuleCache, toEarnRuleInput, validateEarnRule, type EarnRuleValues } from "@/lib/rewards/earnRules";
-import { auditView, currentAdminId, findActiveConflict, findMissingReferences } from "@/lib/rewards/earnRuleAdmin";
+import { auditView, conflictAfterWrite, currentAdminId, findActiveConflict, findMissingReferences, getRuleVersionHistory } from "@/lib/rewards/earnRuleAdmin";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -39,6 +39,17 @@ async function saveVersioned(id: string, expectedVersion: number, values: EarnRu
     { new: true, runValidators: true }
   );
   if (!updated) return NextResponse.json({ error: "This rule was changed by someone else. Reload and try again." }, { status: 409 });
+  if (values.status === "ACTIVE") {
+    const raced = await conflictAfterWrite(values, id);
+    if (raced) {
+      // Another admin activated an overlapping rule at the same moment: this one must not stay active.
+      const fallback = before.status === "ACTIVE" ? "PAUSED" : before.status;
+      await EarnRule.updateOne({ _id: id }, { $set: { status: fallback }, $inc: { version: 1 } });
+      invalidateEarnRuleCache();
+      await logAdminAction(action, { targetType: "EarnRule", targetId: id, details: { before: auditView({ ...before, version: expectedVersion }), after: auditView({ ...values, status: fallback, version: updated.version + 1 }), note: "Activation lost a race; not active." } });
+      return NextResponse.json({ error: `${raced} The rule was saved but is not active.` }, { status: 409 });
+    }
+  }
   invalidateEarnRuleCache();
   await logAdminAction(action, {
     targetType: "EarnRule",
@@ -46,6 +57,22 @@ async function saveVersioned(id: string, expectedVersion: number, values: EarnRu
     details: { before: auditView({ ...before, version: expectedVersion }), after: auditView({ ...values, version: updated.version }) },
   });
   return NextResponse.json({ rule: JSON.parse(JSON.stringify(updated)) });
+}
+
+// GET — the rule plus its version history (from the admin audit log).
+export async function GET(_req: NextRequest, { params }: Params) {
+  const deny = await checkApiPerm("rewards", "view");
+  if (deny) return deny;
+  try {
+    const { id } = await params;
+    const rule = await loadRule(id);
+    if (!rule) return NextResponse.json({ error: "Rule not found." }, { status: 404 });
+    const history = await getRuleVersionHistory(id);
+    return NextResponse.json({ rule: JSON.parse(JSON.stringify(rule)), history: JSON.parse(JSON.stringify(history)) });
+  } catch (err) {
+    console.error("GET admin/rewards/earn-rules/[id] error:", err);
+    return NextResponse.json({ error: "Server error." }, { status: 500 });
+  }
 }
 
 // PUT — edit a rule's configuration (ruleType is fixed after creation).

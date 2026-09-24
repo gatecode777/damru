@@ -22,6 +22,10 @@ export function validateDamruConfigUpdate(body: Record<string, unknown>, current
       if (typeof oe.enabled !== "boolean") return { error: "Order earning on/off must be true or false." };
       next.orderEarn.enabled = oe.enabled;
     }
+    if (oe.dishRewardBaseBehavior !== undefined) {
+      if (oe.dishRewardBaseBehavior !== "ADD" && oe.dishRewardBaseBehavior !== "REPLACE") return { error: "Choose whether dish rewards add to or replace the base order reward." };
+      next.orderEarn.dishRewardBaseBehavior = oe.dishRewardBaseBehavior;
+    }
   }
   if (body.minRedemption !== undefined) {
     if (!isWhole(body.minRedemption, 0)) return { error: "Minimum redemption must be a whole number of Damru." };

@@ -59,7 +59,7 @@ test("base order earning: ₹10 spent = 1 Damru, floored", () => {
 
 const current: DamruConfigValues = {
   paisePerDamru: 10,
-  orderEarn: { rupeesPerDamru: 10, rounding: "FLOOR", enabled: true },
+  orderEarn: { rupeesPerDamru: 10, rounding: "FLOOR", enabled: true, dishRewardBaseBehavior: "ADD" },
   minRedemption: 100, maxRedemptionPerOrder: 2000, dailyEarnLimit: null,
   expiryEnabled: false, expiryDays: null, expiryWarningDays: 30,
   loyaltyThresholds: { silver: 1000, gold: 5000, platinum: 10000 },

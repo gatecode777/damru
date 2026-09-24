@@ -11,7 +11,10 @@ import { fromPaise } from "@/lib/checkout/money";
 
 /**
  * POST /api/admin/rewards/earn-rules/preview
- * Body: { rule?: <draft rule>, ruleId?: string, orderValue: number (₹), items?: [{ menuItemId, qty }], branchId? }
+ * Body: { rule?: <draft rule>, ruleId?: string, orderValue: number (₹), items?: [{ menuItemId, qty }], branchId?,
+ *         quantities?: number[], previewDishId?: string }
+ * `quantities` additionally returns what the draft dish rule ALONE earns for
+ * that dish at each quantity (e.g. 1 → 50, 2 → 100, 3 → 150).
  *
  * Runs the SAME evaluator used at checkout and delivery against the active
  * rules plus the draft (treated as active now), so an admin sees exactly what
@@ -31,7 +34,8 @@ export async function POST(req: NextRequest) {
 
     let draft: EarnRuleInput | null = null;
     if (body.rule) {
-      const { values, error } = validateEarnRule({ ...body.rule, status: "ACTIVE" });
+      // A dish-page draft may not have a name/code yet (they're derived from the dish on save).
+      const { values, error } = validateEarnRule({ ...body.rule, name: body.rule.name || "Preview", code: body.rule.code || "PREVIEW", status: "ACTIVE" });
       if (error || !values) return NextResponse.json({ error }, { status: 400 });
       draft = {
         ...values,
@@ -60,8 +64,19 @@ export async function POST(req: NextRequest) {
       rules,
       config.orderEarn
     );
+    let dishQuantityPreview: { qty: number; damru: number }[] | null = null;
+    if (draft && draft.ruleType === "ITEM" && Array.isArray(body.quantities)) {
+      const dishId = typeof body.previewDishId === "string" && draft.menuItemIds.includes(body.previewDishId) ? body.previewDishId : draft.menuItemIds[0];
+      const quantities = (body.quantities as unknown[]).map(Number).filter(q => Number.isInteger(q) && q >= 1 && q <= 99).slice(0, 10);
+      const dishOnly = { rupeesPerDamru: config.orderEarn.rupeesPerDamru, rounding: config.orderEarn.rounding, enabled: false };
+      dishQuantityPreview = quantities.map(qty => ({
+        qty,
+        damru: evaluateOrderDamru({ items: [{ menuItemId: dishId, qty }], eligibleAmount: 0 }, [draft!], dishOnly).totalDamru,
+      }));
+    }
+
     const valuePaise = damruToPaise(evaluation.totalDamru, config.paisePerDamru);
-    return NextResponse.json({ evaluation, totalValue: fromPaise(valuePaise), paisePerDamru: config.paisePerDamru });
+    return NextResponse.json({ evaluation, totalValue: fromPaise(valuePaise), paisePerDamru: config.paisePerDamru, dishQuantityPreview });
   } catch (err) {
     console.error("POST admin/rewards/earn-rules/preview error:", err);
     return NextResponse.json({ error: "Server error." }, { status: 500 });
